@@ -21,4 +21,4 @@ dependencyResolutionManagement {
 
 rootProject.name = "Repoint"
 include(":app")
- 
+include(":core:basics")
