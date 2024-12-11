@@ -4,7 +4,7 @@ plugins {
 }
 
 android {
-    namespace = "com.repoint.basics"
+    namespace = "com.repoint.models"
     compileSdk = 34
 
     defaultConfig {
@@ -34,4 +34,5 @@ android {
 
 dependencies {
     implementation(project(":core:Dependencies"))
+
 }

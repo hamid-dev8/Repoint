@@ -16,9 +16,13 @@ dependencyResolutionManagement {
     repositories {
         google()
         mavenCentral()
+        maven { setUrl("https://jitpack.io") }
     }
 }
 
 rootProject.name = "Repoint"
 include(":app")
 include(":core:basics")
+include(":core:Dependencies")
+include(":core:models")
+include(":core:network")
