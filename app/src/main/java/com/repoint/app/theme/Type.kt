@@ -1,4 +1,4 @@
-package com.repoint.app.ui.theme
+package com.repoint.app.theme
 
 import androidx.compose.material3.Typography
 import androidx.compose.ui.text.TextStyle

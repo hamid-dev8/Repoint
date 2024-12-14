@@ -5,7 +5,7 @@ plugins {
 
 android {
     namespace = "com.repoint.feature"
-    compileSdk = 34
+    compileSdk = 35
 
     defaultConfig {
         minSdk = 26
@@ -35,5 +35,4 @@ android {
 dependencies {
 
     implementation(project(":core:Dependencies"))
-
 }

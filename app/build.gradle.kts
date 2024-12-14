@@ -37,8 +37,14 @@ android {
     buildFeatures {
         compose = true
     }
+
+    composeOptions {
+        kotlinCompilerExtensionVersion = "1.5.15"
+    }
 }
 
 dependencies {
     implementation(project(":core:Dependencies"))
+    implementation(project(":core:basics"))
+    implementation(project(":feature"))
 }
