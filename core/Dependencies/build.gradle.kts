@@ -1,6 +1,10 @@
 plugins {
     alias(libs.plugins.android.library)
     alias(libs.plugins.kotlin.android)
+
+
+    //hilt need
+
 }
 
 android {
@@ -67,4 +71,13 @@ dependencies {
     //web3 android
     //noinspection GradleDependency
     api (libs.core.v489android)
+
+    //hilt
+    api(libs.hilt.android)
+   // ksp(libs.hilt.compiler)
+
 }
+/*
+kapt {
+    correctErrorTypes = true
+}*/

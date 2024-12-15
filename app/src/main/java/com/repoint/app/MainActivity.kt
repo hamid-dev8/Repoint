@@ -1,6 +1,5 @@
 package com.repoint.app
 
-import android.R.attr.text
 import android.os.Bundle
 import android.util.Log
 import androidx.activity.ComponentActivity
@@ -16,14 +15,13 @@ import androidx.compose.ui.tooling.preview.Preview
 import com.repoint.app.theme.RepointTheme
 import com.repoint.app.ui.MainScreen
 import com.repoint.app.ui.SplashScreen
-import org.web3j.crypto.Keys
+import dagger.hilt.android.AndroidEntryPoint
 import org.web3j.crypto.MnemonicUtils
 import org.web3j.utils.Numeric
-import java.nio.charset.StandardCharsets
 import java.security.SecureRandom
 
 
-//@AndroidEntryPoint
+@AndroidEntryPoint
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -40,27 +38,23 @@ class MainActivity : ComponentActivity() {
         }
 
 
-
         //32 char hex!
         //val entropy :String = "2c0b4e6aaa47308803089bba616c9ec6"
         val entropy = hexTo16ByteArray("8bc458c2a94b1029f06b5186e6bce4de")
         val ent = ByteArray(16)
-        Log.d("bitcoin","ent is : $entropy")
+        Log.d("bitcoin", "ent is : $entropy")
         val secureRandom = SecureRandom()
         secureRandom.nextBytes(ent)
-        Log.d("bitcoin","secure ent is : $entropy")
+        Log.d("bitcoin", "secure ent is : $entropy")
 
         val nmeonic = MnemonicUtils.generateMnemonic(entropy)
 
-        val seed = MnemonicUtils.generateSeed(nmeonic , "")
+        val seed = MnemonicUtils.generateSeed(nmeonic, "")
 
-        Log.d("bitcoin",nmeonic)
-
-
+        Log.d("bitcoin", nmeonic)
 
 
     }
-
 
 
     fun hexTo16ByteArray(hex: String): ByteArray {

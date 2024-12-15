@@ -3,7 +3,9 @@ adapterKotlinCoroutines = "0.9.2"
 agp = "8.7.3"
 core = "4.12.2"
 coreVersion = "4.8.9-android"
+hiltAndroid = "2.51.1"
 kotlin = "2.0.0"
+kspVersion = "2.1.0-1.0.29"
 coreKtx = "1.15.0"
 junit = "4.13.2"
 junitVersion = "1.2.1"
@@ -29,6 +31,8 @@ androidx-room-runtime = { module = "androidx.room:room-runtime" ,  version.ref =
 converter-gson = { module = "com.squareup.retrofit2:converter-gson", version.ref = "retrofit" }
 core = { module = "org.web3j:core", version.ref = "core" }
 core-v489android = { module = "org.web3j:core", version.ref = "coreVersion" }
+hilt-android = { module = "com.google.dagger:hilt-android", version.ref = "hiltAndroid" }
+hilt-compiler = { module = "com.google.dagger:hilt-android-compiler", version.ref = "hiltAndroid" }
 junit = { group = "junit", name = "junit", version.ref = "junit" }
 androidx-junit = { group = "androidx.test.ext", name = "junit", version.ref = "junitVersion" }
 androidx-espresso-core = { group = "androidx.test.espresso", name = "espresso-core", version.ref = "espressoCore" }
@@ -59,6 +63,7 @@ kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
 kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
 android-library = { id = "com.android.library", version.ref = "agp" }
 jetbrains-kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
-kotlin-ksp = {id = "com.google.devtools.ksp"  , version.ref = "kotlin"}
+dagger-hilt-android = { id = "com.google.dagger.hilt.android", version.ref = "hiltAndroid" }
+kotlin-ksp = {id = "com.google.devtools.ksp"  , version.ref = "kspVersion"}
 
 

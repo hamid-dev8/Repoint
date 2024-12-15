@@ -2,6 +2,10 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
+
+    //hilt need
+    alias(libs.plugins.kotlin.ksp) apply false
+    alias(libs.plugins.dagger.hilt.android) apply false
 }
 
 android {
@@ -47,4 +51,6 @@ dependencies {
     implementation(project(":core:Dependencies"))
     implementation(project(":core:basics"))
     implementation(project(":feature"))
+
+
 }
