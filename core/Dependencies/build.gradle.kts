@@ -60,5 +60,11 @@ dependencies {
     api(libs.kotlinx.coroutines.android)
 
 
+    //web3j
+    //java//implementation (libs.core)
 
+
+    //web3 android
+    //noinspection GradleDependency
+    api (libs.core.v489android)
 }
