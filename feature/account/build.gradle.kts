@@ -1,11 +1,13 @@
 plugins {
     alias(libs.plugins.android.library)
     alias(libs.plugins.kotlin.android)
+    alias(libs.plugins.kotlin.compose)
+
 }
 
 android {
-    namespace = "com.repoint.feature"
-    compileSdk = 35
+    namespace = "com.repoint.account"
+    compileSdk = 34
 
     defaultConfig {
         minSdk = 26
@@ -30,10 +32,20 @@ android {
     kotlinOptions {
         jvmTarget = "11"
     }
+
+
+    buildFeatures {
+        compose = true
+    }
+
+    composeOptions {
+        kotlinCompilerExtensionVersion = "1.5.15"
+    }
 }
 
 dependencies {
 
     implementation(project(":core:Dependencies"))
+    implementation(project(":core:models"))
     implementation(project(":core:basics"))
 }

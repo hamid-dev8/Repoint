@@ -1,7 +1,7 @@
 package com.repoint.models.sharedmodels
 
-sealed class UiState<out T> {
-    object Loading : UiState<Nothing>()
-    data class Success<out T>(val data : T) : UiState<T>() //TODO ADD GENERIC MODEL
-    data class Error(val messages : String) : UiState<Nothing>()
+sealed class UiState {
+    object Loading : UiState()
+    data class Success(val data : String) : UiState() //TODO ADD GENERIC MODEL
+    data class Error(val messages : String) : UiState()
 }

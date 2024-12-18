@@ -2,6 +2,7 @@ package com.repoint.app
 
 import android.os.Bundle
 import android.util.Log
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -12,9 +13,11 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
-import com.repoint.app.theme.RepointTheme
+import com.repoint.account.ui.AuthScreen
+import com.repoint.dependencies.theme.RepointTheme
 import com.repoint.app.ui.MainScreen
 import com.repoint.app.ui.SplashScreen
+import com.repoint.basics.logic.ScreenActions
 import dagger.hilt.android.AndroidEntryPoint
 import org.web3j.crypto.MnemonicUtils
 import org.web3j.utils.Numeric
@@ -22,17 +25,15 @@ import java.security.SecureRandom
 
 
 @AndroidEntryPoint
-class MainActivity : ComponentActivity() {
+class MainActivity : ComponentActivity()  , ScreenActions {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
         enableEdgeToEdge()
         setContent {
             RepointTheme {
-
-
                 SplashScreen {
-                    MainScreen()
+                    AuthScreen(this)
                 }
             }
         }
@@ -70,6 +71,18 @@ class MainActivity : ComponentActivity() {
         }
 
         return byteArray
+    }
+
+    override fun onButtonClick() {
+        Toast.makeText(this,"button Clicked" , Toast.LENGTH_SHORT).show()
+     }
+
+    override fun onItemSelected(itemId: Int) {
+        //TODO("Not yet implemented")
+    }
+
+    override fun onTabSelected(index: Int, title: String) {
+        //TODO("Not yet implemented")
     }
 
 }

@@ -1,4 +1,4 @@
-package com.repoint.basics
+package com.repoint.account
 
 import org.junit.Test
 

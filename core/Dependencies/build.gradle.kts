@@ -2,6 +2,7 @@ plugins {
     alias(libs.plugins.android.library)
     alias(libs.plugins.kotlin.android)
 
+    alias(libs.plugins.kotlin.compose)
 
     //hilt need
 
@@ -34,6 +35,15 @@ android {
     kotlinOptions {
         jvmTarget = "11"
     }
+
+    buildFeatures {
+        compose = true
+    }
+
+    composeOptions {
+        kotlinCompilerExtensionVersion = "1.5.15"
+    }
+
 }
 
 dependencies {
@@ -46,13 +56,16 @@ dependencies {
     api(libs.androidx.ui.graphics)
     api(libs.androidx.ui.tooling.preview)
     api(libs.androidx.material3)
-    testImplementation(libs.junit)
+    testImplementation("junit:junit:4.12")
     androidTestApi(libs.androidx.junit)
     androidTestApi(libs.androidx.espresso.core)
     androidTestApi(platform(libs.androidx.compose.bom))
     androidTestApi(libs.androidx.ui.test.junit4)
     debugApi(libs.androidx.ui.tooling)
     debugApi(libs.androidx.ui.test.manifest)
+
+    //navigation_compose
+    api(libs.navigation.compose)
 
     // ViewModel
     api(libs.lifecycle.viewmodel.ktx)

@@ -51,6 +51,7 @@ dependencies {
     implementation(project(":core:Dependencies"))
     implementation(project(":core:basics"))
     implementation(project(":feature"))
+    implementation(project(":feature:account"))
 
 
 }

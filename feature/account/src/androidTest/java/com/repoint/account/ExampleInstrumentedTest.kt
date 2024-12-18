@@ -1,4 +1,4 @@
-package com.repoint.basics
+package com.repoint.account
 
 import androidx.test.platform.app.InstrumentationRegistry
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -19,6 +19,6 @@ class ExampleInstrumentedTest {
     fun useAppContext() {
         // Context of the app under test.
         val appContext = InstrumentationRegistry.getInstrumentation().targetContext
-        assertEquals("com.repoint.basics.test", appContext.packageName)
+        assertEquals("com.repoint.account.test", appContext.packageName)
     }
 }

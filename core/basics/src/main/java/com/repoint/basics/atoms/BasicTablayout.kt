@@ -17,17 +17,18 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
+import com.repoint.basics.logic.ScreenActions
 
 
 @Preview(showBackground = true)
 @Composable
 fun TabLayoutPreview() {
-    BasicTabLayout()
+   // BasicTabLayout()
 }
 
 
 @Composable
-fun BasicTabLayout(): Int {
+fun BasicTabLayout(actions : ScreenActions): Int {
 
     var tabIndex by remember { mutableStateOf(0) }
 
@@ -38,7 +39,10 @@ fun BasicTabLayout(): Int {
             tabs.forEachIndexed { index, title ->
                 Tab(text = { Text(title) },
                     selected = tabIndex == index,
-                    onClick = { tabIndex = index },
+                    onClick = {
+                        tabIndex = index
+                        actions.onTabSelected(index,title)
+                    },
                     icon = {
                         when (index) {
                             0 -> Icon(

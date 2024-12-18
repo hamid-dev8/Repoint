@@ -11,22 +11,23 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import com.repoint.basics.atoms.BasicTabLayout
+import com.repoint.basics.logic.ScreenActions
 
 
 @Preview(showBackground = true)
 @Composable
 fun MainScreenPreview() {
-    MainScreen()
+    //MainScreen()
 }
 
 
 @Composable
-fun MainScreen() {
+fun MainScreen(actions : ScreenActions) {
     var tabIndex = 0
 
     Surface(Modifier.fillMaxSize()) {
         Scaffold(
-            bottomBar = { tabIndex = BasicTabLayout() }
+            bottomBar = { tabIndex = BasicTabLayout(actions) }
         ) { innerpadding ->
 
             Box(
