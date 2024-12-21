@@ -33,8 +33,8 @@ fun AuthScreenPreview() {
                 .padding(4.dp)
                 .align(Alignment.BottomCenter)
         ) {
-            // AuthButton("Create Wallet",actions)
-            // AuthButton("Enter Wallet",actions)
+            //AuthButton("Create Wallet",actions)
+            //AuthButton("Enter Wallet",actions)
         }
 
 

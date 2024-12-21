@@ -48,4 +48,6 @@ dependencies {
     implementation(project(":core:Dependencies"))
     implementation(project(":core:models"))
     implementation(project(":core:basics"))
+    implementation(project(":core:database"))
+    implementation(project(":data:sources"))
 }

@@ -9,8 +9,16 @@ import androidx.compose.ui.platform.ComposeView
 import androidx.fragment.app.Fragment
 import com.repoint.account.ui.AuthScreen
 import com.repoint.basics.logic.ScreenActions
+import com.repoint.database.dao.AuthDao
+import dagger.hilt.android.AndroidEntryPoint
+import javax.inject.Inject
 
+
+@AndroidEntryPoint
 class AuthFragment : Fragment(), ScreenActions {
+
+    @Inject
+    lateinit var authDao: AuthDao
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -29,11 +37,11 @@ class AuthFragment : Fragment(), ScreenActions {
     }
 
     override fun onButtonClick() {
-        Toast.makeText(requireContext(), "salam", Toast.LENGTH_SHORT).show()
+        TODO("Not yet implemented")
     }
 
     override fun onItemSelected(itemId: Int) {
-        //TODO("Not yet implemented")
+        TODO("Not yet implemented")
     }
 
     override fun onTabSelected(index: Int, title: String) {

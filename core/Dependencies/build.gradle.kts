@@ -5,7 +5,9 @@ plugins {
     alias(libs.plugins.kotlin.compose)
 
     //hilt need
-
+    alias(libs.plugins.kotlin.ksp) apply false
+    alias(libs.plugins.dagger.hilt.android) apply false
+    id("kotlin-kapt") apply false
 }
 
 android {
@@ -76,7 +78,6 @@ dependencies {
     //kotlin coroutines
     api(libs.kotlinx.coroutines.android)
 
-
     //web3j
     //java//implementation (libs.core)
 
@@ -87,6 +88,7 @@ dependencies {
 
     //hilt
     api(libs.hilt.android)
+
    // ksp(libs.hilt.compiler)
 
 }

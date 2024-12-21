@@ -35,10 +35,10 @@ android {
 dependencies {
 
     implementation(project(":core:Dependencies"))
+    implementation(project(":core:models"))
 
     implementation(libs.androidx.room.runtime)
 
     // optional - Kotlin Extensions and Coroutines support for Room
     implementation(libs.androidx.room.ktx)
-
 }

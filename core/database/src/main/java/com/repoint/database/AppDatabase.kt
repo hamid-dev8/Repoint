@@ -1,28 +1,13 @@
 package com.repoint.database
 
 import androidx.room.Database
-import androidx.room.DatabaseConfiguration
-import androidx.room.InvalidationTracker
 import androidx.room.RoomDatabase
-import androidx.sqlite.db.SupportSQLiteOpenHelper
+import com.repoint.database.dao.AuthDao
+import com.repoint.models.sharedmodels.User
+import com.repoint.models.sharedmodels.Wallet
 
-@Database(entities = [] , version =  1 , exportSchema = false)
-class AppDatabase : RoomDatabase()
+@Database(entities = [User::class,Wallet::class] , version =  1 , exportSchema = false)
+ abstract class AppDatabase : RoomDatabase()
 {
-
-    //abstract  fun dao() : SomeDao
-
-
-    override fun clearAllTables() {
-        TODO("Not yet implemented")
-    }
-
-    override fun createInvalidationTracker(): InvalidationTracker {
-        TODO("Not yet implemented")
-    }
-
-    override fun createOpenHelper(config: DatabaseConfiguration): SupportSQLiteOpenHelper {
-        TODO("Not yet implemented")
-    }
-
+    abstract fun AuthDao() : AuthDao
 }

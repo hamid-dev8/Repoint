@@ -6,6 +6,7 @@ plugins {
     //hilt need
     alias(libs.plugins.kotlin.ksp) apply false
     alias(libs.plugins.dagger.hilt.android) apply false
+    id("kotlin-kapt") apply false
 }
 
 android {
