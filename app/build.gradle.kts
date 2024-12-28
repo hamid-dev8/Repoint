@@ -4,9 +4,10 @@ plugins {
     alias(libs.plugins.kotlin.compose)
 
     //hilt need
-    alias(libs.plugins.kotlin.ksp) apply false
-    alias(libs.plugins.dagger.hilt.android) apply false
-    id("kotlin-kapt") apply false
+    id("kotlin-kapt")
+    id("com.google.devtools.ksp")
+    alias(libs.plugins.hilt)
+   // id ("dagger.hilt.android.plugin")
 }
 
 android {
@@ -21,6 +22,7 @@ android {
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
     }
 
     buildTypes {
@@ -43,6 +45,7 @@ android {
         compose = true
     }
 
+
     composeOptions {
         kotlinCompilerExtensionVersion = "1.5.15"
     }
@@ -53,6 +56,24 @@ dependencies {
     implementation(project(":core:basics"))
     implementation(project(":feature"))
     implementation(project(":feature:account"))
+    implementation(project(":core:models"))
 
+    implementation(libs.hilt.android)
 
+    //kapt("com.google.dagger:hilt-android-compiler:2.51.1")
+    kapt(libs.hilt.compiler)
+}
+
+hilt{
+    enableAggregatingTask = true
+}
+
+kapt {
+    correctErrorTypes = true
+ /*   javacOptions {
+        // These options are normally set automatically via the Hilt Gradle plugin, but we
+        // set them manually to workaround a bug in the Kotlin 1.5.20
+        option("-Adagger.fastInit=ENABLED")
+        option("-Adagger.hilt.android.internal.disableAndroidSuperclassValidation=true")
+    }*/
 }

@@ -9,5 +9,5 @@ import com.repoint.models.sharedmodels.Wallet
 @Database(entities = [User::class,Wallet::class] , version =  1 , exportSchema = false)
  abstract class AppDatabase : RoomDatabase()
 {
-    abstract fun AuthDao() : AuthDao
+    abstract fun authDao() : AuthDao
 }

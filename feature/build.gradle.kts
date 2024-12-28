@@ -34,6 +34,6 @@ android {
 
 dependencies {
 
-    implementation(project(":core:Dependencies"))
-    implementation(project(":core:basics"))
+    //implementation(project(":core:Dependencies"))
+    //implementation(project(":core:basics"))
 }

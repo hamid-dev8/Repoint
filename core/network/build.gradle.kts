@@ -5,7 +5,7 @@ plugins {
 
 android {
     namespace = "com.repoint.network"
-    compileSdk = 34
+    compileSdk = 35
 
     defaultConfig {
         minSdk = 26
@@ -34,6 +34,7 @@ android {
 
 dependencies {
 
+    implementation(project(":core:Dependencies"))
 
     //retrofit
     implementation(libs.retrofit)
@@ -41,7 +42,8 @@ dependencies {
     implementation(libs.converter.gson)
 
     //kotlin coroutine adapter for retrofit
-    implementation(libs.adapter.kotlin.coroutines)
+    //in retrofit 2.6 and higher it doesn't need to use this dependency
+    //implementation(libs.adapter.kotlin.coroutines)
 
 
 
@@ -57,5 +59,4 @@ dependencies {
     }
 
 
-    implementation(project(":core:Dependencies"))
 }

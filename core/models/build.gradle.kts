@@ -1,11 +1,14 @@
 plugins {
     alias(libs.plugins.android.library)
     alias(libs.plugins.kotlin.android)
+    alias(libs.plugins.ksp)
+
+    //alias(libs.plugins.kap)
 }
 
 android {
     namespace = "com.repoint.models"
-    compileSdk = 34
+    compileSdk = 35
 
     defaultConfig {
         minSdk = 26
@@ -37,8 +40,13 @@ dependencies {
     implementation(project(":core:Dependencies"))
 
     implementation(libs.androidx.room.runtime)
-
     // optional - Kotlin Extensions and Coroutines support for Room
     implementation(libs.androidx.room.ktx)
 
+    ksp(libs.androidx.room.compiler)
 }
+
+/*
+ksp {
+    arg("room.schemaLocation", "$projectDir/schemas")
+}*/

@@ -10,6 +10,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
+import com.repoint.app.navigation.RepointNavigation
 import com.repoint.basics.atoms.BasicTabLayout
 import com.repoint.basics.logic.ScreenActions
 
@@ -22,8 +23,8 @@ fun MainScreenPreview() {
 
 
 @Composable
-fun MainScreen(actions : ScreenActions) {
-    var tabIndex = 0
+fun MainScreen() {
+ /*   var tabIndex = 0
 
     Surface(Modifier.fillMaxSize()) {
         Scaffold(
@@ -44,6 +45,7 @@ fun MainScreen(actions : ScreenActions) {
             }
         }
 
-    }
+    }*/
+    RepointNavigation()
 
 }

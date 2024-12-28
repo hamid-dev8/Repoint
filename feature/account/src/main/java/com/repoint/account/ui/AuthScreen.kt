@@ -1,5 +1,6 @@
 package com.repoint.account.ui
 
+import android.annotation.SuppressLint
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -10,17 +11,21 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import com.repoint.basics.logic.ScreenActions
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.navigation.NavController
+import com.repoint.account.AuthViewModel
+import com.repoint.basics.logic.EcGen
+import com.repoint.basics.logic.EntropyManager
 
 
 @Composable
-@Preview
 fun AuthScreenPreview() {
 
     Box(
@@ -44,7 +49,12 @@ fun AuthScreenPreview() {
 
 
 @Composable
-fun AuthScreen(actions: ScreenActions) {
+fun AuthScreen(
+    navController: NavController,
+    viewModel: AuthViewModel = hiltViewModel<AuthViewModel>()
+) {
+    val context = LocalContext.current
+
 
     Box(
         Modifier
@@ -56,8 +66,13 @@ fun AuthScreen(actions: ScreenActions) {
                 .padding(4.dp)
                 .align(Alignment.BottomCenter)
         ) {
-            AuthButton("Create Wallet", actions)
-            AuthButton("Enter Wallet", actions)
+            AuthButton("Create Wallet"){
+                val entropyManager = EcGen()
+                entropyManager.getFromMnemonic()
+            }
+            AuthButton("Enter Wallet"){
+
+            }
         }
 
 
@@ -67,12 +82,16 @@ fun AuthScreen(actions: ScreenActions) {
 
 
 @Composable
-fun AuthButton(text: String, actions: ScreenActions) {
+fun AuthButton(
+    text: String,
+    onClick : () -> Unit
+) {
+
 
 
     Button(
         onClick = {
-            actions.onButtonClick()
+            onClick()
         },
         Modifier
             .fillMaxWidth()
@@ -81,4 +100,33 @@ fun AuthButton(text: String, actions: ScreenActions) {
     ) {
         Text(text, color = MaterialTheme.colorScheme.onTertiary)
     }
+}
+
+
+@SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
+@Composable
+fun Screen1(navController: NavController,viewModel : AuthViewModel = hiltViewModel()) {
+    Scaffold(
+        content = {
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                Button(onClick = { navController.navigate("screen2") }) {
+                    Text("Go to Screen 2")
+                }
+            }
+        }
+    )
+}
+
+@SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
+@Composable
+fun Screen2(navController: NavController,viewModel: AuthViewModel = hiltViewModel()) {
+    Scaffold(
+        content = {
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                Button(onClick = { navController.popBackStack() }) {
+                    Text("Go Back to Screen 1")
+                }
+            }
+        }
+    )
 }

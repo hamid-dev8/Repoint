@@ -5,9 +5,13 @@ plugins {
     alias(libs.plugins.kotlin.compose)
 
     //hilt need
-    alias(libs.plugins.kotlin.ksp) apply false
-    alias(libs.plugins.dagger.hilt.android) apply false
-    id("kotlin-kapt") apply false
+    alias(libs.plugins.ksp) apply false
+
+    id("kotlin-kapt")
+    alias(libs.plugins.hilt)
+
+    //id ("dagger.hilt.android.plugin")
+
 }
 
 android {
@@ -58,7 +62,7 @@ dependencies {
     api(libs.androidx.ui.graphics)
     api(libs.androidx.ui.tooling.preview)
     api(libs.androidx.material3)
-    testImplementation("junit:junit:4.12")
+    testApi(libs.junit.v412)
     androidTestApi(libs.androidx.junit)
     androidTestApi(libs.androidx.espresso.core)
     androidTestApi(platform(libs.androidx.compose.bom))
@@ -82,17 +86,36 @@ dependencies {
     //java//implementation (libs.core)
 
 
+
     //web3 android
     //noinspection GradleDependency
-    api (libs.core.v489android)
+    api(libs.core.v489android)
 
     //hilt
-    api(libs.hilt.android)
+    implementation(libs.hilt.android)
+    api(libs.androidx.hilt.navigation.fragment)
+    // Hilt core library
+    api("androidx.hilt:hilt-navigation-compose:1.2.0")
 
-   // ksp(libs.hilt.compiler)
+    // ksp(libs.hilt.compiler)
+    kapt(libs.hilt.compiler)
+    // Hilt compiler for annotation processing
+    //kapt ("com.google.dagger:hilt-compiler:2.51.1")
 
+
+
+    // Jetpack Compose integration
+    api(libs.navigation.compose)
+    //api(libs.hilt.compiler)
 }
-/*
+// Allow references to generated code
 kapt {
     correctErrorTypes = true
-}*/
+
+    /*javacOptions {
+        // These options are normally set automatically via the Hilt Gradle plugin, but we
+        // set them manually to workaround a bug in the Kotlin 1.5.20
+        option("-Adagger.fastInit=ENABLED")
+        option("-Adagger.hilt.android.internal.disableAndroidSuperclassValidation=true")
+    }*/
+}

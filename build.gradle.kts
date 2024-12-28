@@ -7,9 +7,12 @@ plugins {
     alias(libs.plugins.android.library) apply false
     alias(libs.plugins.jetbrains.kotlin.jvm) apply false
 
-    //hilt
-    alias(libs.plugins.dagger.hilt.android) apply false
-    //ksp
-    alias(libs.plugins.kotlin.ksp) apply false
+    //hilt plugin
+    alias(libs.plugins.hilt) apply false
+    //id ("dagger.hilt.android.plugin") version "2.51.1" apply false
 
+    //ksp
+    alias(libs.plugins.ksp) apply false
+    kotlin("kapt") version "2.1.0"
+   // kotlin("jvm") version "2.0.0" apply false
 }

@@ -1,11 +1,16 @@
 plugins {
     alias(libs.plugins.android.library)
     alias(libs.plugins.kotlin.android)
+    alias(libs.plugins.ksp)
+
+    //id ("dagger.hilt.android.plugin")
+    alias(libs.plugins.hilt)
+    kotlin("kapt")
 }
 
 android {
     namespace = "com.repoint.sources"
-    compileSdk = 34
+    compileSdk = 35
 
     defaultConfig {
         minSdk = 26
@@ -38,5 +43,9 @@ dependencies {
     implementation(project(":core:models"))
     implementation(project(":core:database"))
 
+    implementation(libs.hilt.android)
 
+    kapt(libs.hilt.compiler)
+    //kapt("com.google.dagger:hilt-android-compiler:2.51.1")
+   // kapt ("com.google.dagger:hilt-compiler:2.51.1")
 }

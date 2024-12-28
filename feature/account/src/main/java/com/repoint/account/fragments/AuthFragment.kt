@@ -27,7 +27,7 @@ class AuthFragment : Fragment(), ScreenActions {
     ): View? {
         return ComposeView(requireContext()).apply {
             setContent {
-                AuthScreen(this@AuthFragment)
+               // AuthScreen(this@AuthFragment)
             }
         }
     }

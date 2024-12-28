@@ -1,11 +1,16 @@
 plugins {
     alias(libs.plugins.android.library)
     alias(libs.plugins.kotlin.android)
+
+    kotlin("kapt")
+    alias(libs.plugins.ksp)
+    alias(libs.plugins.hilt)
+
 }
 
 android {
     namespace = "com.repoint.database"
-    compileSdk = 34
+    compileSdk = 35
 
     defaultConfig {
         minSdk = 26
@@ -37,8 +42,23 @@ dependencies {
     implementation(project(":core:Dependencies"))
     implementation(project(":core:models"))
 
+    //room
     implementation(libs.androidx.room.runtime)
-
     // optional - Kotlin Extensions and Coroutines support for Room
     implementation(libs.androidx.room.ktx)
+    ksp(libs.androidx.room.compiler)
+
+    //kapt(libs.androidx.room.compiler)
+
+    implementation(libs.hilt.android)
+    //  kapt("com.google.dagger:hilt-android-compiler:2.51.1")
+    kapt (libs.hilt.compiler)
+}
+// For KSP
+ksp {
+    arg("option_name", "option_value")
+// other options...
+}
+kapt{
+    correctErrorTypes = true
 }

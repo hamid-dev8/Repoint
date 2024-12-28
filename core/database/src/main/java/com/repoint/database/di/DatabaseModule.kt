@@ -27,6 +27,7 @@ internal object DatabaseModule {
     ).build()
 
     @Provides
-    fun provideAuthDao(database: AppDatabase) : AuthDao = database.AuthDao()
+    @Singleton
+    fun providesAuthDao(database: AppDatabase): AuthDao = database.authDao()
 
 }

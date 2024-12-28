@@ -1,4 +1,4 @@
-package com.repoint.models.sharedmodels
+package com.repoint.models.sharedmodels.ui
 
 sealed class UiState {
     object Loading : UiState()

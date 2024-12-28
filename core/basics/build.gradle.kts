@@ -44,4 +44,5 @@ android {
 
 dependencies {
     implementation(project(":core:Dependencies"))
+    implementation(project(":core:models"))
 }

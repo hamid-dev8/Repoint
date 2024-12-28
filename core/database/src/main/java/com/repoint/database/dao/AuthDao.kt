@@ -13,7 +13,7 @@ interface AuthDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun authUser(user: User)
 
-    @Query("SELECT id FROM users")
+    @Query("SELECT * FROM users")
     suspend fun getUser() : User
 
 
