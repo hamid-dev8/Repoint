@@ -1,6 +1,6 @@
 package di
 
-import com.repoint.sources.datarepo.UserRepositoryImp
+import com.repoint.sources.datarepo.WalletRepositoryImp
 import com.repoint.sources.datarepo.datasource.AuthDataSource
 import dagger.Binds
 import dagger.Module
@@ -16,7 +16,7 @@ interface RepoModule {
 
     @Binds
     @Singleton
-    fun bindAuthDataSource(imp: UserRepositoryImp ) : AuthDataSource
+    fun bindAuthDataSource(imp: WalletRepositoryImp ) : AuthDataSource
 
 
 }

@@ -1,6 +1,7 @@
 package com.repoint.account.ui
 
 import android.annotation.SuppressLint
+import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -17,14 +18,15 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
-import com.repoint.account.AuthViewModel
-import com.repoint.basics.logic.EcGen
-import com.repoint.basics.logic.EntropyManager
+import com.repoint.account.CreateWalletViewModel
+import com.repoint.basics.atoms.RepointCommonButton
 
 
+@Preview
 @Composable
 fun AuthScreenPreview() {
 
@@ -39,6 +41,9 @@ fun AuthScreenPreview() {
                 .align(Alignment.BottomCenter)
         ) {
             //AuthButton("Create Wallet",actions)
+            RepointCommonButton("salam", {
+
+            })
             //AuthButton("Enter Wallet",actions)
         }
 
@@ -49,13 +54,8 @@ fun AuthScreenPreview() {
 
 
 @Composable
-fun AuthScreen(
-    navController: NavController,
-    viewModel: AuthViewModel = hiltViewModel<AuthViewModel>()
-) {
+fun AuthScreen(navController: NavController) {
     val context = LocalContext.current
-
-
     Box(
         Modifier
             .fillMaxSize()
@@ -63,16 +63,15 @@ fun AuthScreen(
     ) {
         Column(
             Modifier
-                .padding(4.dp)
+                .padding(bottom = 36.dp)
                 .align(Alignment.BottomCenter)
         ) {
-            AuthButton("Create Wallet"){
-                val entropyManager = EcGen()
-                entropyManager.getFromMnemonic()
-            }
-            AuthButton("Enter Wallet"){
-
-            }
+            RepointCommonButton("Create Wallet", onClick = {
+                navController.navigate("walletConfirm")
+            })
+            RepointCommonButton("Enter Wallet", onClick = {
+                Toast.makeText(context, " NOT YET! " , Toast.LENGTH_SHORT).show()
+            })
         }
 
 
@@ -84,11 +83,8 @@ fun AuthScreen(
 @Composable
 fun AuthButton(
     text: String,
-    onClick : () -> Unit
+    onClick: () -> Unit
 ) {
-
-
-
     Button(
         onClick = {
             onClick()
@@ -105,7 +101,7 @@ fun AuthButton(
 
 @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
 @Composable
-fun Screen1(navController: NavController,viewModel : AuthViewModel = hiltViewModel()) {
+fun Screen1(navController: NavController, viewModel: CreateWalletViewModel = hiltViewModel()) {
     Scaffold(
         content = {
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -119,7 +115,7 @@ fun Screen1(navController: NavController,viewModel : AuthViewModel = hiltViewMod
 
 @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
 @Composable
-fun Screen2(navController: NavController,viewModel: AuthViewModel = hiltViewModel()) {
+fun Screen2(navController: NavController, viewModel: CreateWalletViewModel = hiltViewModel()) {
     Scaffold(
         content = {
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {

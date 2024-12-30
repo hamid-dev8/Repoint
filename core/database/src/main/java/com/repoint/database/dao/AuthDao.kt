@@ -4,6 +4,7 @@ import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
+import com.repoint.models.sharedmodels.RepointWallet
 import com.repoint.models.sharedmodels.User
 
 
@@ -11,10 +12,9 @@ import com.repoint.models.sharedmodels.User
 interface AuthDao {
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun authUser(user: User)
+    suspend fun authWallet(wallet: RepointWallet)
 
-    @Query("SELECT * FROM users")
-    suspend fun getUser() : User
-
+    @Query("SELECT * FROM wallets WHERE walletId = :id LIMIT 1")
+    suspend fun getWallet(id : String) : RepointWallet
 
 }

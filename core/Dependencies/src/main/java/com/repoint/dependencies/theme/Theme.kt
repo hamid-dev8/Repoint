@@ -18,7 +18,11 @@ private val DarkColorScheme = darkColorScheme(
     tertiaryContainer = aliceBlue,
     onTertiaryContainer = lapisLazul,
     background = ghostWhite,
-    onBackground = richBlack
+    onBackground = richBlack,
+    surface = ghostWhite,
+    onSurface = richBlack,
+    onPrimaryContainer = Sepia,
+    secondaryContainer = RoseWood
 )
 
 private val LightColorScheme = lightColorScheme(
@@ -27,8 +31,13 @@ private val LightColorScheme = lightColorScheme(
     tertiary = PowderBlue,
     tertiaryContainer = aliceBlue,
     onTertiaryContainer = lapisLazul,
-    background = richBlack,
-    onBackground = ghostWhite
+    background = ghostWhite,
+    onBackground = richBlack,
+    surface = ghostWhite,
+    onSurface = richBlack,
+    onPrimaryContainer = Sepia,
+    secondaryContainer = RoseWood
+
 
     /* Other default colors to override
     background = Color(0xFFFFFBFE),
@@ -49,10 +58,10 @@ fun RepointTheme(
     content: @Composable () -> Unit
 ) {
     val colorScheme = when {
-        dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
+        /*dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
             val context = LocalContext.current
             if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
-        }
+        }*/
 
         darkTheme -> DarkColorScheme
         else -> LightColorScheme
@@ -60,7 +69,7 @@ fun RepointTheme(
 
     MaterialTheme(
         colorScheme = colorScheme,
-        typography = Typography,
+        typography = RepointTypography,
         content = content
     )
 }

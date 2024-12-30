@@ -1,5 +1,6 @@
 package com.repoint.app.ui
 
+import android.annotation.SuppressLint
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -10,8 +11,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.navigation.NavController
 import com.repoint.app.navigation.RepointNavigation
 import com.repoint.basics.atoms.BasicTabLayout
+import com.repoint.basics.atoms.RepointBar
+import com.repoint.basics.atoms.TopAppBarWithBackButton
 import com.repoint.basics.logic.ScreenActions
 
 
@@ -24,28 +28,5 @@ fun MainScreenPreview() {
 
 @Composable
 fun MainScreen() {
- /*   var tabIndex = 0
-
-    Surface(Modifier.fillMaxSize()) {
-        Scaffold(
-            bottomBar = { tabIndex = BasicTabLayout(actions) }
-        ) { innerpadding ->
-
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(innerpadding),
-                contentAlignment = Alignment.Center
-            ){
-                when (tabIndex){
-                    0 -> Text("Home Content")
-                    1 -> Text("Profile Content")
-                    2 -> Text("Settings Content")
-                }
-            }
-        }
-
-    }*/
     RepointNavigation()
-
 }

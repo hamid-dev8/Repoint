@@ -1,10 +1,11 @@
 package com.repoint.sources.datarepo.datasource
 
+import com.repoint.models.sharedmodels.RepointWallet
 import com.repoint.models.sharedmodels.User
 
 interface AuthDataSource
 {
-    suspend fun authUser(user : User)
-    suspend fun getUser() : User
+    suspend fun authWallet(wallet : RepointWallet)
+    suspend fun getWallet(id : String) : RepointWallet
 
 }

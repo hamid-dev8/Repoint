@@ -12,7 +12,7 @@ object EntropyManager {
     val entropy_bytes_32 = 32
     val ethereumTag = "ETH"
 
-    fun generateEntropy(entropyBytes: Int): ByteArray {
+    fun generateEntropy(entropyBytes: Int = 16): ByteArray {
         val random = SecureRandom()
         val entropy: ByteArray = ByteArray(entropyBytes)
         random.nextBytes(entropy)
