@@ -119,8 +119,8 @@ fun WalletConfirmSurface(
                     .align(Alignment.BottomCenter)
                     .padding(8.dp),
                 onClick = {
-                    val phrases = viewModel.createUserWallet()
-                    onConfirm(phrases)
+                    val walletId = viewModel.createUserWallet()
+                    onConfirm(walletId)
                     //navController.navigate("phrase")
                 })
         }

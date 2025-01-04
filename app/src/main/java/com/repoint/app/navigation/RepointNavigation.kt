@@ -1,10 +1,13 @@
 package com.repoint.app.navigation
 
+import android.widget.Toast
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.platform.LocalContext
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.repoint.account.ui.AuthScreen
+import com.repoint.account.ui.ConfirmPhrases
 import com.repoint.account.ui.WalletConfirmSurface
 import com.repoint.account.ui.ShowPhrase
 
@@ -16,13 +19,20 @@ fun RepointNavigation() {
     NavHost(navController = navController, startDestination = "auth") {
         composable("auth") { AuthScreen(navController) }
         composable("walletConfirm") {
-            WalletConfirmSurface(navController, onConfirm = { phrases ->
-                navController.navigate("phrase/$phrases")
+            WalletConfirmSurface(navController, onConfirm = { walletId ->
+                navController.navigate("phrase/$walletId")
             })
         }
         composable("phrase/{phrases}") { backStackEntry ->
-            val phraseStrings = backStackEntry.arguments?.getString("phrases") ?: ""
-            ShowPhrase(data = phraseStrings,navController) }
+            val walletId = backStackEntry.arguments?.getString("phrases") ?: ""
+            ShowPhrase(walletId = walletId, navController, onConfirm = { phrasesList ->
+                navController.navigate("confirmPhrases/$phrasesList")
+            })
+        }
+        composable("confirmPhrases/{phraseList}") { backStackEntry ->
+            val phrases = backStackEntry.arguments?.getString("phraseList") ?: ""
+            ConfirmPhrases(phrases = phrases,navController)
+        }
     }
 
 
