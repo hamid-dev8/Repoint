@@ -22,7 +22,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
-import com.repoint.account.CreateWalletViewModel
+import com.repoint.account.WalletViewModel
 import com.repoint.basics.atoms.RepointAppBar
 import com.repoint.basics.atoms.RepointCheckbox
 import com.repoint.basics.atoms.RepointCommonButton
@@ -70,7 +70,7 @@ enum class CheckboxItemTexts(val displayText: String) {
 @Composable
 fun WalletConfirmSurface(
     navController: NavController,
-    viewModel: CreateWalletViewModel = hiltViewModel<CreateWalletViewModel>(),
+    viewModel: WalletViewModel = hiltViewModel<WalletViewModel>(),
     onConfirm : (String) -> Unit)
  {
     var isChecked by remember { mutableStateOf(false) }

@@ -72,6 +72,8 @@ dependencies {
 
     //navigation_compose
     api(libs.navigation.compose)
+    //compose constraint
+    api(libs.androidx.constraintlayout.compose)
 
     // ViewModel
     api(libs.lifecycle.viewmodel.ktx)
@@ -102,11 +104,23 @@ dependencies {
     // Hilt compiler for annotation processing
     //kapt ("com.google.dagger:hilt-compiler:2.51.1")
 
+    // Java language implementation
+    api(libs.androidx.biometric)
+    // Kotlin
+    api(libs.androidx.biometric.v140alpha02)
+
+
+    //gson
+    api(libs.gson)
 
 
     // Jetpack Compose integration
     api(libs.navigation.compose)
     //api(libs.hilt.compiler)
+
+    api(libs.androidx.appcompat.v170)
+    // For loading and tinting drawables on older versions of the platform
+    api(libs.androidx.appcompat.resources)
 }
 // Allow references to generated code
 kapt {

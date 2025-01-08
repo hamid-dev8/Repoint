@@ -11,6 +11,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.fragment.app.FragmentActivity
 import androidx.navigation.NavController
 import com.repoint.app.navigation.RepointNavigation
 import com.repoint.basics.atoms.BasicTabLayout
@@ -27,6 +28,6 @@ fun MainScreenPreview() {
 
 
 @Composable
-fun MainScreen() {
-    RepointNavigation()
+fun MainScreen(activity: FragmentActivity) {
+    RepointNavigation(activity)
 }

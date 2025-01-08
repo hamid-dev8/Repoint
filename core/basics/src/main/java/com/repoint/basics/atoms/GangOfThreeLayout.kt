@@ -51,12 +51,15 @@ fun RepointThreeTextSelectable(
     correctAnswers: List<Pair<Int, String>>,
     isSelectedCorrectly: (Boolean) -> Unit
 ) {
-    // State for selected indices and answers
-    val selectedIndices = remember { mutableStateListOf(-1, -1, -1, -1) }
-    val selectedAnswers = remember { mutableStateListOf(0, 0, 0, 0) }
+
 
     // Chunk the phrases into rows
     val rows = remember { shuffled.chunked(3) }
+    // State for selected indices and answers
+    val selectedIndices = remember { mutableStateListOf(*Array(rows.size) {-1}) }
+    val selectedAnswers = remember { mutableStateListOf(*Array(rows.size) {-1}) }
+
+
 
     // Calculate correctness only when selections are updated
     val results = remember(selectedAnswers) {
@@ -99,7 +102,7 @@ fun RepointThreeTextSelectable(
 
             // Correct answer information
             Text(
-                text = "Correct Word ${correctAnswers[rowIndex].first} : ",
+                text = "Correct Word of ${correctAnswers[rowIndex].first} : ",
                 style = MaterialTheme.typography.bodySmall,
                 modifier = Modifier.padding(top = 8.dp)
             )

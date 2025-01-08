@@ -22,7 +22,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
-import com.repoint.account.CreateWalletViewModel
+import com.repoint.account.WalletViewModel
 import com.repoint.basics.atoms.RepointCommonButton
 
 
@@ -101,7 +101,7 @@ fun AuthButton(
 
 @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
 @Composable
-fun Screen1(navController: NavController, viewModel: CreateWalletViewModel = hiltViewModel()) {
+fun Screen1(navController: NavController, viewModel: WalletViewModel = hiltViewModel()) {
     Scaffold(
         content = {
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -115,7 +115,7 @@ fun Screen1(navController: NavController, viewModel: CreateWalletViewModel = hil
 
 @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
 @Composable
-fun Screen2(navController: NavController, viewModel: CreateWalletViewModel = hiltViewModel()) {
+fun Screen2(navController: NavController, viewModel: WalletViewModel = hiltViewModel()) {
     Scaffold(
         content = {
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {

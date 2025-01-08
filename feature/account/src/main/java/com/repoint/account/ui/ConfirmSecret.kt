@@ -21,7 +21,7 @@ import kotlin.random.Random
 
 
 @Composable
-fun ConfirmPhrases(phrases: String, navController: NavController) {
+fun ConfirmPhrases(phrases: String, navController: NavController,onConfirm : () -> Unit) {
 
     val phraseList = phrases.split(" ")
     val shuffledList = phraseList.chunked(3).flatMap { it.shuffled() }
@@ -51,8 +51,7 @@ fun ConfirmPhrases(phrases: String, navController: NavController) {
             "Confirm", modifier = Modifier
                 .align(Alignment.BottomCenter)
                 .padding(8.dp), onClick = {
-
-
+                    onConfirm()
             }, enabled = isUserCorrect)
     }
 

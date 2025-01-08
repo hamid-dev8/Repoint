@@ -1,7 +1,11 @@
 package di
 
+import com.repoint.sources.datarepo.BiometricRepositoryImp
+import com.repoint.sources.datarepo.UserRepositoryImp
 import com.repoint.sources.datarepo.WalletRepositoryImp
 import com.repoint.sources.datarepo.datasource.AuthDataSource
+import com.repoint.sources.datarepo.datasource.BiometricDataSource
+import com.repoint.sources.datarepo.datasource.UserDataSource
 import dagger.Binds
 import dagger.Module
 import dagger.hilt.InstallIn
@@ -18,5 +22,12 @@ interface RepoModule {
     @Singleton
     fun bindAuthDataSource(imp: WalletRepositoryImp ) : AuthDataSource
 
+    @Binds
+    @Singleton
+    fun bindUserDataSource(imp : UserRepositoryImp) : UserDataSource
+
+    @Binds
+    @Singleton
+    fun bindBiometricDataSource(imp : BiometricRepositoryImp) : BiometricDataSource
 
 }

@@ -15,7 +15,7 @@ import javax.inject.Inject
 
 
 @HiltViewModel
-class CreateWalletViewModel @Inject constructor(private val repository: AuthDataSource) :
+class WalletViewModel @Inject constructor(private val repository: AuthDataSource) :
     ViewModel() {
 
     private val _data = mutableStateOf("Nothing Yet!")
