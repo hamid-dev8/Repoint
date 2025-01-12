@@ -19,4 +19,5 @@ import javax.inject.Singleton
     override suspend fun getWallet(id : String): RepointWallet {
         return authDao.getWallet(id)
     }
+
 }

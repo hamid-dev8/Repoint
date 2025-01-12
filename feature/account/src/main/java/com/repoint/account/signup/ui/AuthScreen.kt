@@ -1,4 +1,4 @@
-package com.repoint.account.ui
+package com.repoint.account.signup.ui
 
 import android.annotation.SuppressLint
 import android.widget.Toast
@@ -70,7 +70,7 @@ fun AuthScreen(navController: NavController) {
                 navController.navigate("walletConfirm")
             })
             RepointCommonButton("Enter Wallet", onClick = {
-                Toast.makeText(context, " NOT YET! " , Toast.LENGTH_SHORT).show()
+                navController.navigate("login")
             })
         }
 

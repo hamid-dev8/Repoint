@@ -56,6 +56,7 @@ dependencies {
     implementation(project(":core:basics"))
     implementation(project(":feature"))
     implementation(project(":feature:account"))
+    implementation(project(":feature:dashboard"))
     implementation(project(":core:models"))
 
     implementation(libs.hilt.android)
@@ -64,9 +65,11 @@ dependencies {
     kapt(libs.hilt.compiler)
 }
 
+
 hilt{
     enableAggregatingTask = true
 }
+
 
 kapt {
     correctErrorTypes = true

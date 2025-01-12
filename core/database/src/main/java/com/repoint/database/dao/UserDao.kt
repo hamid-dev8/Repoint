@@ -13,7 +13,7 @@ interface UserDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun authUser(user : User)
 
-    @Query("SELECT * FROM users WHERE userId = :userId LIMIT 1")
-    suspend fun getUser(userId : Int) : User
+    @Query("SELECT * FROM users")
+    suspend fun getUser() : User
 
 }

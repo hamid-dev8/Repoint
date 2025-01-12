@@ -7,7 +7,7 @@ import android.view.ViewGroup
 import android.widget.Toast
 import androidx.compose.ui.platform.ComposeView
 import androidx.fragment.app.Fragment
-import com.repoint.account.ui.AuthScreen
+import com.repoint.account.signup.ui.AuthScreen
 import com.repoint.basics.logic.ScreenActions
 import com.repoint.database.dao.AuthDao
 import dagger.hilt.android.AndroidEntryPoint

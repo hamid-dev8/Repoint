@@ -8,11 +8,13 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.google.gson.Gson
-import com.repoint.account.ui.AuthScreen
-import com.repoint.account.ui.ConfirmPhrases
-import com.repoint.account.ui.SetPinCode
-import com.repoint.account.ui.WalletConfirmSurface
-import com.repoint.account.ui.ShowPhrase
+import com.repoint.account.login.LoginScreen
+import com.repoint.account.signup.ui.AuthScreen
+import com.repoint.account.signup.ui.ConfirmPhrases
+import com.repoint.account.signup.ui.SetPinCode
+import com.repoint.account.signup.ui.WalletConfirmSurface
+import com.repoint.account.signup.ui.ShowPhrase
+import com.repoint.dashboard.ui.Home
 
 
 val gson = Gson()
@@ -21,6 +23,8 @@ val gson = Gson()
 fun RepointNavigation(activity: FragmentActivity) {
     val navController = rememberNavController()
 
+
+    //auth and signup
 
     NavHost(navController = navController, startDestination = "auth") {
         composable("auth") { AuthScreen(navController) }
@@ -32,27 +36,42 @@ fun RepointNavigation(activity: FragmentActivity) {
         composable("phrase/{phrases}") { backStackEntry ->
             val walletId = backStackEntry.arguments?.getString("phrases") ?: ""
             ShowPhrase(walletId = walletId, navController, onConfirm = { phrasesList ->
-                navController.navigate("confirmPhrases/$phrasesList")
+                navController.navigate("confirmPhrases/$walletId/$phrasesList")
             })
         }
-        composable("confirmPhrases/{phraseList}") { backStackEntry ->
+        composable("confirmPhrases/{walletId}/{phraseList}") { backStackEntry ->
             val phrases = backStackEntry.arguments?.getString("phraseList") ?: ""
+            val walletId = backStackEntry.arguments?.getString("walletId") ?: ""
             ConfirmPhrases(phrases = phrases, navController, onConfirm = {
-                navController.navigate("setPin")
+                navController.navigate("setPin/$walletId")
             })
         }
 
-        composable("setPin") { backStackEntry ->
-            SetPinCode(digits = arrayOf(), navController, onConfirm = { digitStates ->
-                navController.navigate("confirmPin/$digitStates")
+        composable("setPin/{walletId}") { backStackEntry ->
+            val walletId = backStackEntry.arguments?.getString("walletId") ?: ""
+            SetPinCode(walletId, digits = arrayOf(), navController, onConfirm = { digitStates ->
+                navController.navigate("confirmPin/$walletId/$digitStates")
             }, true, activity = activity)
         }
-        composable("confirmPin/{digitStates}") { backStateEntry ->
+        composable("confirmPin/{walletId}/{digitStates}") { backStateEntry ->
+            val walletId = backStateEntry.arguments?.getString("walletId") ?: ""
             val digitStatesJson = backStateEntry.arguments?.getString("digitStates") ?: "[]"
             val digitStates: Array<String> =
                 gson.fromJson(digitStatesJson, Array<String>::class.java)
-            SetPinCode(digits = digitStates, navController, onConfirm = {
+            SetPinCode(walletId, digits = digitStates, navController, onConfirm = {
+                //TODO Handle confirmation here
             }, false, activity = activity)
+        }
+
+
+        //login
+        composable("login") {
+            LoginScreen(navController)
+        }
+
+
+        composable("home") {
+            Home()
         }
     }
 

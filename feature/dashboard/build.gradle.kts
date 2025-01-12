@@ -1,15 +1,15 @@
 plugins {
     alias(libs.plugins.android.library)
     alias(libs.plugins.kotlin.android)
-    alias(libs.plugins.ksp)
+    alias(libs.plugins.kotlin.compose)
+    id("kotlin-kapt")
+    id("com.google.devtools.ksp")
 
-    //id ("dagger.hilt.android.plugin")
     alias(libs.plugins.hilt)
-    kotlin("kapt")
 }
 
 android {
-    namespace = "com.repoint.sources"
+    namespace = "com.repoint.dashboard"
     compileSdk = 35
 
     defaultConfig {
@@ -35,18 +35,23 @@ android {
     kotlinOptions {
         jvmTarget = "11"
     }
+
+    buildFeatures {
+        compose = true
+    }
 }
 
 dependencies {
 
     implementation(project(":core:Dependencies"))
-    implementation(project(":core:models"))
-    implementation(project(":core:database"))
-    implementation(project(":core:basics"))
+
 
     implementation(libs.hilt.android)
 
-    kapt(libs.hilt.compiler)
-    //kapt("com.google.dagger:hilt-android-compiler:2.51.1")
-   // kapt ("com.google.dagger:hilt-compiler:2.51.1")
+    kapt (libs.hilt.compiler)
+
+}
+
+kapt{
+    correctErrorTypes = true
 }

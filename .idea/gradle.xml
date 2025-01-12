@@ -21,6 +21,7 @@
             <option value="$PROJECT_DIR$/data/sources" />
             <option value="$PROJECT_DIR$/feature" />
             <option value="$PROJECT_DIR$/feature/account" />
+            <option value="$PROJECT_DIR$/feature/dashboard" />
           </set>
         </option>
         <option name="resolveExternalAnnotations" value="false" />

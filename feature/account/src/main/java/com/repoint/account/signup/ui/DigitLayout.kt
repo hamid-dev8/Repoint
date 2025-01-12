@@ -1,4 +1,4 @@
-package com.repoint.account.ui
+package com.repoint.account.signup.ui
 
 import android.util.Log
 import android.widget.Toast
@@ -116,12 +116,13 @@ fun SingleDigitRow(digitState: SnapshotStateList<String>, modifier: Modifier, fo
 
 @Composable
 fun RepointNumPad(
+    walletId: String,
     digits: Array<String>?,
     navController: NavController,
     onConfirm: (ArrayList<String>) -> Unit,
     isItSet: Boolean,
-    activity : FragmentActivity,
-    viewModel : UserViewModel = hiltViewModel()
+    activity: FragmentActivity,
+    viewModel: UserViewModel = hiltViewModel()
 ) {
 
     val context = LocalContext.current
@@ -136,7 +137,13 @@ fun RepointNumPad(
     var showDialog = remember { mutableStateOf(false) }
     var showBiometricDialog by remember { mutableStateOf(false) }
 
-    Log.d("focus", "digits that passed is : ${digits.contentToString()}")
+    Log.d(
+        "focus",
+        "digits that passed is : ${digits.contentToString()} & ${digits?.joinToString("")}"
+    )
+
+    Log.d("focus", "wallet id is : $walletId")
+
 
 
     RepointAppBar("", navController, exp = {
@@ -301,13 +308,16 @@ fun RepointNumPad(
                 focusedIndex = 0
             }, onConfirm = {
                 showBiometricDialog = true
-               // viewModel.createUser()
+                digits?.joinToString("")?.let { viewModel.createUser(walletId, it) }
                 showDialog.value = false
             })
         }
     })
 
     if (showBiometricDialog) {
+        LaunchedEffect(walletId) {
+            Log.d("focus","user is : ${viewModel.fetchUser()}")
+        }
         BiometricDialog(
             activity,
             onDismiss = {
@@ -317,6 +327,7 @@ fun RepointNumPad(
             },
             onConfirm = {
                 showBiometricDialog = false
+                navController.navigate("home")
                 Log.d("focus", "biometric Confirmed")
             }
         )
@@ -390,7 +401,7 @@ fun BiometricScreen(
 
     if (isBiometricAvailable) {
         Button(onClick = {
-            Log.d("Biometric","biometric activity is :$activity")
+            Log.d("Biometric", "biometric activity is :$activity")
             activity?.let {
                 viewModel.authenticate(it, onSuccess, onFailure)
             }

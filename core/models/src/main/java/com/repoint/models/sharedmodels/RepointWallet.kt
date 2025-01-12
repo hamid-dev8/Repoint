@@ -10,7 +10,7 @@ data class RepointWallet(
     @PrimaryKey val walletId: String = UUID.randomUUID().toString(),
     val phrase : String,
     val name: String?,
-    val creationDate: Long,
+    val creationDate: String,
     val network: String,
     val publicKey: String,
     val privateKey: String,

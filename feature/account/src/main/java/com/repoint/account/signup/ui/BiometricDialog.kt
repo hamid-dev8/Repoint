@@ -1,4 +1,4 @@
-package com.repoint.account.ui
+package com.repoint.account.signup.ui
 
 import android.util.Log
 import androidx.compose.foundation.layout.Column

@@ -6,6 +6,6 @@ interface UserDataSource
 {
 
     suspend fun authUser(user : User)
-    suspend fun getUser(id : Int) : User
+    suspend fun getUser() : User
 
 }

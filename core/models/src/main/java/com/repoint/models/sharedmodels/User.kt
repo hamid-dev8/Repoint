@@ -15,4 +15,4 @@ import androidx.room.PrimaryKey
             onDelete = ForeignKey.CASCADE
         )
     ], indices = [Index(value = ["walletId"])]) // improve query on foreign key
-data class User(@PrimaryKey(autoGenerate = true) val userId : Int,val walletId : String,val passwordHash : String = "0",val createdAt : Long)
+data class User(@PrimaryKey(autoGenerate = true) val userId : Int = 0,val walletId : String,val salt : String,val passwordHash : String = "0",val createdAt : String)

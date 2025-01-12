@@ -21,9 +21,9 @@ class WalletViewModel @Inject constructor(private val repository: AuthDataSource
     private val _data = mutableStateOf("Nothing Yet!")
     val data: State<String> = _data
     val result = mutableStateOf<String?>(null)
+    val ecGen = EcGen.instance
 
     fun createUserWallet(): String {
-        val ecGen = EcGen()
         val wallet = ecGen.getFromMnemonic()
         viewModelScope.launch {
             repository.authWallet(wallet)
@@ -36,14 +36,25 @@ class WalletViewModel @Inject constructor(private val repository: AuthDataSource
     }
     //return wallet.phrase    }
 
-    suspend fun showPhrase(id: String)  : RepointWallet{
+    suspend fun showPhrase(id: String): RepointWallet {
         val deferredWallet = viewModelScope.async {
-             val wallet = repository.getWallet(id)
+            val wallet = repository.getWallet(id)
             wallet
         }
-        Log.d("showPh",id.toString())
+        Log.d("showPh", id.toString())
 
         return deferredWallet.await()
+    }
+
+    fun importWallet(mnemonic: String, walletName: String): String? {
+        val wallet = ecGen.importWithMnemonic(mnemonic, walletName = walletName)
+
+        viewModelScope.launch {
+            Log.d("import" , "wallet is = $wallet")
+            wallet?.let { repository.authWallet(it) }
+        }
+
+        return wallet?.walletId
     }
 
 
