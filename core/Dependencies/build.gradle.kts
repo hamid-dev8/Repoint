@@ -121,6 +121,9 @@ dependencies {
     api(libs.androidx.appcompat.v170)
     // For loading and tinting drawables on older versions of the platform
     api(libs.androidx.appcompat.resources)
+
+    api(libs.androidx.foundation)
+
 }
 // Allow references to generated code
 kapt {

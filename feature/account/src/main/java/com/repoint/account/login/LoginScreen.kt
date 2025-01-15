@@ -33,14 +33,15 @@ import com.repoint.basics.atoms.SimpleEditText
 fun PreviewLogin() {
     val context = LocalContext.current
     val navController = NavController(context)
-    LoginScreen(navController = navController)
+    //LoginScreen(navController = navController)
 
 }
 
 @Composable
 fun LoginScreen(
     navController: NavController,
-    viewModel: WalletViewModel = hiltViewModel()
+    viewModel: WalletViewModel = hiltViewModel(),
+    onConfirm: (String) -> Unit
 ) {
     var walletNameInput by remember { mutableStateOf("") } // State to hold the user input
     var secretInput by remember { mutableStateOf("") } // State to hold the user input
@@ -100,9 +101,15 @@ fun LoginScreen(
             RepointCommonButton(
                 "Restore Wallet", onClick = {
 
-                   val walletId =  viewModel.importWallet(secretInput, walletNameInput)
+                    val walletId = viewModel.importWallet(secretInput, walletNameInput)
 
-                    Log.d("import","wallet is set and its id is = $walletId")
+                    Log.d("import", "wallet is set and its id is = $walletId")
+
+                    if (walletId != null) onConfirm(walletId) else Toast.makeText(
+                        context,
+                        "its not a valid Wallet",
+                        Toast.LENGTH_SHORT
+                    ).show()
                 },
                 Modifier
                     .align(Alignment.BottomCenter)

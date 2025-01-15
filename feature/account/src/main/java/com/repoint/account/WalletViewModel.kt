@@ -49,9 +49,11 @@ class WalletViewModel @Inject constructor(private val repository: AuthDataSource
     fun importWallet(mnemonic: String, walletName: String): String? {
         val wallet = ecGen.importWithMnemonic(mnemonic, walletName = walletName)
 
-        viewModelScope.launch {
-            Log.d("import" , "wallet is = $wallet")
-            wallet?.let { repository.authWallet(it) }
+        if  (wallet != null) {
+            viewModelScope.launch {
+                Log.d("import", "wallet is = $wallet")
+                wallet?.let { repository.authWallet(it) }
+            }
         }
 
         return wallet?.walletId
