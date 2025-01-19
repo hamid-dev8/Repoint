@@ -1,19 +1,18 @@
 package com.repoint.app
 
 import android.os.Bundle
-import android.widget.Toast
-import androidx.activity.ComponentActivity
+import android.view.View
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.tooling.preview.Preview
-import androidx.fragment.app.FragmentActivity
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalView
+import androidx.lifecycle.Lifecycle
 import com.repoint.app.ui.MainScreen
 import com.repoint.dependencies.theme.RepointTheme
 import dagger.hilt.android.AndroidEntryPoint
@@ -30,41 +29,34 @@ class MainActivity : AppCompatActivity() {
         setTheme(R.style.Theme_Repoint)
         setContent {
             RepointTheme {
-                    //val viewModel = hiltViewModel<AuthViewModel>()
-                    Toast.makeText(this,"sallam",Toast.LENGTH_LONG).show()
-                   // MainScreen()
-                   // AuthScreen()
-                    MainScreen(this)
+                FullScreenContent(this)
             }
+
         }
+    }
+}
 
+@Composable
+fun FullScreenContent(activity: MainActivity) {
+    val view = LocalView.current
+    val context = LocalContext.current
 
-
-
+    // Set the system UI visibility flags
+    DisposableEffect(Lifecycle.Event.ON_RESUME) {
+        val decorView = view.rootView
+        decorView.systemUiVisibility = (
+                View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY or
+                        View.SYSTEM_UI_FLAG_FULLSCREEN or
+                        View.SYSTEM_UI_FLAG_HIDE_NAVIGATION or
+                        View.SYSTEM_UI_FLAG_LAYOUT_STABLE or
+                        View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION or
+                        View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
+                )
+        onDispose { /* Clean up if necessary */ }
     }
 
-
-
-
-}
-
-@Composable
-fun Greeting(name: String, modifier: Modifier = Modifier) {
-    Text(
-        text = "Hello $name!",
-        modifier = modifier
-    )
-}
-
-@Preview(showBackground = true)
-@Composable
-fun GreetingPreview() {
-    RepointTheme {
-        Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-            Greeting(
-                name = "Android",
-                modifier = Modifier.padding(innerPadding)
-            )
-        }
+    // Your UI content
+    Box(Modifier.fillMaxSize()) {
+        MainScreen(activity)
     }
 }

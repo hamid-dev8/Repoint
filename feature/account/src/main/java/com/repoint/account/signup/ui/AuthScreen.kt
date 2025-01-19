@@ -1,54 +1,42 @@
 package com.repoint.account.signup.ui
 
-import android.annotation.SuppressLint
-import android.widget.Toast
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Button
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Download
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.constraintlayout.compose.ConstraintLayout
 import androidx.navigation.NavController
-import com.repoint.account.WalletViewModel
-import com.repoint.basics.atoms.RepointCommonButton
+import com.repoint.basics.atoms.BigPng
+import com.repoint.basics.atoms.WalletButton
+import com.repoint.dependencies.theme.RepointTypography
+import com.repoint.dependencies.theme.repointBlue
+import com.repoint.dependencies.theme.repointOrange
 
 
 @Preview
 @Composable
 fun AuthScreenPreview() {
 
-    Box(
-        Modifier
-            .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background)
-    ) {
-        Column(
-            Modifier
-                .padding(4.dp)
-                .align(Alignment.BottomCenter)
-        ) {
-            //AuthButton("Create Wallet",actions)
-            RepointCommonButton("salam", {
-
-            })
-            //AuthButton("Enter Wallet",actions)
-        }
-
-
-    }
+    AuthScreen(navController = NavController(context = LocalContext.current))
 
 }
 
@@ -56,73 +44,117 @@ fun AuthScreenPreview() {
 @Composable
 fun AuthScreen(navController: NavController) {
     val context = LocalContext.current
-    Box(
+    ConstraintLayout(
         Modifier
             .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background)
+            .background(MaterialTheme.colorScheme.background).fillMaxSize().padding(16.dp),
     ) {
-        Column(
-            Modifier
-                .padding(bottom = 36.dp)
-                .align(Alignment.BottomCenter)
-        ) {
-            RepointCommonButton("Create Wallet", onClick = {
-                navController.navigate("walletConfirm")
-            })
-            RepointCommonButton("Enter Wallet", onClick = {
-                navController.navigate("login")
-            })
-        }
 
+        val (topViews, centerViews, bottomViews) = createRefs()
+
+        Box(modifier = Modifier.constrainAs(topViews) {
+            top.linkTo(parent.top)
+            start.linkTo(parent.start)
+            end.linkTo(parent.end)
+        }) {
+            AuthInfo(modifier = Modifier.padding(2.dp))
+        }
+        BigPng(
+            com.repoint.dependencies.R.drawable.wallet,
+            modifier = Modifier.constrainAs(centerViews) {
+                top.linkTo(topViews.bottom)
+                start.linkTo(parent.start)
+                end.linkTo(parent.end)
+                bottom.linkTo(bottomViews.top)
+            })
+
+        AuthButtons(navController, modifier = Modifier.constrainAs(bottomViews) {
+            start.linkTo(parent.start)
+            end.linkTo(parent.end)
+            bottom.linkTo(parent.bottom)
+        })
 
     }
-
 }
 
+@Composable
+fun AuthButtons(navController: NavController, modifier: Modifier) {
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
+    ) {
+        WalletButton(
+            text = "Create new wallet",
+            subText = "Secret phrase or Swift wallet",
+            backgroundColor = repointOrange, // Orange
+            icon = {
+                Icon(
+                    imageVector = Icons.Filled.Add,
+                    contentDescription = "Add Icon",
+                    tint = Color(0xFFFFA726)
+                )
+            },
+            onClick = { navController.navigate("walletConfirm") }
+        )
+
+        WalletButton(
+            text = "Add existing wallet",
+            subText = "Import, restore or view-only",
+            backgroundColor = repointBlue, // Blue
+            icon = {
+                Icon(
+                    imageVector = Icons.Filled.Download,
+                    contentDescription = "Download Icon",
+                    tint = Color(0xFF1565C0)
+                )
+            },
+            onClick = { navController.navigate("login") }
+        )
+    }
+}
+//
+//
 
 @Composable
-fun AuthButton(
-    text: String,
-    onClick: () -> Unit
-) {
-    Button(
-        onClick = {
-            onClick()
-        },
+fun AuthInfo(modifier: Modifier) {
+
+    Column(
         Modifier
             .fillMaxWidth()
-            .padding(top = 8.dp, bottom = 8.dp)
-            .height(48.dp), shape = RoundedCornerShape(8.dp)
+            .padding(start = 8.dp)
     ) {
-        Text(text, color = MaterialTheme.colorScheme.onTertiary)
+
+        /*PngWithText(
+            com.repoint.dependencies.R.drawable.orglogo, "repointLogo", "re_Point",
+            repointOrange,Modifier.padding(2.dp)
+        )*/
+
+        Image(
+            painter = painterResource(com.repoint.dependencies.R.drawable.logo),
+            contentDescription = "logo",
+            modifier = modifier
+                .fillMaxWidth().align(Alignment.Start).padding(start = 8.dp, bottom = 8.dp , end = 8.dp, top = 72.dp),
+            alignment = Alignment.CenterStart,
+            contentScale = ContentScale.Fit
+        )
+
+        Text(
+            "own and manage\nyour assets",
+            style = RepointTypography.displayLarge,
+            modifier = Modifier
+                .align(Alignment.Start)
+                .padding(start = 8.dp, bottom = 8.dp, end = 8.dp).padding(2.dp),
+        )
+        Text(
+            "+100 blockchains supported",
+            style = RepointTypography.bodySmall,
+            modifier = Modifier
+                .align(Alignment.Start)
+                .padding(start = 8.dp).padding(2.dp),
+        )
+
     }
-}
 
-
-@SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
-@Composable
-fun Screen1(navController: NavController, viewModel: WalletViewModel = hiltViewModel()) {
-    Scaffold(
-        content = {
-            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Button(onClick = { navController.navigate("screen2") }) {
-                    Text("Go to Screen 2")
-                }
-            }
-        }
-    )
-}
-
-@SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
-@Composable
-fun Screen2(navController: NavController, viewModel: WalletViewModel = hiltViewModel()) {
-    Scaffold(
-        content = {
-            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Button(onClick = { navController.popBackStack() }) {
-                    Text("Go Back to Screen 1")
-                }
-            }
-        }
-    )
 }

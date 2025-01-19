@@ -124,6 +124,10 @@ dependencies {
 
     api(libs.androidx.foundation)
 
+    //extended icons material
+    api(libs.androidx.material.icons.extended)
+
+
 }
 // Allow references to generated code
 kapt {

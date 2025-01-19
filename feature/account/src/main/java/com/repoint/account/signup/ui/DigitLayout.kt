@@ -50,7 +50,7 @@ import androidx.navigation.NavController
 import com.repoint.account.BioViewModel
 import com.repoint.account.UserViewModel
 import com.repoint.basics.atoms.RepointAppBar
-import com.repoint.dependencies.theme.Sepia
+import com.repoint.dependencies.theme.repointOrange
 import com.repoint.dependencies.theme.richBlack
 
 
@@ -99,7 +99,7 @@ fun SingleDigitRow(digitState: SnapshotStateList<String>, modifier: Modifier, fo
                             .height(56.dp)
                             .border(
                                 width = 2.dp,
-                                color = if (index == focusedIndex) Sepia else Color.Gray,
+                                color = if (index == focusedIndex) repointOrange else Color.Gray,
                                 shape = RoundedCornerShape(8.dp)
                             ),
                         textStyle = LocalTextStyle.current.copy(textAlign = TextAlign.Center),

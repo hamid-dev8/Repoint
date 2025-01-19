@@ -11,7 +11,8 @@ val PurpleGrey40 = Color(0xFF625b71)
 val Pink40 = Color(0xFF7D5260)
 
 
-val Sepia = Color(0xFFE3B778)
+val repointOrange = Color(0xFFFFA060)
+val repointBlue = Color(0xFF2E5396)
 val RoseWood= Color(0xFF9E4344)
 val PowderBlue = Color(0xFFA3C3D9)
 val aliceBlue = Color(0xFFD4E3ED)

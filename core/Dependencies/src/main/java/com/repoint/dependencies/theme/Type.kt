@@ -11,11 +11,7 @@ import com.repoint.dependencies.R
 
 
 val CustomFontFamily = FontFamily(
-    Font(R.font.lato_thin),
-    Font(R.font.lato_light),
-    Font(R.font.lato_regular),
-    Font(R.font.lato_black),
-    Font(R.font.lato_bold)
+    Font(resId = R.font.fonts)
 )
 
 // Set of Material typography styles to start with
@@ -23,28 +19,28 @@ val RepointTypography =
     Typography(
         displayLarge = TextStyle(
             fontFamily = CustomFontFamily,
-            fontWeight = FontWeight.W800,
+            fontWeight = FontWeight.W900, //black
             fontSize = 32.sp,
-            lineHeight = 32.sp,
+            lineHeight = 34.sp,
             letterSpacing = 1.sp
         ),
         bodyLarge = TextStyle(
             fontFamily = CustomFontFamily,
-            fontWeight = FontWeight.W800,
+            fontWeight = FontWeight.W700, //bold
             fontSize = 24.sp,
             lineHeight = 28.sp,
             letterSpacing = 1.sp
         ),
         bodyMedium = TextStyle(
             fontFamily = CustomFontFamily,
-            fontWeight = FontWeight.W800,
+            fontWeight = FontWeight.W400, //regular
             fontSize = 22.sp,
             lineHeight = 24.sp,
             letterSpacing = 1.sp
         ),
         bodySmall = TextStyle(
             fontFamily = CustomFontFamily,
-            fontWeight = FontWeight.W800,
+            fontWeight = FontWeight.W300, //light
             fontSize = 18.sp,
             lineHeight = 22.sp,
             letterSpacing = 0.5.sp

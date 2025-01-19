@@ -1,18 +1,13 @@
 package com.repoint.dependencies.theme
 
-import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
-import androidx.compose.material3.dynamicDarkColorScheme
-import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
 
 private val DarkColorScheme = darkColorScheme(
-    primary = Sepia,
+    primary = repointOrange,
     secondary = RoseWood,
     tertiary = PowderBlue,
     tertiaryContainer = aliceBlue,
@@ -21,12 +16,12 @@ private val DarkColorScheme = darkColorScheme(
     onBackground = richBlack,
     surface = ghostWhite,
     onSurface = richBlack,
-    onPrimaryContainer = Sepia,
+    onPrimaryContainer = repointOrange,
     secondaryContainer = RoseWood
 )
 
 private val LightColorScheme = lightColorScheme(
-    primary = Sepia,
+    primary = repointOrange,
     secondary = RoseWood,
     tertiary = PowderBlue,
     tertiaryContainer = aliceBlue,
@@ -35,7 +30,7 @@ private val LightColorScheme = lightColorScheme(
     onBackground = richBlack,
     surface = ghostWhite,
     onSurface = richBlack,
-    onPrimaryContainer = Sepia,
+    onPrimaryContainer = repointOrange,
     secondaryContainer = RoseWood
 
 
