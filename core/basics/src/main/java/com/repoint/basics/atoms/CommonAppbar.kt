@@ -1,18 +1,16 @@
 package com.repoint.basics.atoms
 
 import android.app.Activity
-import android.view.Surface
-import android.widget.Toolbar
-import androidx.annotation.StringRes
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -24,8 +22,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import androidx.navigation.compose.currentBackStackEntryAsState
+import com.repoint.dependencies.theme.RepointTypography
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -65,7 +65,7 @@ fun RepointBar(navController: NavController) {
 fun BackButton(navController: NavController, modifier: Modifier = Modifier) {
     IconButton(onClick = { navController.popBackStack() }, modifier = modifier) {
         Icon(
-            imageVector = Icons.Default.ArrowBack,
+            imageVector = Icons.AutoMirrored.Default.ArrowBack,
             contentDescription = "Back"
         )
     }
@@ -79,20 +79,23 @@ fun TopAppBarWithBackButton(
     modifier: Modifier = Modifier,
     actions: @Composable RowScope.() -> Unit = {}
 ) {
-    TopAppBar(
-        title = { Text(text = title) },
+    CenterAlignedTopAppBar(
+        title = {
+                Text(
+                    text = title,
+                    style = RepointTypography.bodyMedium,
+                )
+        },
         navigationIcon = { BackButton(navController) },
-        actions = actions,
-        modifier = modifier
-    )
+        actions = actions,)
 }
 
 @Composable
-fun RepointAppBar(title : String,navController: NavController, exp: @Composable () -> Unit) {
+fun RepointAppBar(title: String, navController: NavController, exp: @Composable () -> Unit) {
     Scaffold(
-        topBar = { TopAppBarWithBackButton(navController = navController,title = title) }
+        topBar = { TopAppBarWithBackButton(navController = navController, title = title) }
     ) { paddingValues ->
-        Surface(modifier = Modifier.padding(paddingValues)){
+        Surface(modifier = Modifier.padding(paddingValues)) {
             exp()
         }
     }

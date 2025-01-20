@@ -12,6 +12,7 @@ val Pink40 = Color(0xFF7D5260)
 
 
 val repointOrange = Color(0xFFFFA060)
+val repointLightOrange = Color(0xFFFFE2CF)
 val repointBlue = Color(0xFF2E5396)
 val RoseWood= Color(0xFF9E4344)
 val PowderBlue = Color(0xFFA3C3D9)

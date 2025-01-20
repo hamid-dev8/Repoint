@@ -21,6 +21,7 @@ import androidx.compose.material.icons.filled.ArrowForward
 import androidx.compose.material.icons.filled.ArrowForwardIos
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonColors
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -52,9 +53,8 @@ fun RepointCommonButton(
     onClick : () -> Unit,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
-    margin : Dp = 8.dp
+    margin : Dp = 0.dp
 ) {
-    RepointTheme {
 
         Button(
             onClick = {
@@ -62,14 +62,14 @@ fun RepointCommonButton(
             },
             modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = margin)
-                .height(48.dp),
+                .padding(horizontal = 14.dp, vertical = margin)
+                .height(52.dp),
             enabled = enabled,
-            shape = RoundedCornerShape(24.dp)
+            shape = RoundedCornerShape(50.dp)
         ) {
-            Text(text = text, style = RepointTypography.bodyMedium)
+            Text(text = text, style = RepointTypography.bodyLarge)
         }
-    }
+
 }
 
 

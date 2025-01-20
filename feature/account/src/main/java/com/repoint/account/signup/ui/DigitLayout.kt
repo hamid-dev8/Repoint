@@ -25,6 +25,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.TextFieldColors
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -50,6 +51,9 @@ import androidx.navigation.NavController
 import com.repoint.account.BioViewModel
 import com.repoint.account.UserViewModel
 import com.repoint.basics.atoms.RepointAppBar
+import com.repoint.dependencies.theme.RepointTypography
+import com.repoint.dependencies.theme.aliceBlue
+import com.repoint.dependencies.theme.repointBlue
 import com.repoint.dependencies.theme.repointOrange
 import com.repoint.dependencies.theme.richBlack
 
@@ -99,10 +103,10 @@ fun SingleDigitRow(digitState: SnapshotStateList<String>, modifier: Modifier, fo
                             .height(56.dp)
                             .border(
                                 width = 2.dp,
-                                color = if (index == focusedIndex) repointOrange else Color.Gray,
+                                color = if (index == focusedIndex) repointOrange else aliceBlue,
                                 shape = RoundedCornerShape(8.dp)
                             ),
-                        textStyle = LocalTextStyle.current.copy(textAlign = TextAlign.Center),
+                        textStyle = LocalTextStyle.current.copy(textAlign = TextAlign.Center, color = repointBlue),
                         readOnly = true,
                         enabled = true
                     )
@@ -160,7 +164,6 @@ fun RepointNumPad(
 
             Text(
                 if (isItSet) "Create Passcode" else "Confirm Passcode",
-                fontSize = 32.sp,
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(top = 64.dp)
@@ -169,7 +172,8 @@ fun RepointNumPad(
                         start.linkTo(parent.start)
                         end.linkTo(parent.end)
                     },
-                textAlign = TextAlign.Center
+                textAlign = TextAlign.Center,
+                style = RepointTypography.bodyLarge
             )
 
             SingleDigitRow(
@@ -187,7 +191,6 @@ fun RepointNumPad(
 
             Text(
                 "Passcode adds an extra layer of security when using rePoint",
-                fontSize = 18.sp,
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(16.dp)
@@ -196,7 +199,9 @@ fun RepointNumPad(
                         start.linkTo(parent.start)
                         end.linkTo(parent.end)
                     },
-                textAlign = TextAlign.Center
+                textAlign = TextAlign.Center,
+                style = RepointTypography.labelSmall,
+                color = Color.Gray
             )
 
 
@@ -293,8 +298,7 @@ fun RepointNumPad(
                                 Text(
                                     text = key,
                                     fontSize = 22.sp,
-                                    style = MaterialTheme.typography.bodyMedium
-                                )
+                                    style = RepointTypography.bodyMedium)
                             }
                         }
                     }

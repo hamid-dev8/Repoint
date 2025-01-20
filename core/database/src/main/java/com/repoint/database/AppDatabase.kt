@@ -7,7 +7,7 @@ import com.repoint.database.dao.UserDao
 import com.repoint.models.sharedmodels.User
 import com.repoint.models.sharedmodels.RepointWallet
 
-@Database(entities = [User::class,RepointWallet::class] , version =  1 , exportSchema = false)
+@Database(entities = [User::class,RepointWallet::class] , version =  2 , exportSchema = false)
  abstract class AppDatabase : RoomDatabase()
 {
     abstract fun authDao() : AuthDao

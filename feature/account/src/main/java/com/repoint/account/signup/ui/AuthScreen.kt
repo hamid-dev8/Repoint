@@ -13,6 +13,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -44,10 +45,11 @@ fun AuthScreenPreview() {
 @Composable
 fun AuthScreen(navController: NavController) {
     val context = LocalContext.current
+    Scaffold { contentPadding ->
     ConstraintLayout(
         Modifier
             .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background).fillMaxSize().padding(16.dp),
+            .background(MaterialTheme.colorScheme.background).fillMaxSize().padding(16.dp).padding(contentPadding),
     ) {
 
         val (topViews, centerViews, bottomViews) = createRefs()
@@ -61,7 +63,7 @@ fun AuthScreen(navController: NavController) {
         }
         BigPng(
             com.repoint.dependencies.R.drawable.wallet,
-            modifier = Modifier.constrainAs(centerViews) {
+            modifier = Modifier.padding(end = 16.dp).constrainAs(centerViews) {
                 top.linkTo(topViews.bottom)
                 start.linkTo(parent.start)
                 end.linkTo(parent.end)
@@ -74,6 +76,7 @@ fun AuthScreen(navController: NavController) {
             bottom.linkTo(parent.bottom)
         })
 
+    }
     }
 }
 
@@ -142,14 +145,14 @@ fun AuthInfo(modifier: Modifier) {
 
         Text(
             "own and manage\nyour assets",
-            style = RepointTypography.displayLarge,
+            style = RepointTypography.headlineMedium,
             modifier = Modifier
                 .align(Alignment.Start)
                 .padding(start = 8.dp, bottom = 8.dp, end = 8.dp).padding(2.dp),
         )
         Text(
             "+100 blockchains supported",
-            style = RepointTypography.bodySmall,
+            style = RepointTypography.bodyMedium,
             modifier = Modifier
                 .align(Alignment.Start)
                 .padding(start = 8.dp).padding(2.dp),

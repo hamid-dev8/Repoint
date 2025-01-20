@@ -25,7 +25,7 @@ internal object DatabaseModule {
         context,
         AppDatabase::class.java,
         "repoint_database"
-    ).build()
+    ).fallbackToDestructiveMigration().build()
 
     @Provides
     @Singleton
@@ -33,6 +33,6 @@ internal object DatabaseModule {
 
     @Provides
     @Singleton
-    fun providesUserDao(database: AppDatabase) : UserDao = database.userDao()
+    fun providesUserDao(database: AppDatabase): UserDao = database.userDao()
 
 }

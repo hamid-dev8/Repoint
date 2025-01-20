@@ -22,6 +22,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import com.repoint.dependencies.theme.repointOrange
 
 
 @Preview
@@ -48,27 +49,24 @@ fun RepointCheckbox(
     modifier: Modifier = Modifier,
     size: Dp = 24.dp,
     borderColor: Color,
-    checkedColor: Color = MaterialTheme.colorScheme.primary,
+    checkedColor: Color = repointOrange,
     uncheckedColor: Color = Color.Transparent
 ) {
 
     Box(
         modifier = modifier
             .size(size)
-            .clip(RoundedCornerShape(4.dp))
+            .clip(RoundedCornerShape(12.dp))
             .background(if (isChecked) checkedColor else uncheckedColor)
-            .border(width = 1.dp, color = borderColor, shape = RoundedCornerShape(4.dp))
             .clickable { onCheckedChange(!isChecked) },
         contentAlignment = Alignment.Center
-    ){
-        if (isChecked){
-            Icon(
-                imageVector = Icons.Default.Check,
-                contentDescription = "checked",
-                tint = Color.White,
-                modifier = Modifier.size(size/2)
-            )
-        }
+    ) {
+        Icon(
+            imageVector = Icons.Default.Check,
+            contentDescription = "checked",
+            tint = Color.White,
+            modifier = Modifier.size(size / 2),
+        )
     }
-
 }
+
