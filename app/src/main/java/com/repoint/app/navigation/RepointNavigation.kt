@@ -14,6 +14,8 @@ import com.repoint.account.signup.ui.SetPinCode
 import com.repoint.account.signup.ui.ShowPhrase
 import com.repoint.account.signup.ui.WalletConfirmSurface
 import com.repoint.dashboard.ui.HomeScreen
+import com.repoint.splash.ui.SplashScreenRepoint
+import com.repoint.splash.ui.Web3WalletScreen
 
 
 val gson = Gson()
@@ -32,11 +34,24 @@ fun RepointNavigation(activity: FragmentActivity) {
 
 
     //auth and signup
-    NavHost(navController = navController, startDestination = "auth") {
-
+    NavHost(navController = navController, startDestination = "splash") {
+        composable("splash") {
+            SplashScreenRepoint(onStay = {
+                navController.navigate("hedgehog") {
+                    popUpTo("splash") { inclusive = true }
+                }
+            }, onProceed = {
+                navController.navigate("home") {
+                    popUpTo("splash") { inclusive = true }
+                }
+            })
+        }
+        composable("hedgehog") {
+            Web3WalletScreen(onConfirm = {
+                navController.navigate("auth")
+            })
+        }
         composable("auth") { AuthScreen(navController) }
-
-
         composable("walletConfirm") {
             WalletConfirmSurface(navController, onConfirm = { walletId ->
                 navController.navigate("phrase/$walletId")

@@ -1,6 +1,7 @@
 package com.repoint.sources.datarepo
 
 import android.content.Context
+import android.util.Log
 import androidx.biometric.BiometricManager
 import androidx.biometric.BiometricPrompt
 import androidx.core.content.ContextCompat
@@ -16,8 +17,9 @@ class BiometricRepositoryImp @Inject constructor(
 ) : BiometricDataSource {
     override fun isBiometricAvailable(): Boolean {
         val biometricManager = BiometricManager.from(context)
-        return biometricManager.canAuthenticate(BiometricManager.Authenticators.BIOMETRIC_STRONG) ==
-                BiometricManager.BIOMETRIC_SUCCESS
+        val result = biometricManager.canAuthenticate(BiometricManager.Authenticators.BIOMETRIC_STRONG)
+        Log.d("BiometricCheck", "Biometric status: $result & $context")
+        return result == BiometricManager.BIOMETRIC_SUCCESS
     }
 
     override fun createBiometricPrompt(

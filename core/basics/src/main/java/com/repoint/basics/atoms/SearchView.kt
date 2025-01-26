@@ -4,14 +4,17 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material3.Icon
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextField
+import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.repoint.dependencies.theme.repointOrange
+import com.repoint.dependencies.theme.transparentColor
 
 @Composable
 @Preview
@@ -26,7 +29,7 @@ fun SearchTextField(
     modifier: Modifier = Modifier,
     placeholder: String = "Search"
 ) {
-    OutlinedTextField(
+    TextField(
         value = query,
         onValueChange = onValueChange,
         modifier = modifier
@@ -37,11 +40,17 @@ fun SearchTextField(
         },
         leadingIcon = {
             Icon(
-                imageVector = Icons.Default.Search,
+                imageVector = Icons.Rounded.Search,
                 contentDescription = "Search Icon"
             )
         },
         singleLine = true,
-        shape = RoundedCornerShape(8.dp)
+        shape = RoundedCornerShape(8.dp),
+        colors = TextFieldDefaults.colors(
+           focusedContainerColor = transparentColor,
+            unfocusedContainerColor = transparentColor,
+            unfocusedIndicatorColor = transparentColor,
+            focusedIndicatorColor = repointOrange
+        )
     )
 }

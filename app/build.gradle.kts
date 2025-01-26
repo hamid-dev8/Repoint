@@ -54,10 +54,11 @@ android {
 dependencies {
     implementation(project(":core:Dependencies"))
     implementation(project(":core:basics"))
+    implementation(project(":core:models"))
     implementation(project(":feature"))
     implementation(project(":feature:account"))
     implementation(project(":feature:dashboard"))
-    implementation(project(":core:models"))
+    implementation(project(":feature:splash"))
 
     implementation(libs.hilt.android)
 

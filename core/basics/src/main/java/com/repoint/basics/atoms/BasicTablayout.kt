@@ -23,7 +23,20 @@ import com.repoint.basics.logic.ScreenActions
 @Preview(showBackground = true)
 @Composable
 fun TabLayoutPreview() {
-   // BasicTabLayout()
+    val actions : ScreenActions = object : ScreenActions {
+        override fun onButtonClick() {
+            TODO("Not yet implemented")
+        }
+
+        override fun onItemSelected(itemId: Int) {
+            TODO("Not yet implemented")
+        }
+
+        override fun onTabSelected(index: Int, title: String) {
+            TODO("Not yet implemented")
+        }
+    }
+    BasicTabLayout(actions)
 }
 
 

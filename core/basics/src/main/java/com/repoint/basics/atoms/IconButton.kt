@@ -26,6 +26,8 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.repoint.dependencies.theme.ghostWhite
+import com.repoint.dependencies.theme.richBlack
 
 @Composable
 @Preview
@@ -64,14 +66,14 @@ fun CircularButtonWithText(
                 onClick = onClick,
                 shape = CircleShape,
                 modifier = Modifier.size(buttonSize),
-                colors = ButtonDefaults.buttonColors(containerColor = Color.Gray),
+                colors = ButtonDefaults.buttonColors(containerColor = ghostWhite),
                 contentPadding = PaddingValues(0.dp)
             ) {
                 Icon(
                     imageVector = icon,
                     contentDescription = null,
                     modifier = Modifier.size(iconSize),
-                    tint = MaterialTheme.colorScheme.primary
+                    tint = richBlack
                 )
             }
             Spacer(Modifier.padding(bottom = 8.dp))

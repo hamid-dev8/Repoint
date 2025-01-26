@@ -88,7 +88,6 @@ dependencies {
     //java//implementation (libs.core)
 
 
-
     //web3 android
     //noinspection GradleDependency
     api(libs.core.v489android)
@@ -127,7 +126,10 @@ dependencies {
     //extended icons material
     api(libs.androidx.material.icons.extended)
 
+    //splash
+    api(libs.androidx.core.splashscreen)
 
+    api(libs.androidx.datastore.preferences)
 }
 // Allow references to generated code
 kapt {

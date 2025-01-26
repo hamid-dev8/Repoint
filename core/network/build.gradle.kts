@@ -58,5 +58,7 @@ dependencies {
         exclude(group = "org.json", module = "json")
     }
 
+    //moralis
+    implementation(libs.web3.api.client)
 
 }

@@ -58,6 +58,7 @@ dependencies {
 
 
     implementation(libs.hilt.android)
+    implementation(project(":feature:splash"))
 
     //  kapt("com.google.dagger:hilt-android-compiler:2.51.1")
     kapt (libs.hilt.compiler)

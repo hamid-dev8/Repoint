@@ -19,34 +19,40 @@ class EcGen() {
         val instance: EcGen by lazy { EcGen() }
         private val entropyManager: EntropyManager = EntropyManager
     }
-
+    lateinit var wallet : RepointWallet
     fun getFromMnemonic(): RepointWallet {
-        val phrase = entropyManager.getPhrase()
-        val seedPhrase = MnemonicUtils.generateSeed(phrase, "")
-        val masterKeyPairing: Bip32ECKeyPair = Bip32ECKeyPair.generateKeyPair(seedPhrase)
-        val derivationPath =
-            intArrayOf(44 or -0x80000000, 60 or -0x80000000, 0 or -0x80000000, 0, 0)
-        val derivedKeyPair = Bip32ECKeyPair.deriveKeyPair(masterKeyPairing, derivationPath)
-        val publicKey = masterKeyPairing.publicKey
-        val hexOfIt = derivedKeyPair.privateKey.toString(16)
-        val credentials = Credentials.create(derivedKeyPair)
-
-        val wallet = RepointWallet(
-            phrase = phrase,
-            name = "wallet",
-            creationDate = getCurrentDate(),
-            network = ethereumNetwork,
-            publicKey = publicKey.toString(),
-            privateKey = hexOfIt,
-            address = credentials.address,
-            balance = 0.0
-        )
 
 
-        Log.d("ETH", "private key Hex = $hexOfIt")
-        Log.d("ETH", "credentials = ${credentials.address}")
+            val phrase = entropyManager.getPhrase()
+            val seedPhrase = MnemonicUtils.generateSeed(phrase, "")
+            val masterKeyPairing: Bip32ECKeyPair = Bip32ECKeyPair.generateKeyPair(seedPhrase)
+            val derivationPath =
+                intArrayOf(44 or -0x80000000, 60 or -0x80000000, 0 or -0x80000000, 0, 0)
+            val derivedKeyPair = Bip32ECKeyPair.deriveKeyPair(masterKeyPairing, derivationPath)
+            val publicKey = masterKeyPairing.publicKey
+            val hexOfIt = derivedKeyPair.privateKey.toString(16)
+            val credentials = Credentials.create(derivedKeyPair)
 
-        return wallet
+            wallet = RepointWallet(
+                phrase = phrase,
+                name = "wallet",
+                creationDate = getCurrentDate(),
+                network = ethereumNetwork,
+                publicKey = publicKey.toString(),
+                privateKey = hexOfIt,
+                address = credentials.address,
+                balance = 0.0
+            )
+
+
+            //Log.d("ETH", "private key Hex = $hexOfIt")
+            Log.d("ETH", "" +
+                    "50 ==> seed phrase is = $phrase")
+            Log.d("ETH", "" +
+                    "50 ==> credentials = ${credentials.address}")
+
+            return wallet
+
     }
 
     fun importWithMnemonic(
@@ -106,7 +112,7 @@ class EcGen() {
     }
 
 
-    fun mnemonicToBinary(mnemonic: String,wordList : List<String>): String {
+    fun mnemonicToBinary(mnemonic: String, wordList: List<String>): String {
         val words = mnemonic.split(" ")
         return words.joinToString("") { word ->
             val index = wordList.indexOf(word)
@@ -148,7 +154,7 @@ class EcGen() {
     }*/
 
     fun isValidMnemonic(mnemonic: String): Boolean {
-        val binary = mnemonicToBinary(mnemonic,MnemonicUtils.getWords())
+        val binary = mnemonicToBinary(mnemonic, MnemonicUtils.getWords())
         val (entropy, checksum) = binaryToEntropy(binary)
         val calculatedChecksum = calculateChecksum(entropy)
         return calculatedChecksum == checksum

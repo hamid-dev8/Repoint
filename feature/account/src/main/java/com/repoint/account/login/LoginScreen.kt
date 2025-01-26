@@ -26,6 +26,7 @@ import com.repoint.account.WalletViewModel
 import com.repoint.basics.atoms.RepointAppBar
 import com.repoint.basics.atoms.RepointCommonButton
 import com.repoint.basics.atoms.SimpleEditText
+import com.repoint.dependencies.theme.RepointTypography
 
 
 @Preview
@@ -33,7 +34,7 @@ import com.repoint.basics.atoms.SimpleEditText
 fun PreviewLogin() {
     val context = LocalContext.current
     val navController = NavController(context)
-    //LoginScreen(navController = navController)
+    LoginScreen(navController = navController, onConfirm = {})
 
 }
 
@@ -51,7 +52,7 @@ fun LoginScreen(
 
 
 
-    RepointAppBar("MultiCoinWallet", exp = {
+    RepointAppBar("Multi-CoinWallet", exp = {
         Box(Modifier.fillMaxSize()) {
             Column(Modifier.fillMaxSize()) {
 
@@ -67,7 +68,7 @@ fun LoginScreen(
 
                 SimpleEditText(
                     "Secret phrase :",
-                    height = 256,
+                    height = 148,
                     true,
                     userInput = secretInput,
                     onInputChange = { secretInput = it },
@@ -92,7 +93,7 @@ fun LoginScreen(
                 Text(
                     "Enter your 12 Security words",
                     Modifier.align(Alignment.CenterHorizontally),
-                    fontSize = 14.sp
+                    style = RepointTypography.labelMedium
                 )
 
 

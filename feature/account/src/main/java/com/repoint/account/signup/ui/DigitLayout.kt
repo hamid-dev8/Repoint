@@ -40,6 +40,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -49,6 +50,7 @@ import androidx.fragment.app.FragmentActivity
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import com.repoint.account.BioViewModel
+import com.repoint.account.R
 import com.repoint.account.UserViewModel
 import com.repoint.basics.atoms.RepointAppBar
 import com.repoint.dependencies.theme.RepointTypography
@@ -106,7 +108,10 @@ fun SingleDigitRow(digitState: SnapshotStateList<String>, modifier: Modifier, fo
                                 color = if (index == focusedIndex) repointOrange else aliceBlue,
                                 shape = RoundedCornerShape(8.dp)
                             ),
-                        textStyle = LocalTextStyle.current.copy(textAlign = TextAlign.Center, color = repointBlue),
+                        textStyle = LocalTextStyle.current.copy(
+                            textAlign = TextAlign.Center,
+                            color = repointBlue
+                        ),
                         readOnly = true,
                         enabled = true
                     )
@@ -298,7 +303,8 @@ fun RepointNumPad(
                                 Text(
                                     text = key,
                                     fontSize = 22.sp,
-                                    style = RepointTypography.bodyMedium)
+                                    style = RepointTypography.bodyMedium
+                                )
                             }
                         }
                     }
@@ -312,27 +318,32 @@ fun RepointNumPad(
                 focusedIndex = 0
             }, onConfirm = {
                 showBiometricDialog = true
-                digits?.joinToString("")?.let { viewModel.createUser(walletId, it) }
                 showDialog.value = false
+                digits?.joinToString("")?.let { viewModel.createUser(walletId, it) }
             })
         }
     })
 
     if (showBiometricDialog) {
         LaunchedEffect(walletId) {
-            Log.d("focus","user is : ${viewModel.fetchUser()}")
+            Log.d("focus", "user is : ${viewModel.fetchUser()}")
         }
-        BiometricDialog(
-            activity,
-            onDismiss = {
+        BiometricalDialog(
+            onDenyClick = {
                 showBiometricDialog = false
-                digitStates.fill("")
-                focusedIndex = 0
+                navController.navigate("home")
             },
-            onConfirm = {
+            onConfirmClick = {
                 showBiometricDialog = false
                 navController.navigate("home")
                 Log.d("focus", "biometric Confirmed")
+            },
+            fingerprintIcon = painterResource(com.repoint.dependencies.R.drawable.biometric_ic),
+            activity = activity,
+            onDismissRequest = {
+                showBiometricDialog = false
+                digitStates.fill("")
+                focusedIndex = 0
             }
         )
     }
@@ -340,7 +351,7 @@ fun RepointNumPad(
 
 
 fun toConfirmPin(digitStates: SnapshotStateList<String>, onConfirm: (ArrayList<String>) -> Unit) {
-    if (digitStates.all { it.isNotEmpty() } && digitStates.size == 6) {
+    if (digitStates.all { it.isNotEmpty() } && digitStates.size >= 6) {
         val digitStatesArrayList: ArrayList<String> = ArrayList(digitStates)
         onConfirm(digitStatesArrayList)
         Log.d("pincod", "all fields are filled ${digitStates.size} && $digitStates")
@@ -406,7 +417,7 @@ fun BiometricScreen(
     if (isBiometricAvailable) {
         Button(onClick = {
             Log.d("Biometric", "biometric activity is :$activity")
-            activity?.let {
+            activity.let {
                 viewModel.authenticate(it, onSuccess, onFailure)
             }
         }) {

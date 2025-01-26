@@ -7,10 +7,9 @@ import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import com.repoint.app.ui.MainScreen
 import com.repoint.dependencies.theme.RepointTheme
 import dagger.hilt.android.AndroidEntryPoint
@@ -22,8 +21,12 @@ class MainActivity : AppCompatActivity() {
 
     @SuppressLint("WrongConstant", "NewApi")
     override fun onCreate(savedInstanceState: Bundle?) {
+
+
         super.onCreate(savedInstanceState)
 
+        val splash = installSplashScreen()
+        splash.setKeepOnScreenCondition { false }
         enableEdgeToEdge()
         setTheme(R.style.Theme_Repoint)
         setContent {
