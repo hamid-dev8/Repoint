@@ -1,5 +1,6 @@
 package com.repoint.basics.atoms
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -31,6 +32,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.repoint.dependencies.theme.RepointTypography
 import com.repoint.dependencies.theme.transparentColor
+import com.repoint.models.sharedmodels.local.RepointWallet
 
 @Composable
 @Preview
@@ -38,25 +40,32 @@ fun PreviewBalanceScreen() {
 
     val sampleList = listOf("wallet1", "wallet 2 ", " wallet 3")
 
-    BalanceScreen(sampleList, "0.00")
+    //  BalanceScreen(sampleList, "0.00")
 
 }
 
 @Composable
-fun BalanceScreen(items: List<String>, balance: String) {
+fun BalanceScreen(items: List<RepointWallet>, balance: String) {
+    var isHiddenBalance by remember { mutableStateOf(false) }
 
-    Column(Modifier.fillMaxWidth().padding(8.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+    Column(
+        Modifier
+            .fillMaxWidth()
+            .padding(8.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
 
-        DropDownList(items, "", onItemSelected = {
+        if (items.isNotEmpty()) {
+            DropDownList(items, items[0].name, onItemSelected = {
 
-        }, Modifier.align(Alignment.CenterHorizontally))
+            }, Modifier.align(Alignment.CenterHorizontally))
 
-
+        }
         Spacer(Modifier.padding(top = 8.dp))
 
         Row(Modifier.align(Alignment.CenterHorizontally)) {
             Text(
-                balance,
+                text = if (!isHiddenBalance) balance else balance.replace(Regex("[0-9]"), "*") ,
                 Modifier
                     .padding(4.dp)
                     .align(Alignment.CenterVertically),
@@ -67,7 +76,9 @@ fun BalanceScreen(items: List<String>, balance: String) {
                 contentDescription = "hide_balance",
                 Modifier
                     .padding(4.dp)
-                    .align(Alignment.CenterVertically),
+                    .align(Alignment.CenterVertically).clickable {
+                        isHiddenBalance = !isHiddenBalance
+                    },
                 tint = Color.Gray,
             )
         }
@@ -77,7 +88,7 @@ fun BalanceScreen(items: List<String>, balance: String) {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DropDownList(
-    items: List<String>,
+    items: List<RepointWallet>,
     selectedItem: String?,
     onItemSelected: (String) -> Unit,
     modifier: Modifier = Modifier
@@ -123,10 +134,10 @@ fun DropDownList(
         ) {
             items.forEach { item ->
                 DropdownMenuItem(
-                    text = { Text(text = item, Modifier) },
+                    text = { Text(text = item.name.toString(), Modifier) },
                     onClick = {
-                        selectedText = item
-                        onItemSelected(item)
+                        selectedText = item.name.toString()
+                        onItemSelected(item.name.toString())
                         expanded = false
                     }
                 )

@@ -34,6 +34,7 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.ui.Alignment
@@ -52,12 +53,15 @@ import androidx.navigation.NavController
 import com.repoint.account.BioViewModel
 import com.repoint.account.R
 import com.repoint.account.UserViewModel
+import com.repoint.account.WalletViewModel
 import com.repoint.basics.atoms.RepointAppBar
 import com.repoint.dependencies.theme.RepointTypography
 import com.repoint.dependencies.theme.aliceBlue
 import com.repoint.dependencies.theme.repointBlue
 import com.repoint.dependencies.theme.repointOrange
 import com.repoint.dependencies.theme.richBlack
+import com.repoint.models.sharedmodels.local.User
+import kotlinx.coroutines.launch
 
 
 @Composable
@@ -131,7 +135,8 @@ fun RepointNumPad(
     onConfirm: (ArrayList<String>) -> Unit,
     isItSet: Boolean,
     activity: FragmentActivity,
-    viewModel: UserViewModel = hiltViewModel()
+    viewModel: UserViewModel = hiltViewModel(),
+    walletViewModel: WalletViewModel = hiltViewModel()
 ) {
 
     val context = LocalContext.current
@@ -145,6 +150,7 @@ fun RepointNumPad(
 
     var showDialog = remember { mutableStateOf(false) }
     var showBiometricDialog by remember { mutableStateOf(false) }
+    val coroutineScope = rememberCoroutineScope()
 
     Log.d(
         "focus",
@@ -312,6 +318,8 @@ fun RepointNumPad(
             }
         }
         if (showDialog.value) {
+
+
             CustomBasicAlertDialog(showDialog = showDialog.value, onDismiss = {
                 showDialog.value = false
                 digitStates.fill("")
@@ -319,15 +327,24 @@ fun RepointNumPad(
             }, onConfirm = {
                 showBiometricDialog = true
                 showDialog.value = false
-                digits?.joinToString("")?.let { viewModel.createUser(walletId, it) }
+                digits?.joinToString("")?.let { viewModel.createUser(it) }
+                coroutineScope.launch {
+                    val user = viewModel.fetchUser()
+                    Log.d("focus", "the user id  is somehow : ${user.userId}")
+                    walletViewModel.linkUserToWallet(walletId,user.userId)
+                }
+                //user?.let { walletViewModel.linkUserToWallet(walletId, userId = it.userId) }
+                //Log.d("focus", " user is $user ")
             })
         }
     })
 
     if (showBiometricDialog) {
-        LaunchedEffect(walletId) {
-            Log.d("focus", "user is : ${viewModel.fetchUser()}")
-        }
+       /* LaunchedEffect(walletId) {
+            val user = viewModel.fetchUser()
+            Log.d("focus" , "user isss : $user")
+            //walletViewModel.linkUserToWallet(walletId, userId = user.userId)
+        }*/
         BiometricalDialog(
             onDenyClick = {
                 showBiometricDialog = false

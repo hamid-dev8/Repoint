@@ -49,6 +49,8 @@ dependencies {
     implementation(libs.hilt.android)
     implementation(project(":core:basics"))
     implementation(project(":core:models"))
+    implementation(project(":core:network"))
+    implementation(project(":feature:account"))
 
     kapt (libs.hilt.compiler)
 

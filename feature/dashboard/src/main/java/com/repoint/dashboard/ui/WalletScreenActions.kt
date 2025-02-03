@@ -1,14 +1,22 @@
 package com.repoint.dashboard.ui
 
 import android.annotation.SuppressLint
+import android.util.Log
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.pager.VerticalPager
 import androidx.compose.foundation.pager.rememberPagerState
@@ -22,29 +30,46 @@ import androidx.compose.material3.Tab
 import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.blur
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.constraintlayout.compose.ConstraintLayout
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
+import coil3.compose.AsyncImage
+import com.repoint.account.UserViewModel
+import com.repoint.account.WalletViewModel
 import com.repoint.basics.atoms.BalanceScreen
-import com.repoint.basics.atoms.BasicTabLayout
 import com.repoint.basics.atoms.CircularButtonWithText
 import com.repoint.basics.atoms.RepointAppBar
 import com.repoint.basics.atoms.SearchTextField
 import com.repoint.basics.atoms.ViewPagerRobot
+import com.repoint.dashboard.TokenViewModel
+import com.repoint.dependencies.R
 import com.repoint.dependencies.theme.RepointTypography
+import com.repoint.dependencies.theme.ghostWhite
 import com.repoint.dependencies.theme.richBlack
-import com.repoint.models.sharedmodels.Tokens
+import com.repoint.models.sharedmodels.local.RepointWallet
+import com.repoint.models.sharedmodels.local.Tokens
+import com.repoint.models.sharedmodels.remote.NativesBalance
+import com.repoint.models.sharedmodels.remote.TokensBalance
 import kotlinx.coroutines.launch
+import org.bouncycastle.math.raw.Mod
+import java.text.DecimalFormat
 
 
 @Composable
@@ -56,27 +81,52 @@ fun PreviewActionsRow() {
 
 
 @Composable
-fun HomeScreen(navController: NavController) {
+fun HomeScreen(
+    navController: NavController,
+    walletViewModel: WalletViewModel = hiltViewModel<WalletViewModel>(),
+    userViewModel: UserViewModel = hiltViewModel<UserViewModel>(),
+    tokenViewModel: TokenViewModel = hiltViewModel<TokenViewModel>()
+) {
+
+    var wallets by remember { mutableStateOf<List<RepointWallet>>(emptyList()) }
+    var tokenList by remember { mutableStateOf<NativesBalance?>(null) }
+    var balance by remember { mutableStateOf<String>(" ") }
+
+    LaunchedEffect(Unit) {
+
+        val user = userViewModel.fetchUser()
+        Log.d("token", " user is : $user")
+        wallets = user.let { walletViewModel.getAllWallets(it.userId) }
+        Log.d("token", " wallets  are : $wallets")
 
 
+        tokenList = tokenViewModel.getTokenBalance(address = wallets[0].address, "polygon")
+        Log.d("token", "token list are : $tokenList")
+    }
 
     RepointAppBar("wallet", exp = {
-        val sampleList = listOf("wallet1", "wallet2", "wallet3")
 
-        Column(Modifier.fillMaxSize().padding(8.dp)) {
+        Column(
+            Modifier
+                .fillMaxSize()
+                .padding(8.dp)
+        ) {
 
 
             SearchTextField("", onValueChange = { text ->
 
             }, modifier = Modifier.padding(8.dp))
 
-            BalanceScreen(sampleList, "12.0$")
+
+            val amount = netWorthSection(tokenList?.result)
+            val formattedBalanceAmount = DecimalFormat("#0.00").format(amount)
+            BalanceScreen(wallets, "$$formattedBalanceAmount")
 
             ActionsRow()
 
             ViewPagerRobot()
 
-            AssetsTabLayout()
+            AssetsTabLayout(tokenList)
 
             //BasicTabLayout(actions = )
         }
@@ -120,7 +170,7 @@ fun ActionsRow() {
             buttonSize = 48.dp
         )
         CircularButtonWithText(
-            icon = ImageVector.vectorResource(com.repoint.dependencies.R.drawable.ic_robot),
+            icon = ImageVector.vectorResource(R.drawable.ic_robot),
             "To Bot",
             onClick = { },
             Modifier.padding(12.dp),
@@ -139,9 +189,9 @@ fun ActionsRow() {
 
 @SuppressLint("UnusedBoxWithConstraintsScope")
 @Composable
-fun AssetsTabLayout() {
+fun AssetsTabLayout(tokenList: NativesBalance?) {
     val tabs = listOf("Token", "NFTs")
-    val pagerState = rememberPagerState(initialPage = 0, pageCount = { 2 })
+    val pagerState = rememberPagerState(initialPage = 0, pageCount = { tabs.size })
     val coroutineScope = rememberCoroutineScope()
     val selectedTabIndex by remember { mutableStateOf(0) }
 
@@ -161,20 +211,28 @@ fun AssetsTabLayout() {
             tabs.forEachIndexed { index, title ->
 
                 Tab(
-                    selected = selectedTabIndex == index,
+                    selected = pagerState.currentPage == index,
                     onClick = {
                         coroutineScope.launch {
                             pagerState.animateScrollToPage(index)
                         }
                     },
                     modifier = Modifier.padding(16.dp),
-                    text = { Text(text = title, style = RepointTypography.titleSmall, color = richBlack , textAlign = TextAlign.Center)  },
+                    text = {
+                        Text(
+                            text = title,
+                            style = RepointTypography.titleSmall,
+                            color = richBlack,
+                            textAlign = TextAlign.Center
+                        )
+                    },
                 )
             }
 
         }
         VerticalPager(
             state = pagerState,
+            userScrollEnabled = false, // 🚨 Prevents swipe gestures
             modifier = Modifier
                 .constrainAs(pagerRef) {
                     top.linkTo(tabRowRef.bottom)
@@ -184,8 +242,36 @@ fun AssetsTabLayout() {
                 }
                 .padding(32.dp)
         ) { page ->
-            val fakeData = generateFakeData(page)
-            ListScreen(items = fakeData)
+
+            when (page) {
+
+                0 -> {
+                    ListScreen(items = tokenList?.result)
+                }
+
+                1 -> {
+                    // NFT tab: apply blur only to background, keeping text clear
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .matchParentSize().padding(12.dp)
+                                .background(color = ghostWhite)
+                                .blur(64.dp) // Blur applied to the background only
+                        )
+
+                        Text(
+                            text = "Coming Soon",
+                            style = RepointTypography.headlineSmall,
+                            color = Color.Black,
+                        )
+                    }
+                }
+
+            }
         }
 
     }
@@ -193,39 +279,89 @@ fun AssetsTabLayout() {
 }
 
 @Composable
-fun ListScreen(items: List<Tokens>) {
+fun ListScreen(items: List<TokensBalance>?) {
 
     // val items = List(10) { "item ${it + 1} in tab ${page + 1}" }
 
     LazyColumn(
         modifier = Modifier
-            .padding(16.dp)
-            .fillMaxSize(),
+            .padding(top = 8.dp, bottom = 8.dp)
+            .fillMaxSize()
     ) {
+        items(items.orEmpty()) { item ->
 
-        items(items) { item ->
 
-            Text(
-                text = item.content, modifier = Modifier
+            Row(
+                modifier = Modifier
                     .fillMaxWidth()
-                    .padding(8.dp)
-                    .background(
-                        Color.LightGray, shape = RoundedCornerShape(8.dp)
-                    )
-                    .padding(16.dp)
-            )
-        }
+                    .padding(8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Center
+            ) {
 
+                AsyncImage(
+                    model = item.logo,
+                    contentDescription = "logo",
+                    modifier = Modifier
+                        .size(48.dp)
+                        .clip(RoundedCornerShape(8.dp))
+                )
+
+                Spacer(modifier = Modifier.width(8.dp))
+
+                Column(modifier = Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
+
+                    Text(
+                        text = item.symbol.uppercase(), modifier = Modifier
+                            .fillMaxWidth().align(Alignment.Start)
+                            .padding(horizontal = 8.dp, vertical = 2.dp)
+                    )
+
+                    Text(
+                        text = item.name,
+                        style = RepointTypography.labelSmall,
+                        color = richBlack,
+                        modifier = Modifier.padding(horizontal = 8.dp , vertical = 2.dp).align(Alignment.Start)
+                    )
+
+                }
+
+                Column(horizontalAlignment = Alignment.End, modifier = Modifier.weight(1f)) {
+
+                    Text(
+                        text = item.balanceFormatted,
+                        style = RepointTypography.titleMedium
+                    )
+
+                    val amount = item.usdPrice
+                    val formattedAmount = DecimalFormat("#0.00").format(amount)
+                    //USD
+                    Text(
+                        text = "$$formattedAmount",
+                        style = RepointTypography.titleSmall
+                    )
+
+
+                }
+
+
+            }
+        }
     }
 
 }
 
-fun generateFakeData(tabIndex: Int): List<Tokens> {
+
+fun netWorthSection(tokenList: List<TokensBalance>?) : Float{
+    return tokenList?.sumOf { it.balanceFormatted.toDouble() * it.usdPrice.toDouble() }?.toFloat() ?: 0f
+}
+
+/*fun generateFakeData(tabIndex: Int): List<Tokens> {
     return List(20) { index ->
         Tokens(
             id = index,
             content = "Item ${index + 1} in Tab ${tabIndex + 1}"
         )
     }
-}
+}*/
 

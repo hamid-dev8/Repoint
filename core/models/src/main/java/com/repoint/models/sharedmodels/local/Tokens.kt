@@ -1,3 +1,3 @@
-package com.repoint.models.sharedmodels
+package com.repoint.models.sharedmodels.local
 
 data class Tokens(val id :Int , val content : String)

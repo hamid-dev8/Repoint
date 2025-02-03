@@ -14,13 +14,11 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CopyAll
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -37,19 +35,18 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import com.repoint.account.WalletViewModel
-import com.repoint.basics.atoms.PngWithText
 import com.repoint.basics.atoms.RepointAppBar
 import com.repoint.basics.atoms.RepointCommonButton
 import com.repoint.basics.atoms.VectorWithText
 import com.repoint.basics.atoms.WarningBanner
 import com.repoint.dependencies.theme.Purple40
 import com.repoint.dependencies.theme.RepointTypography
-import com.repoint.models.sharedmodels.RepointWallet
+import com.repoint.models.sharedmodels.local.RepointWallet
 
 
 @Composable
 fun ShowPhrase(
-    walletId: String,
+    walletId  : String,
     navController: NavController,
     viewModel: WalletViewModel = hiltViewModel<WalletViewModel>(),
     onConfirm: (String?) -> Unit
@@ -63,7 +60,9 @@ fun ShowPhrase(
         Box(Modifier.fillMaxSize().padding(16.dp)) {
             LaunchedEffect(walletId) {
                 wallet = viewModel.showPhrase(walletId)
+                Log.d("phrase","phrase is : $wallet")
             }
+
             val phraseList = wallet?.phrase?.split(" ")
 
             Column(
@@ -99,7 +98,7 @@ fun ShowPhrase(
                     "I saved And Confirmed",
                     onClick = {
                         //TODO ADD CONFIRM TO CONFIRM
-                        if (wallet != null) onConfirm(wallet?.phrase)
+                        onConfirm(wallet?.phrase)
                         Log.d("saved", "halaloua")
 
                     }, modifier = Modifier.padding(top = 32.dp))

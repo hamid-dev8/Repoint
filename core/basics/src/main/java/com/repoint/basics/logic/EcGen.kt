@@ -1,9 +1,8 @@
 package com.repoint.basics.logic
 
 import android.util.Log
-import com.repoint.models.sharedmodels.RepointWallet
+import com.repoint.models.sharedmodels.local.RepointWallet
 import org.web3j.crypto.Bip32ECKeyPair
-import org.web3j.crypto.Bip39Wallet
 import org.web3j.crypto.Credentials
 import org.web3j.crypto.MnemonicUtils
 import org.web3j.crypto.WalletUtils
@@ -33,7 +32,9 @@ class EcGen() {
             val hexOfIt = derivedKeyPair.privateKey.toString(16)
             val credentials = Credentials.create(derivedKeyPair)
 
+
             wallet = RepointWallet(
+                userId = null,
                 phrase = phrase,
                 name = "wallet",
                 creationDate = getCurrentDate(),
@@ -46,8 +47,7 @@ class EcGen() {
 
 
             //Log.d("ETH", "private key Hex = $hexOfIt")
-            Log.d("ETH", "" +
-                    "50 ==> seed phrase is = $phrase")
+            Log.d("ETH", "50 ==> seed phrase is = $phrase")
             Log.d("ETH", "" +
                     "50 ==> credentials = ${credentials.address}")
 
@@ -88,6 +88,7 @@ class EcGen() {
 
         if (WalletUtils.isValidPrivateKey(hexOfIt) && isValidMnemonic(mnemonic)) {
             return RepointWallet(
+                userId = null,
                 phrase = mnemonic,
                 name = walletName,
                 creationDate = getCurrentDate(),

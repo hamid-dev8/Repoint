@@ -1,6 +1,11 @@
 plugins {
     alias(libs.plugins.android.library)
     alias(libs.plugins.kotlin.android)
+
+    kotlin("kapt")
+    alias(libs.plugins.ksp)
+    alias(libs.plugins.hilt)
+
 }
 
 android {
@@ -59,6 +64,25 @@ dependencies {
     }
 
     //moralis
-    implementation(libs.web3.api.client)
+    //implementation(libs.web3.api.client)
+    implementation(project(":core:models"))
 
+    //coil
+    api(libs.coil.compose)
+    api(libs.coil.network.okhttp)
+
+
+    implementation(libs.hilt.android)
+    //  kapt("com.google.dagger:hilt-android-compiler:2.51.1")
+    kapt (libs.hilt.compiler)
+
+}
+
+// For KSP
+ksp {
+    arg("option_name", "option_value")
+// other options...
+}
+kapt{
+    correctErrorTypes = true
 }

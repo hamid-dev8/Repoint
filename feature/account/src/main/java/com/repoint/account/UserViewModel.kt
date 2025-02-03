@@ -1,14 +1,18 @@
 package com.repoint.account
 
+import android.util.Log
+import androidx.lifecycle.LiveData
+import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.repoint.basics.logic.generateSalt
 import com.repoint.basics.logic.hashPasscode
-import com.repoint.models.sharedmodels.User
+import com.repoint.models.sharedmodels.local.User
 import com.repoint.sources.datarepo.datasource.UserDataSource
 import com.repoint.splash.accountmanager.SpManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.async
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
@@ -21,8 +25,10 @@ class UserViewModel @Inject constructor(
     private val spManager: SpManager
 ) : ViewModel() {
 
+    private val _result = MutableLiveData<User>()
+    val result: LiveData<User> get() = _result
 
-    fun createUser(walletId: String, passcode: String) {
+    fun createUser(passcode: String) {
 
         viewModelScope.launch {
             val current = LocalDateTime.now()
@@ -31,22 +37,22 @@ class UserViewModel @Inject constructor(
             val salt = generateSalt()
             val hashed = hashPasscode(passcode, salt)
             val user =
-                User(walletId = walletId, salt = salt, passwordHash = hashed, createdAt = createdAt)
+                User(salt = salt, passwordHash = hashed, createdAt = createdAt)
 
             spManager.setUserId(user.userId)
-            repository.authUser(user)
+           repository.authUser(user)
+            Log.d("focus" , " user have been created  : $user")
         }
-
     }
 
     suspend fun fetchUser(): User {
 
-        val deferredUser = viewModelScope.async {
+            delay(3000)
             val user = repository.getUser()
-            user
-        }
+            Log.d("focus" , "fetch user is : $user")
 
-        return deferredUser.await()
+
+        return user
     }
 
 

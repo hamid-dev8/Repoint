@@ -5,6 +5,7 @@ appcompatVersion = "1.7.0"
 biometric = "1.4.0-alpha02"
 biometricVersion = "1.2.0"
 bitcoinjCore = "0.16.4"
+coilCompose = "3.0.4"
 constraintlayoutCompose = "1.1.0"
 core = "4.12.2"
 coreSplashscreen = "1.0.0"
@@ -57,6 +58,8 @@ androidx-room-compiler = { module = "androidx.room:room-compiler", version.ref =
 androidx-room-ktx = { module = "androidx.room:room-ktx", version.ref = "room" }
 androidx-room-runtime = { module = "androidx.room:room-runtime" ,  version.ref = "room" }
 bitcoinj-core = { module = "org.bitcoinj:bitcoinj-core", version.ref = "bitcoinjCore" }
+coil-compose = { module = "io.coil-kt.coil3:coil-compose", version.ref = "coilCompose" }
+coil-network-okhttp = { module = "io.coil-kt.coil3:coil-network-okhttp", version.ref = "coilCompose" }
 converter-gson = { module = "com.squareup.retrofit2:converter-gson", version.ref = "retrofit" }
 core = { module = "org.web3j:core", version.ref = "core" }
 core-v489android = { module = "org.web3j:core", version.ref = "coreVersion" }
