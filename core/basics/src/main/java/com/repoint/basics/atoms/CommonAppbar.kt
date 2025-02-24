@@ -6,10 +6,11 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.rounded.AddCircleOutline
+import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -22,7 +23,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import androidx.navigation.compose.currentBackStackEntryAsState
 import com.repoint.dependencies.theme.RepointTypography
@@ -62,38 +62,87 @@ fun RepointBar(navController: NavController) {
 }
 
 @Composable
-fun BackButton(navController: NavController, modifier: Modifier = Modifier) {
-    IconButton(onClick = { navController.popBackStack() }, modifier = modifier) {
+fun NavigationButton(
+    navController: NavController,
+    modifier: Modifier = Modifier,
+    isSettings: Boolean,
+    onSettingsClick: () -> Unit = {}
+) {
+    IconButton(
+        onClick = { if (isSettings) onSettingsClick() else navController.popBackStack() },
+        modifier = modifier
+    ) {
         Icon(
-            imageVector = Icons.AutoMirrored.Default.ArrowBack,
-            contentDescription = "Back"
+            imageVector = if (isSettings) Icons.Rounded.Settings else Icons.AutoMirrored.Default.ArrowBack,
+            contentDescription = if (isSettings) "Settings" else "Back"
         )
     }
 }
 
+@Composable
+fun EndIconButton(showEndIcon: Boolean, onEndIconClick: () -> Unit) {
+
+    if (showEndIcon) {
+        IconButton(onClick = onEndIconClick) {
+            Icon(imageVector = Icons.Rounded.AddCircleOutline, contentDescription = "Add Tokens")
+        }
+    }
+
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun TopAppBarWithBackButton(
+fun TopAppBarWithButton(
     navController: NavController,
     title: String,
+    isSettings: Boolean = false,
+    showEndIcon: Boolean = false,
+    onSettingsClick: () -> Unit = {},
+    onEndIconClick: () -> Unit = {},
     modifier: Modifier = Modifier,
     actions: @Composable RowScope.() -> Unit = {}
 ) {
     CenterAlignedTopAppBar(
         title = {
-                Text(
-                    text = title,
-                    style = RepointTypography.bodyMedium,
-                )
+            Text(
+                text = title,
+                style = RepointTypography.bodyMedium,
+            )
         },
-        navigationIcon = { BackButton(navController) },
-        actions = actions,)
+        navigationIcon = {
+            NavigationButton(
+                navController,
+                isSettings = isSettings,
+                onSettingsClick = onSettingsClick
+            )
+        },
+        actions = {
+            EndIconButton(showEndIcon, onEndIconClick = onEndIconClick)
+            actions()
+        })
 }
 
 @Composable
-fun RepointAppBar(title: String, navController: NavController, exp: @Composable () -> Unit) {
+fun RepointAppBar(
+    title: String,
+    navController: NavController,
+    isSettings: Boolean = false,
+    showEndIcon: Boolean = false,
+    onSettingsClick: () -> Unit = {},
+    onEndIconClick: () -> Unit = {},
+    exp: @Composable () -> Unit
+) {
     Scaffold(
-        topBar = { TopAppBarWithBackButton(navController = navController, title = title) }
+        topBar = {
+            TopAppBarWithButton(
+                navController = navController,
+                title = title,
+                isSettings = isSettings,
+                showEndIcon = showEndIcon,
+                onSettingsClick = onSettingsClick,
+                onEndIconClick = onEndIconClick
+            )
+        }
     ) { paddingValues ->
         Surface(modifier = Modifier.padding(paddingValues)) {
             exp()

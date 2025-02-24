@@ -2,7 +2,6 @@ plugins {
     alias(libs.plugins.android.library)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
-
 }
 
 android {
@@ -45,4 +44,7 @@ android {
 dependencies {
     implementation(project(":core:Dependencies"))
     implementation(project(":core:models"))
+    //zxing
+    implementation(libs.zxing.android.embedded)
+
 }

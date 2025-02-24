@@ -52,7 +52,6 @@ class EcGen() {
                     "50 ==> credentials = ${credentials.address}")
 
             return wallet
-
     }
 
     fun importWithMnemonic(

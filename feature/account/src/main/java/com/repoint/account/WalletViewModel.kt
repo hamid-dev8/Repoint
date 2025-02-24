@@ -60,7 +60,7 @@ class WalletViewModel @Inject constructor(
     suspend fun getAllWallets(userId : String) : List<RepointWallet>{
 
         val deferredWallets = viewModelScope.async {
-            delay(2000)
+            delay(20)
             val wallets = repository.getAllWallets(userId)
             wallets
         }

@@ -3,9 +3,11 @@ package com.repoint.app.navigation
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.fragment.app.FragmentActivity
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
 import com.google.gson.Gson
 import com.repoint.account.login.LoginScreen
 import com.repoint.account.signup.ui.AuthScreen
@@ -14,6 +16,8 @@ import com.repoint.account.signup.ui.SetPinCode
 import com.repoint.account.signup.ui.ShowPhrase
 import com.repoint.account.signup.ui.WalletConfirmSurface
 import com.repoint.dashboard.ui.HomeScreen
+import com.repoint.dashboard.ui.SendTokenScreen
+import com.repoint.dashboard.ui.WalletQrCodeScreen
 import com.repoint.splash.ui.SplashScreenRepoint
 import com.repoint.splash.ui.Web3WalletScreen
 
@@ -22,7 +26,7 @@ val gson = Gson()
 
 @Composable
 @Preview
-fun PreViewNav(){
+fun PreViewNav() {
 
     //RepointNavigation()
 
@@ -98,9 +102,24 @@ fun RepointNavigation(activity: FragmentActivity) {
         }
 
 
-        composable("home") {
+        composable("home") { //navigating from home with a button to qrCode screen
             HomeScreen(navController)
         }
+
+
+        //afterhome
+        composable(
+            "qrCode/{walletAddress}",
+            arguments = listOf(navArgument("walletAddress"){type = NavType.StringType})
+        ) { backStackEntry ->
+            val walletAddress = backStackEntry.arguments?.getString("walletAddress") ?: ""
+            WalletQrCodeScreen(navController, walletAddress = walletAddress)
+        }
+
+        composable("sendToken") {
+            SendTokenScreen(navController)
+        }
+
     }
 
 

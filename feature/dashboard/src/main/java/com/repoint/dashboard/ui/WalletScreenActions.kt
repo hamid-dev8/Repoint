@@ -1,8 +1,8 @@
 package com.repoint.dashboard.ui
 
 import android.annotation.SuppressLint
+import android.net.Uri
 import android.util.Log
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -14,9 +14,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.pager.VerticalPager
 import androidx.compose.foundation.pager.rememberPagerState
@@ -42,7 +40,6 @@ import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
@@ -59,16 +56,20 @@ import com.repoint.basics.atoms.RepointAppBar
 import com.repoint.basics.atoms.SearchTextField
 import com.repoint.basics.atoms.ViewPagerRobot
 import com.repoint.dashboard.TokenViewModel
+import com.repoint.dashboard.Web3ViewModel
 import com.repoint.dependencies.R
 import com.repoint.dependencies.theme.RepointTypography
 import com.repoint.dependencies.theme.ghostWhite
 import com.repoint.dependencies.theme.richBlack
 import com.repoint.models.sharedmodels.local.RepointWallet
-import com.repoint.models.sharedmodels.local.Tokens
 import com.repoint.models.sharedmodels.remote.NativesBalance
 import com.repoint.models.sharedmodels.remote.TokensBalance
 import kotlinx.coroutines.launch
-import org.bouncycastle.math.raw.Mod
+import org.web3j.contracts.token.ERC20BasicInterface
+import org.web3j.contracts.token.ERC20Interface
+import org.web3j.ens.Contracts
+import org.web3j.tx.Contract
+import java.math.BigDecimal
 import java.text.DecimalFormat
 
 
@@ -85,12 +86,15 @@ fun HomeScreen(
     navController: NavController,
     walletViewModel: WalletViewModel = hiltViewModel<WalletViewModel>(),
     userViewModel: UserViewModel = hiltViewModel<UserViewModel>(),
-    tokenViewModel: TokenViewModel = hiltViewModel<TokenViewModel>()
+    tokenViewModel: TokenViewModel = hiltViewModel<TokenViewModel>(),
+    web3ViewModel : Web3ViewModel = hiltViewModel<Web3ViewModel>()
 ) {
 
     var wallets by remember { mutableStateOf<List<RepointWallet>>(emptyList()) }
     var tokenList by remember { mutableStateOf<NativesBalance?>(null) }
     var balance by remember { mutableStateOf<String>(" ") }
+    var ether by remember { mutableStateOf<BigDecimal?>(BigDecimal.ZERO) }
+
 
     LaunchedEffect(Unit) {
 
@@ -101,7 +105,9 @@ fun HomeScreen(
 
 
         tokenList = tokenViewModel.getTokenBalance(address = wallets[0].address, "polygon")
+        ether = web3ViewModel.fetchNativeWalletBalance(wallets[0].address)
         Log.d("token", "token list are : $tokenList")
+        Log.d("token" , "ether is : $ether")
     }
 
     RepointAppBar("wallet", exp = {
@@ -122,8 +128,9 @@ fun HomeScreen(
             val formattedBalanceAmount = DecimalFormat("#0.00").format(amount)
             BalanceScreen(wallets, "$$formattedBalanceAmount")
 
-            ActionsRow()
-
+            if (wallets.isNotEmpty()) {
+                ActionsRow(navController, wallets[0])
+            }
             ViewPagerRobot()
 
             AssetsTabLayout(tokenList)
@@ -131,14 +138,18 @@ fun HomeScreen(
             //BasicTabLayout(actions = )
         }
 
-    }, navController = navController)
+    }, navController = navController, isSettings = true, onSettingsClick = {
+
+    }, showEndIcon = true, onEndIconClick = {
+
+    })
 
 
 }
 
 
 @Composable
-fun ActionsRow() {
+fun ActionsRow(navController: NavController,wallet: RepointWallet?) {
 
     Row(
         Modifier
@@ -151,14 +162,19 @@ fun ActionsRow() {
         CircularButtonWithText(
             icon = Icons.AutoMirrored.Rounded.CallMade,
             "Send",
-            onClick = { },
+            onClick = {
+                navController.navigate("sendToken")
+            },
             Modifier.padding(12.dp),
             buttonSize = 48.dp
         )
         CircularButtonWithText(
             icon = Icons.AutoMirrored.Rounded.CallReceived,
             "Receive",
-            onClick = { },
+            onClick = {
+                val encodedAddress = Uri.encode(wallet?.address)
+                navController.navigate("qrCode/$encodedAddress")
+            },
             Modifier.padding(12.dp),
             buttonSize = 48.dp
         )
@@ -258,7 +274,8 @@ fun AssetsTabLayout(tokenList: NativesBalance?) {
                     ) {
                         Box(
                             modifier = Modifier
-                                .matchParentSize().padding(12.dp)
+                                .matchParentSize()
+                                .padding(12.dp)
                                 .background(color = ghostWhite)
                                 .blur(64.dp) // Blur applied to the background only
                         )
@@ -309,11 +326,16 @@ fun ListScreen(items: List<TokensBalance>?) {
 
                 Spacer(modifier = Modifier.width(8.dp))
 
-                Column(modifier = Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
+                Column(
+                    modifier = Modifier.weight(1f),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center
+                ) {
 
                     Text(
                         text = item.symbol.uppercase(), modifier = Modifier
-                            .fillMaxWidth().align(Alignment.Start)
+                            .fillMaxWidth()
+                            .align(Alignment.Start)
                             .padding(horizontal = 8.dp, vertical = 2.dp)
                     )
 
@@ -321,7 +343,9 @@ fun ListScreen(items: List<TokensBalance>?) {
                         text = item.name,
                         style = RepointTypography.labelSmall,
                         color = richBlack,
-                        modifier = Modifier.padding(horizontal = 8.dp , vertical = 2.dp).align(Alignment.Start)
+                        modifier = Modifier
+                            .padding(horizontal = 8.dp, vertical = 2.dp)
+                            .align(Alignment.Start)
                     )
 
                 }
@@ -352,8 +376,9 @@ fun ListScreen(items: List<TokensBalance>?) {
 }
 
 
-fun netWorthSection(tokenList: List<TokensBalance>?) : Float{
-    return tokenList?.sumOf { it.balanceFormatted.toDouble() * it.usdPrice.toDouble() }?.toFloat() ?: 0f
+fun netWorthSection(tokenList: List<TokensBalance>?): Float {
+    return tokenList?.sumOf { it.balanceFormatted.toDouble() * it.usdPrice.toDouble() }?.toFloat()
+        ?: 0f
 }
 
 /*fun generateFakeData(tabIndex: Int): List<Tokens> {

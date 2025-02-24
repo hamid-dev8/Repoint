@@ -1,0 +1,25 @@
+package com.repoint.network.di
+
+import dagger.Module
+import dagger.Provides
+import dagger.hilt.InstallIn
+import dagger.hilt.components.SingletonComponent
+import org.web3j.protocol.Web3j
+import org.web3j.protocol.http.HttpService
+import javax.inject.Singleton
+
+@Module
+@InstallIn(SingletonComponent::class)
+object Web3jModule {
+
+    private const val API_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJub25jZSI6IjllOWYwYzQ5LTI0Y2ItNGNlYi05NDg1LWY2ZjI4NGEzODZkMSIsIm9yZ0lkIjoiNDI1ODk2IiwidXNlcklkIjoiNDM4MDYyIiwidHlwZUlkIjoiZDBmMGJhMzctM2VmNi00OGNjLWJkNjgtNmE3MzE2NGZmMzc1IiwidHlwZSI6IlBST0pFQ1QiLCJpYXQiOjE3MzY5MzA1NDgsImV4cCI6NDg5MjY5MDU0OH0.0OMiwXnG7EhekR8hM41PngKIh0T9SG5NIUk8YsmaBP8"
+    private const val NODE_URL = "https://speedy-nodes-nyc.moralis.io/$API_KEY/eth/mainnet"
+
+
+    @Provides
+    @Singleton
+    fun provideWeb3J(): Web3j {
+        return Web3j.build(HttpService(NODE_URL))
+    }
+
+}

@@ -9,9 +9,7 @@ plugins {
 
     id("kotlin-kapt")
     alias(libs.plugins.hilt)
-
     //id ("dagger.hilt.android.plugin")
-
 }
 
 android {
@@ -91,6 +89,10 @@ dependencies {
     //web3 android
     //noinspection GradleDependency
     api(libs.core.v489android)
+    api(libs.codegen.v487)
+    api( libs.utils)
+    api(libs.crypto)
+    api(libs.rlp)
 
     //hilt
     implementation(libs.hilt.android)
@@ -131,6 +133,8 @@ dependencies {
 
     api(libs.androidx.datastore.preferences)
 }
+
+
 // Allow references to generated code
 kapt {
     correctErrorTypes = true

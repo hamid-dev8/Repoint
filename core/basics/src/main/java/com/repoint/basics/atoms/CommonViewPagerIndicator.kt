@@ -47,7 +47,7 @@ fun ViewPagerRobot() {
 
     LaunchedEffect(pagerState) {
         while (true)
-            delay(3000)
+            delay(20)
         pagerState.animateScrollToPage(
             page = (pagerState.currentPage + 1) % 3
         )

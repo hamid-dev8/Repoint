@@ -1,5 +1,6 @@
 package com.repoint.basics.atoms
 
+import android.graphics.Bitmap
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -17,9 +18,11 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
@@ -28,6 +31,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.repoint.basics.logic.generateQrCodeBitmap
 import com.repoint.dependencies.theme.Purple40
 import com.repoint.dependencies.theme.RepointTypography
 import com.repoint.dependencies.theme.repointOrange
@@ -53,7 +57,7 @@ fun PreviewPng() {
 @Composable
 fun PngWithText(png: Int, desc: String, text: String, textColor: Color, modifier: Modifier) {
 
-    Row() {
+    Row {
 
         Image(
             painter = painterResource(png),
@@ -85,15 +89,18 @@ fun VectorWithText(
     text: String,
     textColor: Color,
     modifier: Modifier,
-    onClick : () -> Unit
+    onClick: () -> Unit
 ) {
 
     Row(
         horizontalArrangement = Arrangement.Center,
         verticalAlignment = Alignment.CenterVertically,
-        modifier = modifier.wrapContentWidth().padding(top = 32.dp).clickable {
-            onClick()
-        }
+        modifier = modifier
+            .wrapContentWidth()
+            .padding(top = 32.dp)
+            .clickable {
+                onClick()
+            }
     ) {
 
         Icon(
@@ -147,4 +154,28 @@ fun BigPng(
             contentScale = ContentScale.Inside
         )
     }
+}
+
+@Composable
+fun BigBitmap(
+    modifier: Modifier = Modifier,
+    aspectRatioWidth: Float = 16.0f,
+    aspectRatioHeight: Float = 12f,
+    walletAddress: String
+) {
+
+    val qrBitmap = remember { generateQrCodeBitmap(walletAddress) }
+
+    Box(modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+        qrBitmap?.let { bitmap ->
+
+
+            Image(
+                bitmap = bitmap.asImageBitmap(),
+                contentDescription = "Wallet QR Code",
+                modifier = Modifier.size(200.dp).align(Alignment.Center).aspectRatio(aspectRatioHeight / aspectRatioWidth))
+        }
+    }
+
+
 }

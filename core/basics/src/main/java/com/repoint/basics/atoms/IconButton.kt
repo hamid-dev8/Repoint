@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
@@ -26,6 +27,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.repoint.dependencies.theme.RepointTypography
 import com.repoint.dependencies.theme.ghostWhite
 import com.repoint.dependencies.theme.richBlack
 
@@ -83,6 +85,31 @@ fun CircularButtonWithText(
             text = text,
             style = textStyle,
             modifier = Modifier.padding(top = 8.dp).align(Alignment.BottomCenter)
+        )
+    }
+}
+
+@Composable
+fun IconWithText(
+    icon: ImageVector,
+    text: String,
+    modifier: Modifier = Modifier,
+    iconSize: Dp = 48.dp,
+    spacing: Dp = 8.dp // Space between icon and text
+) {
+    Column(
+        modifier = modifier,
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            modifier = Modifier.size(iconSize)
+        )
+        Spacer(modifier = Modifier.height(spacing))
+        Text(
+            text = text,
+            style = RepointTypography.titleSmall
         )
     }
 }

@@ -14,5 +14,17 @@ plugins {
     //ksp
     alias(libs.plugins.ksp) apply false
     kotlin("kapt") version "2.1.0"
-   // kotlin("jvm") version "2.0.0" apply false
+
+    // kotlin("jvm") version "2.0.0" apply false
+}
+
+buildscript {
+    repositories {
+        google()
+        mavenCentral()
+    }
+    dependencies {
+        // ✅ Correct syntax for Kotlin DSL
+        classpath("org.web3j:web3j-gradle-plugin:4.8.0")
+    }
 }
