@@ -330,8 +330,8 @@ fun RepointNumPad(
                 digits?.joinToString("")?.let { viewModel.createUser(it) }
                 coroutineScope.launch {
                     val user = viewModel.fetchUser()
-                    Log.d("focus", "the user id  is somehow : ${user.userId}")
-                    walletViewModel.linkUserToWallet(walletId,user.userId)
+                    Log.d("focus", "the user id  is somehow : ${user?.userId}")
+                    user?.userId?.let { walletViewModel.linkUserToWallet(walletId, it) }
                 }
                 //user?.let { walletViewModel.linkUserToWallet(walletId, userId = it.userId) }
                 //Log.d("focus", " user is $user ")

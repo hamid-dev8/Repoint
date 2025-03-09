@@ -2,8 +2,6 @@ package com.repoint.network.di
 
 import com.ihsanbal.logging.Level
 import com.ihsanbal.logging.LoggingInterceptor
-import com.repoint.network.TokenBalanceRepositoryImp
-import com.repoint.network.datasource.TokenDataSource
 import com.repoint.network.util.WebApi
 import dagger.Module
 import dagger.Provides

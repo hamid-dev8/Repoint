@@ -14,7 +14,7 @@ class UserRepositoryImp @Inject constructor(private val userDao: UserDao) : User
          userDao.authUser(user)
     }
 
-    override suspend fun getUser(): User {
+    override suspend fun getUser(): User? {
         return userDao.getUser()
     }
 

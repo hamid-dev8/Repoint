@@ -1,6 +1,8 @@
 package di
 
+import com.repoint.network.datasource.HistoryDataSource
 import com.repoint.sources.datarepo.BiometricRepositoryImp
+import com.repoint.sources.datarepo.HistoryRepositoryImp
 import com.repoint.sources.datarepo.UserRepositoryImp
 import com.repoint.sources.datarepo.WalletRepositoryImp
 import com.repoint.sources.datarepo.datasource.AuthDataSource
@@ -30,4 +32,7 @@ interface RepoModule {
     @Singleton
     fun bindBiometricDataSource(imp : BiometricRepositoryImp) : BiometricDataSource
 
+    @Binds
+    @Singleton
+    fun bindHistoryDataSource(imp : HistoryRepositoryImp) : HistoryDataSource
 }

@@ -45,6 +45,7 @@ dependencies {
     implementation(project(":core:basics"))
 
     implementation(libs.hilt.android)
+    implementation(project(":core:network"))
 
     kapt(libs.hilt.compiler)
     //kapt("com.google.dagger:hilt-android-compiler:2.51.1")

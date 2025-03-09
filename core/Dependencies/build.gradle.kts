@@ -48,6 +48,16 @@ android {
         kotlinCompilerExtensionVersion = "1.5.15"
     }
 
+
+    packaging {
+        resources.excludes.add("META-INF/LICENSE.md")
+        resources.excludes.add("META-INF/LICENSE-notice.md")
+        resources.excludes.add("META-INF/DEPENDENCIES")
+        resources.excludes.add("META-INF/LICENSE")
+        resources.excludes.add("META-INF/LICENSE.txt")
+        resources.excludes.add("META-INF/NOTICE")
+        resources.excludes.add("META-INF/NOTICE.txt")
+    }
 }
 
 dependencies {
@@ -132,6 +142,14 @@ dependencies {
     api(libs.androidx.core.splashscreen)
 
     api(libs.androidx.datastore.preferences)
+
+    //qr
+    api(libs.barcode.scanning)
+    api(libs.play.services.code.scanner)
+    api(libs.androidx.camera.core)
+    api(libs.androidx.camera.camera2)
+    api(libs.androidx.camera.lifecycle)
+    api(libs.androidx.camera.view)
 }
 
 

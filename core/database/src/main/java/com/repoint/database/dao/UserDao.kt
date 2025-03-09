@@ -14,7 +14,7 @@ interface UserDao {
     suspend fun authUser(user : User)
 
     @Query("SELECT * FROM users LIMIT 1")
-    suspend fun getUser() : User
+    suspend fun getUser() : User?
 
     @Query("UPDATE users SET salt = :salt, passwordHash = :passwordHash WHERE userId = :userId")
     suspend fun updateUser(userId: String,salt :String,passwordHash : String)

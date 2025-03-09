@@ -7,6 +7,7 @@ import com.repoint.models.sharedmodels.remote.NativesBalance
 import com.repoint.network.datasource.TokenDataSource
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.async
+import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 
@@ -24,6 +25,5 @@ class TokenViewModel @Inject constructor(private val repository : TokenDataSourc
 
         return tokenDeferred.await()
     }
-
 
 }

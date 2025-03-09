@@ -47,9 +47,9 @@ class EcGen() {
 
 
             //Log.d("ETH", "private key Hex = $hexOfIt")
-            Log.d("ETH", "50 ==> seed phrase is = $phrase")
+            Log.d("ETH", "i ==> seed phrase is = $phrase")
             Log.d("ETH", "" +
-                    "50 ==> credentials = ${credentials.address}")
+                    "i ==> credentials = ${credentials.address}")
 
             return wallet
     }

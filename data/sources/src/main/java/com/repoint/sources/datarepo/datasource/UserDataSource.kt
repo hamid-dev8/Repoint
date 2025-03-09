@@ -6,6 +6,6 @@ interface UserDataSource
 {
 
     suspend fun authUser(user : User)
-    suspend fun getUser() : User
+    suspend fun getUser() : User?
     suspend fun updateUser(userId : String,salt : String,passwordHash : String)
 }

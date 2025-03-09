@@ -45,12 +45,13 @@ dependencies {
 
     implementation(project(":core:Dependencies"))
 
-
     implementation(libs.hilt.android)
     implementation(project(":core:basics"))
     implementation(project(":core:models"))
     implementation(project(":core:network"))
     implementation(project(":feature:account"))
+    implementation(project(":feature:splash"))
+    implementation(libs.androidx.runtime.livedata)
 
 
 

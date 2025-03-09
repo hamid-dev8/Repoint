@@ -65,10 +65,6 @@ import com.repoint.models.sharedmodels.local.RepointWallet
 import com.repoint.models.sharedmodels.remote.NativesBalance
 import com.repoint.models.sharedmodels.remote.TokensBalance
 import kotlinx.coroutines.launch
-import org.web3j.contracts.token.ERC20BasicInterface
-import org.web3j.contracts.token.ERC20Interface
-import org.web3j.ens.Contracts
-import org.web3j.tx.Contract
 import java.math.BigDecimal
 import java.text.DecimalFormat
 
@@ -100,11 +96,13 @@ fun HomeScreen(
 
         val user = userViewModel.fetchUser()
         Log.d("token", " user is : $user")
-        wallets = user.let { walletViewModel.getAllWallets(it.userId) }
+        wallets = user.let { it?.userId?.let { it1 -> walletViewModel.getAllWallets(it1) }!! }
         Log.d("token", " wallets  are : $wallets")
 
 
-        tokenList = tokenViewModel.getTokenBalance(address = wallets[0].address, "polygon")
+        //todo HANDLE active wallet and chain from server
+        tokenList = tokenViewModel.getTokenBalance(address = wallets[0].address, "eth")
+        web3ViewModel.testConnectionToWeb3()
         ether = web3ViewModel.fetchNativeWalletBalance(wallets[0].address)
         Log.d("token", "token list are : $tokenList")
         Log.d("token" , "ether is : $ether")
@@ -129,7 +127,7 @@ fun HomeScreen(
             BalanceScreen(wallets, "$$formattedBalanceAmount")
 
             if (wallets.isNotEmpty()) {
-                ActionsRow(navController, wallets[0])
+                ActionsRow(navController, wallets[0],tokenList)
             }
             ViewPagerRobot()
 
@@ -149,7 +147,7 @@ fun HomeScreen(
 
 
 @Composable
-fun ActionsRow(navController: NavController,wallet: RepointWallet?) {
+fun ActionsRow(navController: NavController,wallet: RepointWallet?,tokenList: NativesBalance?) {
 
     Row(
         Modifier
@@ -163,7 +161,8 @@ fun ActionsRow(navController: NavController,wallet: RepointWallet?) {
             icon = Icons.AutoMirrored.Rounded.CallMade,
             "Send",
             onClick = {
-                navController.navigate("sendToken")
+                //todo handle which is native token to do gas fees
+                navController.navigate("sendToken/${wallet?.address}/${tokenList?.result?.get(0)?.balanceFormatted}")
             },
             Modifier.padding(12.dp),
             buttonSize = 48.dp
@@ -195,7 +194,10 @@ fun ActionsRow(navController: NavController,wallet: RepointWallet?) {
         CircularButtonWithText(
             icon = Icons.Filled.History,
             "History",
-            onClick = { },
+            onClick = {
+                val balance =tokenList?.result?.get(0)?.usdPrice
+                navController.navigate("history/$balance")
+            },
             Modifier.padding(12.dp),
             buttonSize = 48.dp
         )
@@ -350,15 +352,18 @@ fun ListScreen(items: List<TokensBalance>?) {
 
                 }
 
+                val amountToken = item.balanceFormatted
+                val formattedTokenAmount = DecimalFormat("#0.00").format(amountToken)
+
                 Column(horizontalAlignment = Alignment.End, modifier = Modifier.weight(1f)) {
 
                     Text(
-                        text = item.balanceFormatted,
+                        text = "$$formattedTokenAmount",
                         style = RepointTypography.titleMedium
                     )
 
-                    val amount = item.usdPrice
-                    val formattedAmount = DecimalFormat("#0.00").format(amount)
+                    val amountUsd = item.usdPrice
+                    val formattedAmount = DecimalFormat("#0.00").format(amountUsd)
                     //USD
                     Text(
                         text = "$$formattedAmount",

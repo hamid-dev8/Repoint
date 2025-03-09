@@ -22,6 +22,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
+import com.repoint.account.UserViewModel
 import com.repoint.account.WalletViewModel
 import com.repoint.basics.atoms.RepointAppBar
 import com.repoint.basics.atoms.RepointCommonButton
@@ -42,6 +43,7 @@ fun PreviewLogin() {
 fun LoginScreen(
     navController: NavController,
     viewModel: WalletViewModel = hiltViewModel(),
+    userViewModel : UserViewModel = hiltViewModel(),
     onConfirm: (String) -> Unit
 ) {
     var walletNameInput by remember { mutableStateOf("") } // State to hold the user input

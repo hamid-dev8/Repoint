@@ -45,9 +45,9 @@ class UserViewModel @Inject constructor(
         }
     }
 
-    suspend fun fetchUser(): User {
+    suspend fun fetchUser(): User? {
 
-            delay(20)
+            delay(1000)
             val user = repository.getUser()
             Log.d("focus" , "fetch user is : $user")
 

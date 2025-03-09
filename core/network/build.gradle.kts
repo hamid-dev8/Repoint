@@ -73,6 +73,7 @@ dependencies {
 
 
     implementation(libs.hilt.android)
+    implementation(project(":core:basics"))
     //  kapt("com.google.dagger:hilt-android-compiler:2.51.1")
     kapt (libs.hilt.compiler)
 

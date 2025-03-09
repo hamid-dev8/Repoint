@@ -17,7 +17,9 @@ import com.repoint.account.signup.ui.ShowPhrase
 import com.repoint.account.signup.ui.WalletConfirmSurface
 import com.repoint.dashboard.ui.HomeScreen
 import com.repoint.dashboard.ui.SendTokenScreen
+import com.repoint.dashboard.ui.TransactionHistoryScreen
 import com.repoint.dashboard.ui.WalletQrCodeScreen
+import com.repoint.models.sharedmodels.remote.NativesBalance
 import com.repoint.splash.ui.SplashScreenRepoint
 import com.repoint.splash.ui.Web3WalletScreen
 
@@ -110,14 +112,29 @@ fun RepointNavigation(activity: FragmentActivity) {
         //afterhome
         composable(
             "qrCode/{walletAddress}",
-            arguments = listOf(navArgument("walletAddress"){type = NavType.StringType})
+            arguments = listOf(navArgument("walletAddress") { type = NavType.StringType })
         ) { backStackEntry ->
             val walletAddress = backStackEntry.arguments?.getString("walletAddress") ?: ""
             WalletQrCodeScreen(navController, walletAddress = walletAddress)
         }
 
-        composable("sendToken") {
-            SendTokenScreen(navController)
+        composable(
+            "sendToken/{walletAddress}/{tokenBalance}",
+            arguments = listOf(navArgument("walletAddress") { type = NavType.StringType },
+                navArgument("tokenBalance") { type = NavType.StringType })
+        ) { backStackEntry ->
+            val walletAddress = backStackEntry.arguments?.getString("walletAddress") ?: ""
+            val tokenBalance = backStackEntry.arguments?.getString("tokenBalance") ?: "0"
+            SendTokenScreen(walletAddress, tokenBalance, navController)
+        }
+
+        composable(
+            "history/{balance}",
+            arguments = listOf(navArgument("balance"){type = NavType.FloatType})
+        ) { backstackEntry ->
+            val balance = backstackEntry.arguments?.getFloat("balance") ?: 0.0f
+           // val nativeBalance = gson.fromJson(balance,NativesBalance::class.java) // Convert back to object
+            TransactionHistoryScreen(navController,balance = balance)
         }
 
     }
