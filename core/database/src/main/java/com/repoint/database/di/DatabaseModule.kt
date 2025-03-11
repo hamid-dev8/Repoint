@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.room.Room
 import com.repoint.database.AppDatabase
 import com.repoint.database.dao.AuthDao
+import com.repoint.database.dao.NetworkDao
 import com.repoint.database.dao.UserDao
 import dagger.Module
 import dagger.Provides
@@ -34,5 +35,9 @@ internal object DatabaseModule {
     @Provides
     @Singleton
     fun providesUserDao(database: AppDatabase): UserDao = database.userDao()
+
+    @Provides
+    @Singleton
+    fun provideNetworkDao(database: AppDatabase) : NetworkDao = database.networkDao()
 
 }

@@ -67,9 +67,7 @@ dependencies {
     //implementation(libs.web3.api.client)
     implementation(project(":core:models"))
 
-    //coil
-    api(libs.coil.compose)
-    api(libs.coil.network.okhttp)
+
 
 
     implementation(libs.hilt.android)

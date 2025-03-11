@@ -48,4 +48,7 @@ dependencies {
     implementation(libs.zxing.android.embedded)
 
 
+    //coil
+    api(libs.coil.compose)
+    api(libs.coil.network.okhttp)
 }

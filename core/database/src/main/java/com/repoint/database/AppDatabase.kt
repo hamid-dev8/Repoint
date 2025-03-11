@@ -3,6 +3,7 @@ package com.repoint.database
 import androidx.room.Database
 import androidx.room.RoomDatabase
 import com.repoint.database.dao.AuthDao
+import com.repoint.database.dao.NetworkDao
 import com.repoint.database.dao.UserDao
 import com.repoint.models.sharedmodels.local.User
 import com.repoint.models.sharedmodels.local.RepointWallet
@@ -12,4 +13,5 @@ import com.repoint.models.sharedmodels.local.RepointWallet
 {
     abstract fun authDao() : AuthDao
     abstract fun userDao() : UserDao
+    abstract fun networkDao() : NetworkDao
 }

@@ -114,8 +114,8 @@ fun TransactionItem(transaction: RepointTransactions, balance: Float) {
             verticalAlignment = Alignment.CenterVertically
         ) {
             val icon =
-                if (transaction.category == "send") painterResource(id = com.repoint.dependencies.R.drawable.ic_receive)
-                else painterResource(id = com.repoint.dependencies.R.drawable.ic_send)
+                if (transaction.category == "send") painterResource(id = com.repoint.dependencies.R.drawable.ic_send)
+                else painterResource(id = com.repoint.dependencies.R.drawable.ic_receive)
 
 
             Image(

@@ -52,6 +52,7 @@ dependencies {
     implementation(project(":feature:account"))
     implementation(project(":feature:splash"))
     implementation(libs.androidx.runtime.livedata)
+    implementation(project(":core:database"))
 
 
 
