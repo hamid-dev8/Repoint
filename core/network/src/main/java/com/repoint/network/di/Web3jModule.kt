@@ -19,18 +19,11 @@ object Web3jModule {
         "https://site1.moralis-nodes.com/eth/295e6814f2704d189f72446e9f8dfe10"
     private const val NODE_URL_POL =
         "https://site1.moralis-nodes.com/polygon/95c7139ee35e410daae09e53d1725518"
-    val selectedNetwork = networks.find { it.name == "Ethereum" }
-    val rpcUrl = selectedNetwork?.rpcUrl ?: ""
 
     @Provides
     @Singleton
     fun provideWeb3J(): Web3j {
         return Web3j.build(HttpService(NODE_URL))
     }
-
-
-    @Provides
-    @Singleton
-    fun provideBlockchainNetworks(): List<BlockchainNetwork> = networks
 
 }

@@ -101,7 +101,7 @@ fun HomeScreen(
 
 
         //todo HANDLE active wallet and chain from server
-        tokenList = tokenViewModel.getTokenBalance(address = wallets[0].address, "eth")
+        tokenList = tokenViewModel.getTokenBalance(address = wallets[0].address, "polygon")
         web3ViewModel.testConnectionToWeb3()
         ether = web3ViewModel.fetchNativeWalletBalance(wallets[0].address)
         Log.d("token", "token list are : $tokenList")
@@ -139,7 +139,7 @@ fun HomeScreen(
     }, navController = navController, isSettings = true, onSettingsClick = {
 
     }, showEndIcon = true, onEndIconClick = {
-
+        navController.navigate("networks")
     })
 
 
@@ -352,13 +352,13 @@ fun ListScreen(items: List<TokensBalance>?) {
 
                 }
 
-                val amountToken = item.balanceFormatted
+                val amountToken = item.balanceFormatted.toDouble() ?: 0.0
                 val formattedTokenAmount = DecimalFormat("#0.00").format(amountToken)
 
                 Column(horizontalAlignment = Alignment.End, modifier = Modifier.weight(1f)) {
 
                     Text(
-                        text = "$$formattedTokenAmount",
+                        text = formattedTokenAmount,
                         style = RepointTypography.titleMedium
                     )
 

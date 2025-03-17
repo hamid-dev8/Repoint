@@ -4,10 +4,9 @@ import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.repoint.models.sharedmodels.remote.NativesBalance
-import com.repoint.network.datasource.TokenDataSource
+import com.repoint.sources.datarepo.datasource.TokenDataSource
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.async
-import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 

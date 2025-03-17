@@ -1,8 +1,7 @@
 package com.repoint.sources.datarepo
 
 import com.repoint.models.sharedmodels.remote.History
-import com.repoint.models.sharedmodels.remote.RepointTransactions
-import com.repoint.network.datasource.HistoryDataSource
+import com.repoint.sources.datarepo.datasource.HistoryDataSource
 import com.repoint.network.util.WebApi
 import javax.inject.Inject
 import javax.inject.Singleton

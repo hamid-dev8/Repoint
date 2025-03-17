@@ -2,6 +2,8 @@ package com.repoint.database.di
 
 import android.content.Context
 import androidx.room.Room
+import androidx.room.RoomDatabase
+import androidx.sqlite.db.SupportSQLiteDatabase
 import com.repoint.database.AppDatabase
 import com.repoint.database.dao.AuthDao
 import com.repoint.database.dao.NetworkDao
@@ -26,7 +28,13 @@ internal object DatabaseModule {
         context,
         AppDatabase::class.java,
         "repoint_database"
-    ).fallbackToDestructiveMigration().build()
+    ).fallbackToDestructiveMigration().addCallback(object : RoomDatabase.Callback() {
+        override fun onOpen(db: SupportSQLiteDatabase) {
+            super.onOpen(db)
+            db.execSQL("PRAGMA foreign_keys=ON;") // ✅ Enable foreign keys
+        }
+    }).addMigrations(AppDatabase.MIGRATION_1_2).build()
+
 
     @Provides
     @Singleton

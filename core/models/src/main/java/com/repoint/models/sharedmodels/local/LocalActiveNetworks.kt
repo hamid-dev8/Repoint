@@ -8,13 +8,14 @@ import androidx.room.PrimaryKey
     tableName = "actives",
     foreignKeys = [
         ForeignKey(
-            entity = BlockchainNetworkEntity::class, // Link with BlockchainNetwork
+            entity = TokenEntity::class, // Link with BlockchainNetwork
             parentColumns = ["id"], // Foreign Key Parent
-            childColumns = ["id"], // Foreign Key Child
+            childColumns = ["networkId"], // Foreign Key Child
             onDelete = ForeignKey.CASCADE
         )
     ]
 )
 data class LocalActiveNetworks(
-    @PrimaryKey val id: Int // Stores active network IDs
+    @PrimaryKey val Id: Int = 0, // Stores active network IDs
+    val networkId : Int
 )

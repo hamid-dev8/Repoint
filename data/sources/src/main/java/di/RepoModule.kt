@@ -1,13 +1,19 @@
 package di
 
-import com.repoint.network.datasource.HistoryDataSource
+import com.repoint.sources.datarepo.TokenBalanceRepositoryImp
+import com.repoint.sources.datarepo.Web3jWalletRepositoryImp
+import com.repoint.sources.datarepo.datasource.HistoryDataSource
 import com.repoint.sources.datarepo.BiometricRepositoryImp
 import com.repoint.sources.datarepo.HistoryRepositoryImp
+import com.repoint.sources.datarepo.NetworkRepositoryImp
 import com.repoint.sources.datarepo.UserRepositoryImp
 import com.repoint.sources.datarepo.WalletRepositoryImp
 import com.repoint.sources.datarepo.datasource.AuthDataSource
 import com.repoint.sources.datarepo.datasource.BiometricDataSource
+import com.repoint.sources.datarepo.datasource.NetworkDataSource
+import com.repoint.sources.datarepo.datasource.TokenDataSource
 import com.repoint.sources.datarepo.datasource.UserDataSource
+import com.repoint.sources.datarepo.datasource.Web3DataSource
 import dagger.Binds
 import dagger.Module
 import dagger.hilt.InstallIn
@@ -35,4 +41,17 @@ interface RepoModule {
     @Binds
     @Singleton
     fun bindHistoryDataSource(imp : HistoryRepositoryImp) : HistoryDataSource
+
+    @Binds
+    @Singleton
+    fun bindTokenDataSource(imp : TokenBalanceRepositoryImp) : TokenDataSource
+
+
+    @Binds
+    @Singleton
+    fun bindWeb3DataSource(imp : Web3jWalletRepositoryImp) : Web3DataSource
+
+    @Binds
+    @Singleton
+    fun bindNetworkDataSource(imp : NetworkRepositoryImp) : NetworkDataSource
 }

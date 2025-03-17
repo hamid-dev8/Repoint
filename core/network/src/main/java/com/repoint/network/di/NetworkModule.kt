@@ -31,7 +31,7 @@ object NetworkModule {
     val RESPONSE_TAG = "APIRES"
     val API_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJub25jZSI6IjllOWYwYzQ5LTI0Y2ItNGNlYi05NDg1LWY2ZjI4NGEzODZkMSIsIm9yZ0lkIjoiNDI1ODk2IiwidXNlcklkIjoiNDM4MDYyIiwidHlwZUlkIjoiZDBmMGJhMzctM2VmNi00OGNjLWJkNjgtNmE3MzE2NGZmMzc1IiwidHlwZSI6IlBST0pFQ1QiLCJpYXQiOjE3MzY5MzA1NDgsImV4cCI6NDg5MjY5MDU0OH0.0OMiwXnG7EhekR8hM41PngKIh0T9SG5NIUk8YsmaBP8"
     private  val moralisUrl: String = "https://deep-index.moralis.io/api/v2.2/" //TODO add proper baseUrl!!!
-    private val NetworkUrl : String = "http://artaan.com" //Todo add repoint url
+    private val networkUrl : String = "https://botapi.repointbot.com/api/" //Todo add repoint url
 
     @Provides
     @Singleton
@@ -154,7 +154,7 @@ object NetworkModule {
     @NetworkRetrofit
     fun provideNetworkRetrofit(@NetworkOkHttp okHttpClient  : OkHttpClient) : Retrofit{
         return Retrofit.Builder()
-            .baseUrl(moralisUrl)
+            .baseUrl(networkUrl)
             .addConverterFactory(GsonConverterFactory.create())
             .client(okHttpClient)
             .build()
@@ -167,6 +167,7 @@ object NetworkModule {
     @Provides
     @Singleton
     fun provideNetworkApiService(@NetworkRetrofit retrofit: Retrofit): NetworkApiService = retrofit.create(NetworkApiService::class.java)
+
 
   /*  @Provides
     @Singleton

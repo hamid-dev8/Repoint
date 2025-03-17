@@ -1,4 +1,4 @@
-package com.repoint.network.datasource
+package com.repoint.sources.datarepo.datasource
 
 import com.repoint.models.sharedmodels.remote.NativesBalance
 

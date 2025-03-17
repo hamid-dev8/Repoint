@@ -5,8 +5,7 @@ import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import androidx.lifecycle.viewmodel.compose.viewModel
-import com.repoint.network.datasource.Web3DataSource
+import com.repoint.sources.datarepo.datasource.Web3DataSource
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
@@ -25,7 +24,7 @@ import javax.inject.Inject
 
 @HiltViewModel
 class Web3ViewModel @Inject constructor(
-    private val repository: Web3DataSource
+    private val repository: com.repoint.sources.datarepo.datasource.Web3DataSource
 ) : ViewModel() {
     private val _balanceWei = MutableLiveData<BigInteger>()
     val balanceWei: LiveData<BigInteger> get() = _balanceWei
@@ -43,10 +42,7 @@ class Web3ViewModel @Inject constructor(
     }
 
     suspend fun testConnectionToWeb3(): Boolean {
-        return viewModelScope.async {
-            val isConnectedToWeb3 = repository.testWeb3Connection()
-            isConnectedToWeb3
-        }.await()
+        return repository.testWeb3Connection()
     }
 
     suspend fun fetchNativeWalletBalance(walletAddress: String): BigDecimal? {

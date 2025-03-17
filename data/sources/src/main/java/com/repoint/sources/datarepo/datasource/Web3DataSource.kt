@@ -1,9 +1,8 @@
-package com.repoint.network.datasource
+package com.repoint.sources.datarepo.datasource
 
 import org.web3j.crypto.Credentials
 import org.web3j.protocol.core.methods.response.EthSendTransaction
 import org.web3j.protocol.core.methods.response.TransactionReceipt
-import org.web3j.tx.TransactionManager
 import java.math.BigDecimal
 import java.math.BigInteger
 

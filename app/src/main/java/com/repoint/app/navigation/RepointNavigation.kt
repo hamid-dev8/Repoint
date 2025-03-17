@@ -15,6 +15,7 @@ import com.repoint.account.signup.ui.ConfirmPhrases
 import com.repoint.account.signup.ui.SetPinCode
 import com.repoint.account.signup.ui.ShowPhrase
 import com.repoint.account.signup.ui.WalletConfirmSurface
+import com.repoint.dashboard.ui.CryptoManageScreen
 import com.repoint.dashboard.ui.HomeScreen
 import com.repoint.dashboard.ui.SendTokenScreen
 import com.repoint.dashboard.ui.TransactionHistoryScreen
@@ -130,12 +131,20 @@ fun RepointNavigation(activity: FragmentActivity) {
 
         composable(
             "history/{balance}",
-            arguments = listOf(navArgument("balance"){type = NavType.FloatType})
+            arguments = listOf(navArgument("balance") { type = NavType.FloatType })
         ) { backstackEntry ->
             val balance = backstackEntry.arguments?.getFloat("balance") ?: 0.0f
-           // val nativeBalance = gson.fromJson(balance,NativesBalance::class.java) // Convert back to object
-            TransactionHistoryScreen(navController,balance = balance)
+            // val nativeBalance = gson.fromJson(balance,NativesBalance::class.java) // Convert back to object
+            TransactionHistoryScreen(navController, balance = balance)
         }
+
+        composable(
+            "networks"
+        )
+        { navBackStackEntry ->
+            CryptoManageScreen(navController)
+        }
+
 
     }
 

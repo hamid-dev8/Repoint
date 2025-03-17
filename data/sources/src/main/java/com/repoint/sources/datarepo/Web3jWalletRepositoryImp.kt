@@ -1,8 +1,8 @@
-package com.repoint.network
+package com.repoint.sources.datarepo
 
 import android.util.Log
 import com.repoint.basics.logic.TokenERC20
-import com.repoint.network.datasource.Web3DataSource
+import com.repoint.sources.datarepo.datasource.Web3DataSource
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
@@ -30,22 +30,22 @@ import javax.inject.Singleton
 
 
 @Singleton
-class Web3jWalletRepositoryImp @Inject constructor(private val web3j: Web3j) : Web3DataSource {
+class Web3jWalletRepositoryImp @Inject constructor(private val web3j: Web3j) :
+    Web3DataSource {
 
     override suspend fun testWeb3Connection(): Boolean {
-        withContext(Dispatchers.IO) {
+        return withContext(Dispatchers.IO) {
             try {
                 val networkId = web3j.netVersion().send().netVersion
                 val latestBlock = web3j.ethBlockNumber().send().blockNumber
                 Log.d("Web3jTest", "Connected to Ethereum Network ID: $networkId")
                 Log.d("Web3jTest", "Latest Block: $latestBlock")
-                return@withContext true
+                true
             } catch (e: Exception) {
                 Log.e("Web3jTest", "Error connecting to Ethereum node", e)
-                return@withContext false
+                false
             }
         }
-        return true
     }
 
     override suspend fun getChainId(): Long = withContext(Dispatchers.IO) {
