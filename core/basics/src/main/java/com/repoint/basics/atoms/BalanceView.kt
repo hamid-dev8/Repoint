@@ -32,6 +32,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.repoint.dependencies.theme.RepointTypography
 import com.repoint.dependencies.theme.transparentColor
+import com.repoint.models.sharedmodels.local.MasterWallet
 import com.repoint.models.sharedmodels.local.RepointWallet
 
 @Composable
@@ -45,7 +46,7 @@ fun PreviewBalanceScreen() {
 }
 
 @Composable
-fun BalanceScreen(items: List<RepointWallet>, balance: String) {
+fun BalanceScreen(items: List<MasterWallet>, balance: String) {
     var isHiddenBalance by remember { mutableStateOf(false) }
 
     Column(
@@ -88,7 +89,7 @@ fun BalanceScreen(items: List<RepointWallet>, balance: String) {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DropDownList(
-    items: List<RepointWallet>,
+    items: List<MasterWallet>,
     selectedItem: String?,
     onItemSelected: (String) -> Unit,
     modifier: Modifier = Modifier

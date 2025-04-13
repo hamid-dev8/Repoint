@@ -83,10 +83,10 @@ fun SendTokenScreen(
     LaunchedEffect(walletAddress) {
         val userId = userViewModel.fetchUser()
         Log.d("transaction" , "user id is : $userId")
-        val privateKey = userIdFlow.value?.let { walletViewModel.getAllWallets(it)[0].privateKey }
+      //  val privateKey = userIdFlow.value?.let { walletViewModel.getAllMasterWallets(it)[0]. }
         Log.d("transaction" , "user id flow is : ${userIdFlow.value}")
-             credentials = Credentials.create(privateKey)
-        Log.d("transaction", "crendentials is : $credentials and private key is  : $privateKey")
+        //     credentials = Credentials.create(privateKey)
+    //    Log.d("transaction", "crendentials is : $credentials and private key is  : $privateKey")
     }
 
     val isButtonEnabled = recipientAddress.isNotBlank() && amount.isNotBlank()

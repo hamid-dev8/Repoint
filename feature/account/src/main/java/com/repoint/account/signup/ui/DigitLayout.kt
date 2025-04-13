@@ -331,7 +331,7 @@ fun RepointNumPad(
                 coroutineScope.launch {
                     val user = viewModel.fetchUser()
                     Log.d("focus", "the user id  is somehow : ${user?.userId}")
-                    user?.userId?.let { walletViewModel.linkUserToWallet(walletId, it) }
+                    user?.userId?.let { walletViewModel.linkUserToMasterWallet(walletId, it) }
                 }
                 //user?.let { walletViewModel.linkUserToWallet(walletId, userId = it.userId) }
                 //Log.d("focus", " user is $user ")
@@ -340,11 +340,11 @@ fun RepointNumPad(
     })
 
     if (showBiometricDialog) {
-       /* LaunchedEffect(walletId) {
+        LaunchedEffect(walletId) {
             val user = viewModel.fetchUser()
             Log.d("focus" , "user isss : $user")
-            //walletViewModel.linkUserToWallet(walletId, userId = user.userId)
-        }*/
+            walletViewModel.linkUserToMasterWallet(walletId, userId = user?.userId ?: "")
+        }
         BiometricalDialog(
             onDenyClick = {
                 showBiometricDialog = false

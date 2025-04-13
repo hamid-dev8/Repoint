@@ -11,6 +11,7 @@ data class BlockchainNetworkEntity(
    @PrimaryKey val id : Int,
    val name: String,
    val chainId: Int,
+   val coinType : Int,
    val rpcUrl: String,
    val explorerUrl: String,
    val nativeToken: String,

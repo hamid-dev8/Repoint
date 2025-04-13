@@ -117,7 +117,7 @@ object NetworkModule {
                     val original: Request = chain.request()
                     val request: Request = original.newBuilder()
                         .header("accept", "application/json")
-                        .header("X-API-Key", API_KEY)
+                        .header("User-Agent", "Mozilla/5.0") // Fix for 403
                         .build()
                     chain.proceed(request)
                 }

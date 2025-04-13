@@ -49,6 +49,7 @@ web3ApiClient = "1.0.0"
 web3jCore = "4.9.4"
 zxingAndroidEmbedded = "4.3.0"
 runtimeLivedata = "1.7.8"
+media3CommonKtx = "1.6.0"
 
 [libraries]
 abi = { module = "org.web3j:abi", version.ref = "coreVersion" }
@@ -117,6 +118,7 @@ utils = { module = "org.web3j:utils", version.ref = "coreVersion" }
 web3-api-client = { module = "io.moralis:web3-api-client", version.ref = "web3ApiClient" }
 zxing-android-embedded = { module = "com.journeyapps:zxing-android-embedded", version.ref = "zxingAndroidEmbedded" }
 androidx-runtime-livedata = { group = "androidx.compose.runtime", name = "runtime-livedata", version.ref = "runtimeLivedata" }
+androidx-media3-common-ktx = { group = "androidx.media3", name = "media3-common-ktx", version.ref = "media3CommonKtx" }
 
 
 

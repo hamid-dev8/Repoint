@@ -29,6 +29,7 @@ import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -40,6 +41,7 @@ import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
@@ -61,9 +63,11 @@ import com.repoint.dependencies.R
 import com.repoint.dependencies.theme.RepointTypography
 import com.repoint.dependencies.theme.ghostWhite
 import com.repoint.dependencies.theme.richBlack
-import com.repoint.models.sharedmodels.local.RepointWallet
+import com.repoint.models.sharedmodels.local.ChainWallet
+import com.repoint.models.sharedmodels.local.MasterWallet
 import com.repoint.models.sharedmodels.remote.NativesBalance
 import com.repoint.models.sharedmodels.remote.TokensBalance
+import com.repoint.splash.accountmanager.SpManager
 import kotlinx.coroutines.launch
 import java.math.BigDecimal
 import java.text.DecimalFormat
@@ -83,32 +87,85 @@ fun HomeScreen(
     walletViewModel: WalletViewModel = hiltViewModel<WalletViewModel>(),
     userViewModel: UserViewModel = hiltViewModel<UserViewModel>(),
     tokenViewModel: TokenViewModel = hiltViewModel<TokenViewModel>(),
-    web3ViewModel : Web3ViewModel = hiltViewModel<Web3ViewModel>()
+    web3ViewModel: Web3ViewModel = hiltViewModel<Web3ViewModel>()
 ) {
 
-    var wallets by remember { mutableStateOf<List<RepointWallet>>(emptyList()) }
+    var masterWallets by remember { mutableStateOf<List<MasterWallet>>(emptyList()) }
+    var chainWallets by remember { mutableStateOf<List<ChainWallet>>(emptyList()) }
     var tokenList by remember { mutableStateOf<NativesBalance?>(null) }
+    var tokensOf by remember { mutableStateOf<List<TokensBalance?>>(emptyList()) }
     var balance by remember { mutableStateOf<String>(" ") }
     var ether by remember { mutableStateOf<BigDecimal?>(BigDecimal.ZERO) }
+    val ethereumWallet = remember(chainWallets) {
+        derivedStateOf { chainWallets.firstOrNull { it.coinType == 60 } }
+    }
 
+    val context = LocalContext.current
+    val spManager = SpManager(context)
 
     LaunchedEffect(Unit) {
 
         val user = userViewModel.fetchUser()
-        Log.d("token", " user is : $user")
-        wallets = user.let { it?.userId?.let { it1 -> walletViewModel.getAllWallets(it1) }!! }
-        Log.d("token", " wallets  are : $wallets")
+        val userId = user?.userId
+
+        Log.d("token", "user id is $userId & user model is :$user")
+        if (userId != null) {
+
+            masterWallets = walletViewModel.getAllMasterWallets(userId)
+
+            Log.d("token", "Master Wallets: $masterWallets")
+
+            if (masterWallets.isNotEmpty()) {
+
+                //TODO generic the wallet
+                chainWallets = walletViewModel.getAllChainWallets(masterWallets[0].masterWalletId)
+                spManager.setActiveWallet(masterWallets[0].masterWalletId)
+
+                Log.d("token", "Polygon Wallet: $ethereumWallet")
+
+                //Default to Polygon chain for balances
+                val address = ethereumWallet.value?.address ?: return@LaunchedEffect
+
+                web3ViewModel.testConnectionToWeb3()
+               // tokenList = tokenViewModel.getTokenBalance(address = address, chain = "polygon")
+                tokenList = tokenViewModel.getMergedActivatedTokenBalances(address,"polygon")
+                tokensOf = tokenViewModel.getAllActivatedTokenBalances(address, "polygon")
+                //tokensOf = tokenViewModel.getMergedActivatedTokenBalances(address,"polygon")
+                ether = web3ViewModel.fetchNativeWalletBalance(address)
+
+                Log.d("token", "Chain Wallets: $chainWallets")
+                Log.d("token", "Address used: $address")
+                Log.d("token", "Token list: $tokenList")
+                Log.d("token", "activated tokens are : $tokensOf")
+                Log.d("token", "Ether: $ether")
+            }
+
+        }
+        /*
+
+
+                Log.d("token", " user is : $user")
+                wallets = user.let { it?.userId?.let { it1 -> walletViewModel.getAllMasterWallets(it1) }!! }
+
+                Log.d("token", " wallets  are : $wallets")
+        */
 
 
         //todo HANDLE active wallet and chain from server
-        tokenList = tokenViewModel.getTokenBalance(address = wallets[0].address, "polygon")
+        // tokenList = tokenViewModel.getTokenBalance(address = wallets[0]., "polygon")
+     /*   tokensOf = tokenViewModel.getAllActivatedTokenBalances(
+            walletAddress = ethereumWallet.value!!.address,
+            "eth"
+        )*/
+        Log.d("token", "tokens of is $tokensOf")
         web3ViewModel.testConnectionToWeb3()
-        ether = web3ViewModel.fetchNativeWalletBalance(wallets[0].address)
+        //  ether = web3ViewModel.fetchNativeWalletBalance(wallets[0].address)
         Log.d("token", "token list are : $tokenList")
-        Log.d("token" , "ether is : $ether")
+        Log.d("token", "ether is : $ether")
     }
 
     RepointAppBar("wallet", exp = {
+
 
         Column(
             Modifier
@@ -124,10 +181,10 @@ fun HomeScreen(
 
             val amount = netWorthSection(tokenList?.result)
             val formattedBalanceAmount = DecimalFormat("#0.00").format(amount)
-            BalanceScreen(wallets, "$$formattedBalanceAmount")
+            BalanceScreen(masterWallets, "$$formattedBalanceAmount")
 
-            if (wallets.isNotEmpty()) {
-                ActionsRow(navController, wallets[0],tokenList)
+            if (masterWallets.isNotEmpty()) {
+                ActionsRow(navController, wallet = ethereumWallet.value, tokenList)
             }
             ViewPagerRobot()
 
@@ -147,7 +204,7 @@ fun HomeScreen(
 
 
 @Composable
-fun ActionsRow(navController: NavController,wallet: RepointWallet?,tokenList: NativesBalance?) {
+fun ActionsRow(navController: NavController, wallet: ChainWallet?, tokenList: NativesBalance?) {
 
     Row(
         Modifier
@@ -162,7 +219,11 @@ fun ActionsRow(navController: NavController,wallet: RepointWallet?,tokenList: Na
             "Send",
             onClick = {
                 //todo handle which is native token to do gas fees
-                navController.navigate("sendToken/${wallet?.address}/${tokenList?.result?.get(0)?.balanceFormatted}")
+                //send choose token // Todo modify send
+
+                //navController.navigate("sendToken/${wallet?.address}/${tokenList?.result?.get(0)?.balanceFormatted}")
+                navController.currentBackStackEntry?.savedStateHandle?.set("tokenBalances", tokenList?.result)
+                navController.navigate("chooseToken/${true}")
             },
             Modifier.padding(12.dp),
             buttonSize = 48.dp
@@ -171,8 +232,10 @@ fun ActionsRow(navController: NavController,wallet: RepointWallet?,tokenList: Na
             icon = Icons.AutoMirrored.Rounded.CallReceived,
             "Receive",
             onClick = {
+                //receive choose token // Todo modify receive
                 val encodedAddress = Uri.encode(wallet?.address)
-                navController.navigate("qrCode/$encodedAddress")
+                //navController.navigate("qrCode/$encodedAddress")
+                navController.navigate("chooseToken/${false}")
             },
             Modifier.padding(12.dp),
             buttonSize = 48.dp
@@ -195,8 +258,9 @@ fun ActionsRow(navController: NavController,wallet: RepointWallet?,tokenList: Na
             icon = Icons.Filled.History,
             "History",
             onClick = {
-                val balance =tokenList?.result?.get(0)?.usdPrice
-                navController.navigate("history/$balance")
+                val balance = tokenList?.result?.get(0)?.usdPrice
+                val encodedAddress = Uri.encode(wallet?.address)
+                navController.navigate("history/$balance/$encodedAddress")
             },
             Modifier.padding(12.dp),
             buttonSize = 48.dp

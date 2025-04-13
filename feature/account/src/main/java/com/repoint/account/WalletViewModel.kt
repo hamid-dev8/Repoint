@@ -9,6 +9,9 @@ import androidx.lifecycle.asLiveData
 import androidx.lifecycle.flowWithLifecycle
 import androidx.lifecycle.viewModelScope
 import com.repoint.basics.logic.EcGen
+import com.repoint.basics.logic.EcGenerator
+import com.repoint.models.sharedmodels.local.ChainWallet
+import com.repoint.models.sharedmodels.local.MasterWallet
 import com.repoint.models.sharedmodels.local.RepointWallet
 import com.repoint.sources.datarepo.datasource.AuthDataSource
 import com.repoint.splash.accountmanager.SpManager
@@ -25,13 +28,89 @@ class WalletViewModel @Inject constructor(
     private val spManager: SpManager
 ) :
     ViewModel() {
-
+/*
     private val _data = mutableStateOf("Nothing Yet!")
     val data: State<String> = _data
-    val result = mutableStateOf<String?>(null)
-    val ecGen = EcGen.instance
+    val result = mutableStateOf<String?>(null)*/
 
-    fun createUserWallet(): String? {
+
+        private val _walletCreated = mutableStateOf<String?>(null)
+        val walletCreated : State<String?> = _walletCreated
+
+    /*
+    * Creates a new MasterWallet and derives ChainWallets for supported chains.
+    * saves all Wallets into the database.
+    * */
+
+    fun createUserWallet(walletName : String = "Wallet",userId : String?)  {
+
+        viewModelScope.launch {
+            val (masterWallet , chainWallets) = EcGenerator.generateMasterAndChainWallets(walletName,userId)
+
+            repository.insertMasterWallet(masterWallet)
+            repository.insertChainWallets(chainWallets)
+
+            _walletCreated.value = masterWallet.masterWalletId
+            Log.d("WalletViewModel", "Wallet created: $masterWallet with ${chainWallets.size} chains")
+
+
+            spManager.setActiveWallet(masterWallet.masterWalletId)
+        }
+
+    }
+
+    fun importWallet(mnemonic : String,walletName : String) : String? {
+        val isValid = EcGenerator.isValidMnemonic(mnemonic)
+
+        if (!isValid) return null
+
+        val (masterWallet , chainWallets) = EcGenerator.importMasterAndChainWallets(mnemonic,walletName)
+
+
+        viewModelScope.launch {
+            repository.insertMasterWallet(masterWallet)
+            repository.insertChainWallets(chainWallets)
+            Log.d("import", "Imported wallet: $masterWallet with ${chainWallets.size} chains")
+
+        }
+
+        return masterWallet.masterWalletId
+    }
+
+    suspend fun getMasterWallet(masterWalletId: String) : MasterWallet{
+        return repository.getMasterWallet(masterWalletId)
+    }
+
+    suspend fun getAllMasterWallets(userId: String) : List<MasterWallet> {
+        return repository.getAllMasterWallets(userId)
+    }
+
+    suspend fun getAllChainWallets(masterWalletId : String) : List<ChainWallet>
+    {
+        return repository.getChainWalletsByMaster(masterWalletId)
+    }
+
+    suspend fun getChainWallet(masterWalletId : String, coinType : Int) : ChainWallet?{
+        return repository.getChainWallet(masterWalletId,coinType)
+    }
+
+    fun linkUserToMasterWallet(masterWalletId: String, userId : String) {
+        viewModelScope.launch {
+            repository.linkMasterWalletToUser(masterWalletId,userId)
+        }
+    }
+
+
+
+
+
+
+
+
+    }
+    //val ecGen = EcGen.instance
+
+   /* fun createUserWallet(): String? {
 
 
         val wallet = ecGen.getFromMnemonic()
@@ -40,7 +119,7 @@ class WalletViewModel @Inject constructor(
             wallet.let { repository.authWallet(it) }
             Log.d(
                 "viewww",
-                "wallet id is : ${wallet.walletId} ,user id is : ${wallet.userId}, wallet address is : ${wallet.privateKey} , wallet phrase is : ${wallet.phrase}"
+                "wallet id is : ${wallet.} ,user id is : ${wallet.userId}, wallet address is : ${wallet.privateKey} , wallet phrase is : ${wallet.phrase}"
             )
         }
         return wallet.walletId
@@ -93,4 +172,4 @@ class WalletViewModel @Inject constructor(
     override fun onCleared() {
         super.onCleared()
     }
-}
+}*/

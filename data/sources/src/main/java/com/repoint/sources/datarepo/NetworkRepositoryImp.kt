@@ -5,6 +5,7 @@ import com.repoint.models.sharedmodels.local.BlockchainNetworkEntity
 import com.repoint.models.sharedmodels.local.BlockchainNetworkWithTokens
 import com.repoint.models.sharedmodels.local.LocalActiveNetworks
 import com.repoint.models.sharedmodels.local.TokenEntity
+import com.repoint.models.sharedmodels.local.TokenWithNetwork
 import com.repoint.sources.datarepo.datasource.NetworkDataSource
 import javax.inject.Inject
 
@@ -23,8 +24,12 @@ class NetworkRepositoryImp @Inject constructor(private val networkDao : NetworkD
         return networkDao.getTokensForNetwork(networkId)
     }
 
-    override suspend fun getActiveTokens(tokenId: Int): List<TokenEntity> {
-        return networkDao.getActiveTokens(tokenId)
+    override suspend fun getTokensWithNetwork(tokenId: Int): TokenWithNetwork {
+        return networkDao.getTokenWithNetwork(tokenId)
+    }
+
+    override suspend fun getActiveTokens(): List<TokenEntity> {
+        return networkDao.getActiveTokens()
     }
 
     override suspend fun getNetworkWithTokens() : List<BlockchainNetworkWithTokens> {

@@ -139,8 +139,10 @@ fun WalletConfirmSurface(
                 "Confirm",
                 modifier = Modifier.align(Alignment.BottomCenter),
                 onClick = {
-                    val walletId = viewModel.createUserWallet()
-                    walletId?.let { onConfirm(it) }
+                    viewModel.createUserWallet(walletName = "Wallet 1" , userId = null)
+                    viewModel.walletCreated.value?.let { onConfirm(it) }
+
+                    //walletId?.let { onConfirm(it) }
                     //navController.navigate("phrase")
                 }, enabled = isButtonEnabled,
             )

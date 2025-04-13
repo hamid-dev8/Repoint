@@ -15,6 +15,7 @@ import com.repoint.account.signup.ui.ConfirmPhrases
 import com.repoint.account.signup.ui.SetPinCode
 import com.repoint.account.signup.ui.ShowPhrase
 import com.repoint.account.signup.ui.WalletConfirmSurface
+import com.repoint.dashboard.ui.ChooseTokenScreen
 import com.repoint.dashboard.ui.CryptoManageScreen
 import com.repoint.dashboard.ui.HomeScreen
 import com.repoint.dashboard.ui.SendTokenScreen
@@ -67,7 +68,7 @@ fun RepointNavigation(activity: FragmentActivity) {
 
         composable("phrase/{phrases}") { backStackEntry ->
             val walletId = backStackEntry.arguments?.getString("phrases") ?: ""
-            ShowPhrase(walletId = walletId, navController, onConfirm = { phrasesList ->
+            ShowPhrase(masterWalletId = walletId, navController, onConfirm = { phrasesList ->
                 navController.navigate("confirmPhrases/$walletId/$phrasesList")
             })
         }
@@ -109,6 +110,13 @@ fun RepointNavigation(activity: FragmentActivity) {
             HomeScreen(navController)
         }
 
+        composable(
+            "chooseToken/{isSend}",
+            arguments = listOf(navArgument("isSend"){type = NavType.BoolType})
+        ) { backStackEntry ->
+            val isSend = backStackEntry.arguments?.getBoolean("isSend") ?: false
+            ChooseTokenScreen(navController, isSend = isSend)
+        }
 
         //afterhome
         composable(
@@ -130,12 +138,15 @@ fun RepointNavigation(activity: FragmentActivity) {
         }
 
         composable(
-            "history/{balance}",
-            arguments = listOf(navArgument("balance") { type = NavType.FloatType })
+            "history/{balance}/{walletAddress}",
+            arguments = listOf(navArgument("balance") { type = NavType.FloatType },
+                navArgument("walletAddress"){type = NavType.StringType}
+            )
         ) { backstackEntry ->
             val balance = backstackEntry.arguments?.getFloat("balance") ?: 0.0f
+            val walletAddress = backstackEntry.arguments?.getString("walletAddress") ?: ""
             // val nativeBalance = gson.fromJson(balance,NativesBalance::class.java) // Convert back to object
-            TransactionHistoryScreen(navController, balance = balance)
+            TransactionHistoryScreen(navController, balance = balance, walletAddress = walletAddress)
         }
 
         composable(

@@ -24,5 +24,5 @@ data class TokenEntity(
     val contractAddress: String,
     val decimals: Int,
     val logoUrl: String,
-    val networkId: Int // Foreign key referencing BlockchainNetworkEntity
+    val networkId : Int // Foreign key referencing BlockchainNetworkEntity
 )

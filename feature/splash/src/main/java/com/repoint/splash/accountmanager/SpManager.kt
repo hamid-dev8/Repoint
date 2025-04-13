@@ -15,6 +15,7 @@ val Context.dataStore : DataStore<Preferences> by preferencesDataStore(name = "s
 class SpManager(private val context: Context) {
 
     private val USER_ID_KEY = stringPreferencesKey("user_id")
+    private val WALLET_ID_KEY = stringPreferencesKey("wallet_id")
 
     suspend fun setUserId(userId: String) {
         context.dataStore.edit { preferences ->
@@ -26,6 +27,18 @@ class SpManager(private val context: Context) {
         return context.dataStore.data.map { preferences ->
 
             preferences[USER_ID_KEY]
+        }
+    }
+
+    suspend fun setActiveWallet(walletId : String){
+        context.dataStore.edit { prefrences ->
+            prefrences[WALLET_ID_KEY] = walletId
+        }
+    }
+
+    fun getActiveWalletId() : Flow<String?>{
+        return context.dataStore.data.map { prefrences ->
+            prefrences[WALLET_ID_KEY]
         }
     }
 

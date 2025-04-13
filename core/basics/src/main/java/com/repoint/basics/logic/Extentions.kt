@@ -15,6 +15,7 @@ fun BlockchainNetworkEntity.toDomainModel(tokens : List<TokenEntity>): Blockchai
         explorerUrl = this.explorerUrl,
         nativeToken = this.nativeToken,
         dexRouter = this.dexRouter,
+        coinType = this.coinType,
         tokens = tokens.map { tokenEntity ->
             Token(tokenEntity.tokenId,tokenEntity.name,tokenEntity.symbol,tokenEntity.contractAddress,tokenEntity.decimals,tokenEntity.logoUrl)
         } // Tokens are fetched separately

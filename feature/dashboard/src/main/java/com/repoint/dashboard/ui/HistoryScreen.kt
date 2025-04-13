@@ -1,5 +1,6 @@
 package com.repoint.dashboard.ui
 
+import android.util.Log
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.horizontalScroll
@@ -52,6 +53,7 @@ fun TransactionHistoryScreen(
     historyViewModel: HistoryViewModel = hiltViewModel<HistoryViewModel>(),
     walletViewModel: WalletViewModel = hiltViewModel<WalletViewModel>(),
     userViewmodel: UserViewModel = hiltViewModel<UserViewModel>(),
+    walletAddress: String,
     balance: Float
 ) {
 
@@ -62,11 +64,15 @@ fun TransactionHistoryScreen(
 
         val transactions by historyViewModel.transactions.observeAsState() // ✅ Observe StateFlow properly
 
+        Log.d("history", " wallet address is : $walletAddress")
+        Log.d("history", "transaction is :$transactions")
+
         LaunchedEffect(Unit) {
             val user = userViewmodel.fetchUser()
-            wallets = user.let { it?.userId?.let { it1 -> walletViewModel.getAllWallets(it1) }!! }
-            historyViewModel.getNativeHistory(wallets[0].address, chain = "eth", "DESC")
+            //wallets = user.let { it?.userId?.let { it1 -> walletViewModel.getChainWallet(userit1) }!! }
             // transactions  = historyViewModel.getNativeHistory(address = wallets[0].address, chain = "eth", order = "DESC")
+            historyViewModel.getNativeHistory(walletAddress, chain = "polygon", "DESC")
+
         }
 
         LazyColumn(modifier = Modifier.fillMaxSize()) {
@@ -84,90 +90,142 @@ fun TransactionHistoryScreen(
 @Composable
 fun TransactionItem(transaction: RepointTransactions, balance: Float) {
 
-    val scrollState = rememberScrollState()
-    val speed = 10 // Adjust speed (Higher = Slower)
+    val nativeTransfer = transaction.nativeTransfers.firstOrNull()
+    val erc20Transfer = transaction.erc20Transfers?.firstOrNull()
+    val transfer = nativeTransfer ?: erc20Transfer
 
-    // Auto-scroll effect (simulate marquee)
-    LaunchedEffect(Unit) {
-        while (true) {
-            scrollState.animateScrollTo(
-                scrollState.maxValue,
-                animationSpec = tween(durationMillis = speed * 1000)
-            )
-            scrollState.animateScrollTo(
-                0,
-                animationSpec = tween(durationMillis = speed * 1000)
-            ) // Reset Back
+    if (transfer != null) {
+        // render shared info from `transfer`
+
+
+        val scrollState = rememberScrollState()
+        val speed = 10 // Adjust speed (Higher = Slower)
+
+        // Auto-scroll effect (simulate marquee)
+        LaunchedEffect(Unit) {
+            while (true) {
+                scrollState.animateScrollTo(
+                    scrollState.maxValue,
+                    animationSpec = tween(durationMillis = speed * 1000)
+                )
+                scrollState.animateScrollTo(
+                    0,
+                    animationSpec = tween(durationMillis = speed * 1000)
+                ) // Reset Back
+            }
         }
-    }
 
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 8.dp), // More balanced padding
-        colors = CardDefaults.cardColors(Color.White),
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
-        shape = RoundedCornerShape(12.dp)
-    ) {
-        Row(
-            modifier = Modifier.padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 8.dp), // More balanced padding
+            colors = CardDefaults.cardColors(Color.White),
+            elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+            shape = RoundedCornerShape(12.dp)
         ) {
-            val icon =
-                if (transaction.category == "send") painterResource(id = com.repoint.dependencies.R.drawable.ic_send)
-                else painterResource(id = com.repoint.dependencies.R.drawable.ic_receive)
+            Row(
+                modifier = Modifier.padding(16.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                val icon =
+                    if (transaction.category == "send") painterResource(id = com.repoint.dependencies.R.drawable.ic_send)
+                    else painterResource(id = com.repoint.dependencies.R.drawable.ic_receive)
 
 
-            Image(
-                painter = icon,
-                contentDescription = transaction.nativeTransfers[0].direction,
-                modifier = Modifier.size(16.dp)
-            )
-
-            Spacer(modifier = Modifier.width(12.dp))
-
-            val formatedAddress = formatAddress(transaction.toAddress)
-
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = formatDate(transaction.blockTimeStamp),
-                    fontSize = 14.sp,
-                    color = richBlack,
-                    style = RepointTypography.titleSmall
+                Image(
+                    painter = icon,
+                    contentDescription = "transfer",
+                    modifier = Modifier.size(16.dp)
                 )
-                Text(
-                    text = if (transaction.category == "send") "Sent Transfer" else "Received Transfer",
-                    fontSize = 16.sp,
-                    style = RepointTypography.bodySmall
-                )
-                Text(
-                    text = "To: $formatedAddress",
-                    style = RepointTypography.titleSmall,
-                    color = Color.Gray,
-                )
-            }
 
-            Column(horizontalAlignment = Alignment.End)
-            {
-                Text(
-                    text = transaction.nativeTransfers[0].valueFormatted + transaction.nativeTransfers[0].tokenSymbol,
-                    color = richBlack,
-                    style = RepointTypography.labelSmall,
-                    modifier = Modifier.padding(bottom = 4.dp).padding(end = 8.dp)
-                )
-                Text(
-                    text = "${transaction.nativeTransfers[0].valueFormatted.toFloat() * balance} $ ",
-                    style = RepointTypography.titleSmall,
-                    color = Color.Gray,
-                    textAlign = TextAlign.End,
-                    modifier = Modifier.padding(top = 4.dp)
-                )
+                Spacer(modifier = Modifier.width(12.dp))
+
+                val formatedAddress = formatAddress(transaction.toAddress)
+
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = formatDate(transaction.blockTimeStamp),
+                        fontSize = 14.sp,
+                        color = richBlack,
+                        style = RepointTypography.titleSmall
+                    )
+                    Text(
+                        text = if (transaction.category == "send") "Sent Transfer" else "Received Transfer",
+                        fontSize = 16.sp,
+                        style = RepointTypography.bodySmall
+                    )
+                    Text(
+                        text = "To: $formatedAddress",
+                        style = RepointTypography.titleSmall,
+                        color = Color.Gray,
+                    )
+                }
+
+                Column(horizontalAlignment = Alignment.End)
+                {
+                    when {
+                        nativeTransfer != null -> {
+                            val valueFormatted = nativeTransfer.valueFormatted ?: "0"
+                            val symbol = nativeTransfer.tokenSymbol ?: ""
+
+
+
+
+                            Text(
+                                text = "$valueFormatted $symbol",
+                                color = richBlack,
+                                style = RepointTypography.labelSmall,
+                                modifier = Modifier
+                                    .padding(bottom = 4.dp)
+                                    .padding(end = 8.dp)
+                            )
+                            val usdValue = valueFormatted.toFloatOrNull()?.times(balance) ?: 0f
+
+                            Text(
+                                text = "$${" % .2f".format(usdValue)} ",
+                                style = RepointTypography.titleSmall,
+                                color = Color.Gray,
+                                textAlign = TextAlign.End,
+                                modifier = Modifier.padding(top = 4.dp)
+                            )
+                        }
+                        //erc20
+                        erc20Transfer != null -> {
+                            val valueFormatted = erc20Transfer.value ?: "0"
+                            val symbol = erc20Transfer.tokenSymbol ?: ""
+
+                            Text(
+                                text = "$valueFormatted $symbol",
+                                color = richBlack,
+                                style = RepointTypography.labelSmall,
+                                modifier = Modifier
+                                    .padding(bottom = 4.dp)
+                                    .padding(end = 8.dp)
+                            )
+
+                            val usdValue = valueFormatted.toFloatOrNull()?.times(balance) ?: 0f
+                            Text(
+                                text = "$${"%.2f".format(usdValue)}",
+                                style = RepointTypography.titleSmall,
+                                color = Color.Gray,
+                                textAlign = TextAlign.End,
+                                modifier = Modifier.padding(top = 4.dp)
+                            )
+                        }
+
+                        else -> {
+                            Text(
+                                text = "Unsupported Transfer",
+                                style = RepointTypography.bodySmall,
+                                color = Color.Red
+                            )
+                        }
+                    }
+                }
             }
 
         }
-
     }
-
 }
 
 fun formatAddress(address: String): String {

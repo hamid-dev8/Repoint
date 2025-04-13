@@ -7,6 +7,7 @@ import com.repoint.basics.logic.toDomainModel
 import com.repoint.models.sharedmodels.local.BlockchainNetworkEntity
 import com.repoint.models.sharedmodels.local.LocalActiveNetworks
 import com.repoint.models.sharedmodels.local.TokenEntity
+import com.repoint.models.sharedmodels.local.TokenWithNetwork
 import com.repoint.models.sharedmodels.remote.BlockchainNetwork
 import com.repoint.models.sharedmodels.remote.NetworkSummary
 import com.repoint.network.util.NetworkApiService
@@ -25,9 +26,7 @@ class NetworkViewModel @Inject constructor(
     private val repository: NetworkDataSource
 ) : ViewModel() {
 
-    init {
-        Log.d("NetworkViewModel", "NetworkViewModel Created!") // ✅ Add this log
-    }
+
 
     private val _networks = MutableStateFlow<List<BlockchainNetwork>>(emptyList())
     val networks: StateFlow<List<BlockchainNetwork>?> = _networks.asStateFlow()
@@ -41,6 +40,14 @@ class NetworkViewModel @Inject constructor(
     private val _apiMessage = MutableStateFlow<String?>(null)
     val apiMessage: StateFlow<String?> = _apiMessage
 
+    private val _tokenWithNetworks = MutableStateFlow<TokenWithNetwork?>(null)
+    val tokenWithNetworks: StateFlow<TokenWithNetwork?> = _tokenWithNetworks.asStateFlow()
+
+    init {
+        Log.d("NetworkViewModel", "NetworkViewModel Created!") // ✅ Add this log
+        fetchNetworks()
+        fetchActiveTokens()
+    }
   /*  fun fetchNetworks() {
         viewModelScope.launch {
             val networkWithTokens = repository.getNetworkWithTokens()
@@ -102,13 +109,14 @@ class NetworkViewModel @Inject constructor(
 
     fun fetchNetworks() {
         viewModelScope.launch {
-           // if (repository.isDatabaseEmpty()) {
-                Log.d("NetworkViewModel", "Database empty! Fetching from API")
 
-                if (_networks.value.isNotEmpty()) {
+           /*     if (_networks.value.isNotEmpty()) {
                     Log.d("NetworkViewModel", "Skipping fetchNetworks(), data already exists")
                     return@launch
-                }
+                }*/
+
+            val activeTokensIds = repository.getActiveNetworks().map { it.tokenId }
+
 
                 try {
                     Log.d("NetworkViewModel", "Fetching networks...")
@@ -126,6 +134,7 @@ class NetworkViewModel @Inject constructor(
                             explorerUrl = network.explorerUrl,
                             nativeToken = network.nativeToken,
                             dexRouter = network.dexRouter,
+                            coinType = network.coinType
                         )
                     }
 
@@ -148,6 +157,15 @@ class NetworkViewModel @Inject constructor(
                     repository.insertNetworks(blockChainEntities)
                     repository.insertToken(tokenEntities) // ✅ Insert tokens into database
 
+                    activeTokensIds.forEach{ tokenId ->
+                        repository.insertActiveNetwork(LocalActiveNetworks(tokenId))
+                    }
+                    Log.d("insert", "Inserted ${blockChainEntities.size} networks")
+                    Log.d("insert", "Inserted ${tokenEntities.size} tokens")
+
+                    blockChainEntities.find { it.name.contains("Polygon", ignoreCase = true) }?.let {
+                        Log.d("insert", "Polygon network found: $it")
+                    }
                     Log.d("NetworkViewModel", "Inserted networks & tokens into DB")
 
                     getLocalNetworks() // Load from DB after inserting
@@ -156,18 +174,19 @@ class NetworkViewModel @Inject constructor(
                     Log.e("NetworkViewModel", "Error fetching networks: ${e.localizedMessage}", e)
                     getLocalNetworks()
                 }
-            } /*else {
-                Log.d("NetworkViewModel", "Loading networks from database.")
-                getLocalNetworks()
-            }*/
         }
+    }
 
 
     private fun getLocalNetworks() {
         viewModelScope.launch {
             val storedNetworks = repository.getAllNetworks()
             Log.d("NetworkViewModel", "Stored networks in DB: $storedNetworks")
-
+            storedNetworks.forEach {
+                Log.d("net-debug", "Network ${it.name} ID ${it.id}")
+                val tokens = repository.getTokensForNetwork(it.id)
+                Log.d("net-debug", "${it.name} tokens: $tokens")
+            }
         /*    // 🔹 Merge Local Data With Existing Networks
             val existingNetworks = _networks.value.associateBy { it.id }
             val mergedNetworks = storedNetworks.map { it.toDomainModel() }.map { network ->
@@ -186,7 +205,7 @@ class NetworkViewModel @Inject constructor(
 
     fun insertActiveNetwork(activeNetwork: LocalActiveNetworks) {
         viewModelScope.launch {
-            val networkExists = repository.getNetworkById(activeNetwork.networkId)
+            val networkExists = repository.getNetworkById(activeNetwork.tokenId)
             if (networkExists != null) {
                 repository.insertActiveNetwork(activeNetwork)
                 Log.d("NetworkViewModel", "Inserted active network: $activeNetwork")
@@ -199,6 +218,16 @@ class NetworkViewModel @Inject constructor(
         }
     }
 
+    suspend fun getNetworkById(id: Int): BlockchainNetworkEntity? {
+        return repository.getNetworkById(id)
+    }
+
+    fun fetchTokensWithNetwork(tokenId : Int) {
+        viewModelScope.launch {
+            _tokenWithNetworks.value = repository.getTokensWithNetwork(tokenId)
+            Log.d("NetworkViewModel", "Fetched tokens with networks: ${_tokenWithNetworks.value}")
+        }
+    }
 
     private fun fetchActiveNetworks() {
         viewModelScope.launch {
@@ -206,21 +235,25 @@ class NetworkViewModel @Inject constructor(
         }
     }
 
-    fun fetchActiveTokens(tokenId: Int) {
+    fun fetchActiveTokens() {
         viewModelScope.launch {
-            _activeTokens.value = repository.getActiveTokens(tokenId)
+            val tokens = repository.getActiveTokens()
+            Log.d("NetworkViewModel", "Fetched active tokens: $tokens")
+            _activeTokens.value = tokens // ✅ This will now be safe
         }
     }
 
     fun toggleActiveNetwork(tokenId : Int,isActive : Boolean){
         viewModelScope.launch {
             if (isActive){
-                repository.insertActiveNetwork(LocalActiveNetworks(networkId = tokenId))
+                repository.insertActiveNetwork(LocalActiveNetworks(tokenId = tokenId))
             }
             else{
                 repository.deleteActiveNetwork(tokenId)
             }
             fetchActiveNetworks()
+            fetchActiveTokens()
+            //_activeTokens.value = repository.getActiveTokens()
         }
     }
 

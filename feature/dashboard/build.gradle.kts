@@ -65,6 +65,7 @@ dependencies {
     implementation(libs.androidx.runtime.livedata)
     implementation(project(":core:database"))
     implementation(project(":data:sources"))
+    implementation(libs.androidx.media3.common.ktx)
 
 
 

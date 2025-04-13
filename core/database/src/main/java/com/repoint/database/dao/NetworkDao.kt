@@ -9,6 +9,7 @@ import com.repoint.models.sharedmodels.local.BlockchainNetworkEntity
 import com.repoint.models.sharedmodels.local.BlockchainNetworkWithTokens
 import com.repoint.models.sharedmodels.local.LocalActiveNetworks
 import com.repoint.models.sharedmodels.local.TokenEntity
+import com.repoint.models.sharedmodels.local.TokenWithNetwork
 import com.repoint.models.sharedmodels.remote.BlockchainNetwork
 
 
@@ -19,8 +20,14 @@ interface NetworkDao
    @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertTokens(tokens : List<TokenEntity>)
 
-    @Query("SELECT * FROM tokens WHERE networkId = :networkId")
+    @Query("SELECT * FROM tokens WHERE  networkId= :networkId")
     suspend fun getTokensForNetwork(networkId: Int): List<TokenEntity>
+
+
+    /* get embeded token cointype!*/
+    @Transaction
+    @Query("SELECT * FROM tokens WHERE tokenId = :tokenId")
+    suspend fun getTokenWithNetwork(tokenId : Int) : TokenWithNetwork
 
     @Transaction
     @Query("SELECT * FROM networks")
@@ -38,8 +45,8 @@ interface NetworkDao
     @Query("SELECT * From actives")
     suspend fun getActiveNetworks() : List<LocalActiveNetworks>
 
-    @Query("SELECT * FROM actives WHERE networkId = :tokenId")
-    suspend fun getActiveTokens(tokenId: Int) : List<TokenEntity>
+ @Query("SELECT * FROM tokens WHERE tokenId IN (SELECT tokenId FROM actives)")
+    suspend fun getActiveTokens() : List<TokenEntity>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertNetworks(networks : List<BlockchainNetworkEntity>)
@@ -47,6 +54,6 @@ interface NetworkDao
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertActiveNetwork(active : LocalActiveNetworks)
 
-    @Query("DELETE FROM actives WHERE networkId = :networkId")
+    @Query("DELETE FROM actives WHERE  tokenId= :networkId")
     suspend fun deleteActiveNetwork(networkId : Int)
 }

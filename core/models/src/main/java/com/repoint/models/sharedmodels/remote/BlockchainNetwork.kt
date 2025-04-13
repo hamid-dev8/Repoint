@@ -8,5 +8,6 @@ data class BlockchainNetwork(
     val explorerUrl: String,
     val nativeToken: String,
     val dexRouter: String,
-    val tokens : List<Token>
+    val tokens : List<Token>,
+    val coinType : Int
 )

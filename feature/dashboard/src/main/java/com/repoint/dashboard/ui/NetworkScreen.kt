@@ -29,15 +29,18 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import coil3.compose.AsyncImage
+import coil3.request.ImageRequest
+import coil3.request.crossfade
 import com.repoint.basics.atoms.RepointAppBar
 import com.repoint.basics.atoms.RepointSearchBar
 import com.repoint.dashboard.NetworkViewModel
 import com.repoint.dependencies.theme.RepointTypography
-import com.repoint.models.sharedmodels.local.LocalActiveNetworks
 import com.repoint.models.sharedmodels.remote.BlockchainNetwork
 import com.repoint.models.sharedmodels.remote.Token
 
@@ -108,7 +111,7 @@ fun CryptoManageScreen(navController: NavController) {
                     }) { network ->
                         CryptoAssetItem(network, networkViewModel) { updateToken ->
                             blockchainNetworks = blockchainNetworks.map { blockchain ->
-                                if (blockchain?.id == network.id) {
+                                if (blockchain.id == network.id) {
                                     blockchain.copy(tokens = blockchain.tokens.map {
                                         if (it.contractAddress == updateToken.contractAddress) updateToken else it
                                     })
@@ -177,19 +180,20 @@ fun CryptoAssetItem(
     val enabledTokens = remember { mutableStateMapOf<String, Boolean>() }
     val tokens = asset.tokens
     Log.d("CryptoManageScreen", "shows")
-
-    LaunchedEffect(activeNetworks) {
+  /*  LaunchedEffect(activeNetworks) {
         Log.d("CryptoManageScreen", "Calling fetchNetworks()")
 
 
         Log.d("repointnetwork", "network is : $asset")
+
+
         if (asset.tokens.isNotEmpty()) { // ✅ Ensure network has tokens
             asset.tokens.forEach { token ->
-                enabledTokens[token.contractAddress] = activeNetworks.any() { it.networkId == token.tokenId} // ✅ Set it as enabled
+                enabledTokens[token.contractAddress] = activeTokens.any() { it.tokenId == token.tokenId} // ✅ Set it as enabled
             }
             Log.d("Network", "network tokens: ${asset.tokens}")
         }
-    }
+    }*/
 
     Column(
         modifier = Modifier
@@ -204,6 +208,7 @@ fun CryptoAssetItem(
         )
 
         asset.tokens.forEach { token ->
+            Log.d("CryptoAssetItem", "Token: ${token.name}, Logo URL: ${token.logoUrl}")
 
             Row(
                 modifier = Modifier
@@ -212,12 +217,34 @@ fun CryptoAssetItem(
                 verticalAlignment = Alignment.CenterVertically
             ) {
 
-                AsyncImage(
+                /*AsyncImage(
                     model = token.logoUrl,
                     contentDescription = token.name,
                     modifier = Modifier.size(40.dp),
                     contentScale = ContentScale.Fit
+                )*/
+
+                AsyncImage(
+                    model = ImageRequest.Builder(LocalContext.current)
+                        .data(token.logoUrl.trim())
+                        .crossfade(true)
+                        .diskCacheKey(token.logoUrl) // helps prevent cache miss
+                        .memoryCacheKey(token.logoUrl).listener(
+                            onError = {request , throwable ->
+                            Log.e("COIL_IMAGE","Image Load failed : ${token.logoUrl}",throwable.throwable)
+                            },
+                            onSuccess = { _ , _ ->
+                                Log.d("COIL_IMAGE","Image Loaded Successfully ${token.logoUrl}")
+                            }
+                        )
+                        .build(),
+                    contentDescription = token.name,
+                    modifier = Modifier.size(48.dp),
+                    contentScale = ContentScale.Fit,
+                    placeholder = painterResource(com.repoint.dependencies.R.drawable.ic_placeholder),
+                    error = painterResource(com.repoint.dependencies.R.drawable.ic_placeholder)
                 )
+
 
                 Spacer(modifier = Modifier.width(12.dp))
 
@@ -228,17 +255,12 @@ fun CryptoAssetItem(
                 }
 //enabledTokens[token.contractAddress] ?: false
                 Switch(
-                    checked = activeNetworks.any {it.networkId == token.tokenId},
+                    checked = activeTokens.any {it.tokenId == token.tokenId},
                     onCheckedChange = { checked ->
-                        enabledTokens[token.contractAddress] = checked
+                        onToggle(token)
+                       // enabledTokens[token.contractAddress] = checked
                         Log.d("CryptoAssetItem", "Toggling token: $token (checked: $checked)")
                         viewModel.toggleActiveNetwork(token.tokenId,checked)
-                        if (checked) {
-                            onToggle(token)
-                            viewModel.insertActiveNetwork(LocalActiveNetworks(networkId = token.tokenId))
-                        } else {
-                            viewModel.deleteActiveNetwork(token.tokenId)
-                        }
                     }
                 ) }
         }

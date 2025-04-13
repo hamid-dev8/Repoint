@@ -4,6 +4,7 @@ import com.repoint.models.sharedmodels.local.BlockchainNetworkEntity
 import com.repoint.models.sharedmodels.local.BlockchainNetworkWithTokens
 import com.repoint.models.sharedmodels.local.LocalActiveNetworks
 import com.repoint.models.sharedmodels.local.TokenEntity
+import com.repoint.models.sharedmodels.local.TokenWithNetwork
 
 interface NetworkDataSource
 {
@@ -11,7 +12,9 @@ interface NetworkDataSource
     suspend fun insertToken(tokens : List<TokenEntity>)
     suspend fun getTokensForNetwork(networkId: Int): List<TokenEntity>
 
-    suspend fun getActiveTokens(tokenId : Int) : List<TokenEntity>
+    suspend fun getTokensWithNetwork(tokenId : Int) : TokenWithNetwork
+
+    suspend fun getActiveTokens() : List<TokenEntity>
 
     suspend fun getNetworkWithTokens() : List<BlockchainNetworkWithTokens>
     suspend fun getAllNetworks()  : List<BlockchainNetworkEntity>

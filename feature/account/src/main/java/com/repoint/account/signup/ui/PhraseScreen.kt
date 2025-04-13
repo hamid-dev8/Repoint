@@ -41,29 +41,30 @@ import com.repoint.basics.atoms.VectorWithText
 import com.repoint.basics.atoms.WarningBanner
 import com.repoint.dependencies.theme.Purple40
 import com.repoint.dependencies.theme.RepointTypography
+import com.repoint.models.sharedmodels.local.MasterWallet
 import com.repoint.models.sharedmodels.local.RepointWallet
 
 
 @Composable
 fun ShowPhrase(
-    walletId  : String,
+    masterWalletId  : String,
     navController: NavController,
     viewModel: WalletViewModel = hiltViewModel<WalletViewModel>(),
     onConfirm: (String?) -> Unit
 ) {
     val context = LocalContext.current
-    var wallet by remember { mutableStateOf<RepointWallet?>(null) }
+    var masterWallet by remember { mutableStateOf<MasterWallet?>(null) }
     val clipboardManager = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
 
 //val phraseList = viewModel.showPhrase(id)
     RepointAppBar("Secret phrase", navController, exp = {
         Box(Modifier.fillMaxSize().padding(16.dp)) {
-            LaunchedEffect(walletId) {
-                wallet = viewModel.showPhrase(walletId)
-                Log.d("phrase","phrase is : $wallet")
+            LaunchedEffect(masterWalletId) {
+                masterWallet = viewModel.getMasterWallet(masterWalletId)
+                Log.d("phrase","phrase is : $masterWallet")
             }
 
-            val phraseList = wallet?.phrase?.split(" ")
+            val phraseList = masterWallet?.phrase?.split(" ")
 
             Column(
                 modifier = Modifier
@@ -98,7 +99,7 @@ fun ShowPhrase(
                     "I saved And Confirmed",
                     onClick = {
                         //TODO ADD CONFIRM TO CONFIRM
-                        onConfirm(wallet?.phrase)
+                        onConfirm(masterWallet?.phrase)
                         Log.d("saved", "halaloua")
 
                     }, modifier = Modifier.padding(top = 32.dp))

@@ -19,7 +19,7 @@ class HistoryViewModel @Inject constructor(private val repository: HistoryDataSo
     private val _transactions = MutableLiveData<List<RepointTransactions>>()
     val transactions: LiveData<List<RepointTransactions>> = _transactions
 
-    suspend fun getNativeHistory(address: String, chain: String, order: String) {
+     fun getNativeHistory(address: String, chain: String, order: String) {
 
         viewModelScope.launch {
             val history = fetchTransactionHistory(address, chain, order)
