@@ -1,5 +1,6 @@
 package com.repoint.sources.datarepo
 
+import android.util.Log
 import com.repoint.database.dao.NetworkDao
 import com.repoint.models.sharedmodels.local.BlockchainNetworkEntity
 import com.repoint.models.sharedmodels.local.BlockchainNetworkWithTokens
@@ -7,6 +8,7 @@ import com.repoint.models.sharedmodels.local.LocalActiveNetworks
 import com.repoint.models.sharedmodels.local.TokenEntity
 import com.repoint.models.sharedmodels.local.TokenWithNetwork
 import com.repoint.sources.datarepo.datasource.NetworkDataSource
+import kotlinx.coroutines.flow.Flow
 import javax.inject.Inject
 
 class NetworkRepositoryImp @Inject constructor(private val networkDao : NetworkDao) :  NetworkDataSource
@@ -28,8 +30,12 @@ class NetworkRepositoryImp @Inject constructor(private val networkDao : NetworkD
         return networkDao.getTokenWithNetwork(tokenId)
     }
 
-    override suspend fun getActiveTokens(): List<TokenEntity> {
-        return networkDao.getActiveTokens()
+    override suspend fun getActiveTokens(walletId : String): Flow<List<TokenEntity>> {
+        return networkDao.getActiveTokens(walletId)
+    }
+
+    override suspend fun getActiveTokensNow(walletId: String): List<TokenEntity> {
+        return networkDao.getActiveTokensNow(walletId)
     }
 
     override suspend fun getNetworkWithTokens() : List<BlockchainNetworkWithTokens> {
@@ -44,9 +50,16 @@ class NetworkRepositoryImp @Inject constructor(private val networkDao : NetworkD
         return networkDao.getAllNetworks()
     }
 
-    override suspend fun getActiveNetworks(): List<LocalActiveNetworks> {
-        return networkDao.getActiveNetworks()
+    override suspend fun getActiveNetworks(walletId : String): List<LocalActiveNetworks> {
+        return networkDao.getActiveNetworks(walletId)
     }
+
+    override suspend fun debugActiveNetworks(masterWalletId: String): List<LocalActiveNetworks> {
+        val all = networkDao.getAllActiveNetworksDebug(masterWalletId = masterWalletId)
+        Log.d("DEBUG_ACTIVE_NETS", "All active networks on $masterWalletId:\n" + all.joinToString("\n") { it.toString() })
+        return all
+    }
+
 
     override suspend fun insertNetworks(networks: List<BlockchainNetworkEntity>) {
         return networkDao.insertNetworks(networks)
@@ -56,8 +69,8 @@ class NetworkRepositoryImp @Inject constructor(private val networkDao : NetworkD
         return networkDao.insertActiveNetwork(active)
     }
 
-    override suspend fun deleteActiveNetwork(networkId: Int) {
-        return networkDao.deleteActiveNetwork(networkId)
+    override suspend fun deleteActiveNetwork(networkId: Int,masterWalletId : String) {
+        return networkDao.deleteActiveNetwork(networkId,masterWalletId)
     }
 
 }

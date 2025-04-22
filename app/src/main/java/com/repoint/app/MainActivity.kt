@@ -8,9 +8,13 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
+import androidx.hilt.navigation.compose.hiltViewModel
 import com.repoint.app.ui.MainScreen
+import com.repoint.dashboard.ThemeViewModel
 import com.repoint.dependencies.theme.RepointTheme
 import dagger.hilt.android.AndroidEntryPoint
 
@@ -19,7 +23,6 @@ import dagger.hilt.android.AndroidEntryPoint
 class MainActivity : AppCompatActivity() {
 
 
-    @SuppressLint("WrongConstant", "NewApi")
     override fun onCreate(savedInstanceState: Bundle?) {
 
 
@@ -30,8 +33,10 @@ class MainActivity : AppCompatActivity() {
         enableEdgeToEdge()
         setTheme(R.style.Theme_Repoint)
         setContent {
+            val themeViewModel : ThemeViewModel = hiltViewModel()
+            val isDarkMode by themeViewModel.isDarkTheme.collectAsState()
 
-                RepointTheme {
+                RepointTheme(darkTheme = isDarkMode) {
                     FullScreenContent(this)
                 }
         }

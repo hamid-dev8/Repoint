@@ -11,6 +11,7 @@ import com.repoint.models.sharedmodels.local.LocalActiveNetworks
 import com.repoint.models.sharedmodels.local.TokenEntity
 import com.repoint.models.sharedmodels.local.TokenWithNetwork
 import com.repoint.models.sharedmodels.remote.BlockchainNetwork
+import kotlinx.coroutines.flow.Flow
 
 
 @Dao
@@ -42,18 +43,49 @@ interface NetworkDao
     @Query("SELECT * FROM networks WHERE id = :networkId LIMIT 1")
     suspend fun getNetworkById(networkId: Int): BlockchainNetworkEntity
 
-    @Query("SELECT * From actives")
-    suspend fun getActiveNetworks() : List<LocalActiveNetworks>
+    @Query("SELECT * From actives WHERE masterWalletId = :walletId")
+    suspend fun getActiveNetworks(walletId: String) : List<LocalActiveNetworks>
+
+    //debug
+
+    @Query("SELECT * FROM actives WHERE masterWalletId =:masterWalletId")
+    suspend fun getAllActiveNetworksDebug(masterWalletId: String): List<LocalActiveNetworks>
+
+
+    /*
 
  @Query("SELECT * FROM tokens WHERE tokenId IN (SELECT tokenId FROM actives)")
     suspend fun getActiveTokens() : List<TokenEntity>
+*/
+
+    @Query("""
+    SELECT * FROM tokens
+    WHERE masterWalletId = :masterWalletId
+    AND tokenId IN (
+        SELECT tokenId FROM actives WHERE masterWalletId = :masterWalletId
+    )
+""") fun getActiveTokens(masterWalletId: String): Flow<List<TokenEntity>>
+
+    @Query("SELECT * FROM tokens WHERE masterWalletId = :walletId AND tokenId IN (SELECT tokenId FROM actives WHERE masterWalletId = :walletId)")
+    suspend fun getActiveTokensNow(walletId: String): List<TokenEntity>
+
+    // ✅ Optional: Get all tokens for a specific wallet and network
+    @Query("SELECT * FROM tokens WHERE networkId = :networkId AND masterWalletId = :walletId")
+    suspend fun getTokensForNetworkInWallet(networkId: Int, walletId: String): List<TokenEntity>
+
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertNetworks(networks : List<BlockchainNetworkEntity>)
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertActiveNetwork(active : LocalActiveNetworks)
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun insertActiveNetwork(active: LocalActiveNetworks)
 
-    @Query("DELETE FROM actives WHERE  tokenId= :networkId")
-    suspend fun deleteActiveNetwork(networkId : Int)
+    @Query("SELECT * FROM actives")
+    suspend fun getAllActiveNetworksDebug(): List<LocalActiveNetworks>
+
+/*    @Query("DELETE FROM actives WHERE  tokenId= :networkId")
+    suspend fun deleteActiveNetwork(networkId : Int)*/
+
+ @Query("DELETE FROM actives WHERE tokenId = :tokenId AND masterWalletId = :masterWalletId")
+ suspend fun deleteActiveNetwork(tokenId: Int, masterWalletId: String)
 }

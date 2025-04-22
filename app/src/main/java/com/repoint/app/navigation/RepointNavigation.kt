@@ -15,10 +15,13 @@ import com.repoint.account.signup.ui.ConfirmPhrases
 import com.repoint.account.signup.ui.SetPinCode
 import com.repoint.account.signup.ui.ShowPhrase
 import com.repoint.account.signup.ui.WalletConfirmSurface
+import com.repoint.dashboard.ui.ChainWalletsScreen
 import com.repoint.dashboard.ui.ChooseTokenScreen
 import com.repoint.dashboard.ui.CryptoManageScreen
 import com.repoint.dashboard.ui.HomeScreen
+import com.repoint.dashboard.ui.SecurityScreen
 import com.repoint.dashboard.ui.SendTokenScreen
+import com.repoint.dashboard.ui.SettingsScreen
 import com.repoint.dashboard.ui.TransactionHistoryScreen
 import com.repoint.dashboard.ui.WalletQrCodeScreen
 import com.repoint.models.sharedmodels.remote.NativesBalance
@@ -156,6 +159,17 @@ fun RepointNavigation(activity: FragmentActivity) {
             CryptoManageScreen(navController)
         }
 
+        composable("settings") {navBackStackEntry ->
+            SettingsScreen(navController)
+        }
+
+        composable("wallets") {
+            ChainWalletsScreen(navController = navController)
+        }
+
+        composable("security") {
+            SecurityScreen(navController)
+        }
 
     }
 

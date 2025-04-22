@@ -7,31 +7,50 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.util.fastForEachIndexed
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
+import com.repoint.account.UserViewModel
+import com.repoint.account.WalletViewModel
 import com.repoint.basics.atoms.RepointAppBar
 import com.repoint.basics.atoms.RepointCommonButton
 import com.repoint.basics.atoms.RepointThreeTextSelectable
 import com.repoint.dependencies.theme.RepointTypography
+import com.repoint.splash.accountmanager.SpManager
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.launch
 import kotlin.random.Random
 
 
 @Composable
-fun ConfirmPhrases(phrases: String, navController: NavController, onConfirm: () -> Unit) {
+fun ConfirmPhrases(
+    phrases: String,
+    navController: NavController,
+    onConfirm: () -> Unit,
+    userViewModel: UserViewModel = hiltViewModel(),
+    walletViewModel: WalletViewModel = hiltViewModel()
+) {
 
     val phraseList = phrases.split(" ")
     val shuffledList = phraseList.chunked(3).flatMap { it.shuffled() }
     val resultPair = calculateRandomStrings(phraseList)
     var isUserCorrect by remember { mutableStateOf(false) }
 
+    val context = LocalContext.current
+    val spManager = remember { SpManager(context) }
+    val coroutineScope = rememberCoroutineScope()
 
 
     for (index in 0..3) {
@@ -40,12 +59,15 @@ fun ConfirmPhrases(phrases: String, navController: NavController, onConfirm: () 
     Log.d("confirmsss", "orginal list : $phraseList")
     Log.d("confirmsss", "shuffled by 3 : $shuffledList")
 
+    val masterWalletId by spManager.activeWalletIdFlow.collectAsState()
+
     RepointAppBar("Confirm Secret Phrase", navController = navController, exp = {
 
         Box(
             Modifier
                 .fillMaxSize()
-                .padding(12.dp)) {
+                .padding(12.dp)
+        ) {
             resultPair.fastForEachIndexed { index, answer ->
                 Log.d("confirmsss", " result pair is : ${resultPair.toString()}")
 
@@ -58,7 +80,8 @@ fun ConfirmPhrases(phrases: String, navController: NavController, onConfirm: () 
                         color = Color.Gray,
                         modifier = Modifier
                             .align(Alignment.Start)
-                            .padding(8.dp).padding(bottom = 8.dp)
+                            .padding(8.dp)
+                            .padding(bottom = 8.dp)
                     )
 
                     RepointThreeTextSelectable(shuffledList, resultPair, isSelectedCorrectly = {
@@ -68,14 +91,33 @@ fun ConfirmPhrases(phrases: String, navController: NavController, onConfirm: () 
                 }
             }
 
+            Log.d("confirmsss", "masterWalletId is   sss : $masterWalletId")
 
 
             RepointCommonButton(
                 "Confirm", modifier = Modifier
                     .align(Alignment.BottomCenter)
                     .padding(8.dp), onClick = {
-                    onConfirm()
-                }, enabled = isUserCorrect
+
+                    coroutineScope.launch {
+
+                        val user = userViewModel.fetchUser()
+
+                        if (user != null && masterWalletId != null) {
+                            //user Already exist
+                            walletViewModel.linkUserToMasterWallet(
+                                masterWalletId = masterWalletId!!,
+                                userId = user.userId
+                            )
+                            navController.navigate("home") {
+                                popUpTo("auth") { inclusive = true }
+                            }
+                        } else {
+                            onConfirm()
+                        }
+
+                    }
+                }, enabled = isUserCorrect && masterWalletId != null
             )
         }
     })

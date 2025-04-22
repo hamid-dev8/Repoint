@@ -43,6 +43,7 @@ import com.repoint.dashboard.NetworkViewModel
 import com.repoint.dependencies.theme.RepointTypography
 import com.repoint.models.sharedmodels.remote.BlockchainNetwork
 import com.repoint.models.sharedmodels.remote.Token
+import com.repoint.splash.accountmanager.SpManager
 
 @Composable
 fun CryptoManageScreen(navController: NavController) {
@@ -54,26 +55,26 @@ fun CryptoManageScreen(navController: NavController) {
     var searchText by remember { mutableStateOf("") }
     var selectedNetwork by remember { mutableStateOf("All Networks") }
     var searchBarActive by remember { mutableStateOf(false) }
+    val context = LocalContext.current
+    val spManager = remember { SpManager(context) }
 
+    val activeWalletId by spManager.getActiveWalletId().collectAsState(initial = null)
 
-    var blockchainNetworks by remember { mutableStateOf<List<BlockchainNetwork>>(emptyList()) }
     val networks = listOf("All Networks") + cryptoNetworks?.map { it.name }?.distinct().orEmpty()
+    val blockchainNetworks = remember(cryptoNetworks) {
+        cryptoNetworks?.map { it.copy() } ?: emptyList()
+    }
+
     Log.d("CryptoManageScreen", "block chain network is : $blockchainNetworks")
 
-    LaunchedEffect(cryptoNetworks) {
-        cryptoNetworks?.let { networkList -> // ✅ Explicit safe access
-            if (networkList.isNotEmpty()) {
-                blockchainNetworks = cryptoNetworks?.map { it.copy() } ?: emptyList()
-                Log.d("CryptoManageScreen", "Using cached network data: $networkList")
-            } else {
-                Log.d("CryptoManageScreen", "cryptoNetworks is empty, fetching from API...")
-                networkViewModel.fetchNetworks()
-            }
-        }/* ?: run {
-            Log.d("CryptoManageScreen", "cryptoNetworks is NULL, fetching from API...")
-            networkViewModel.fetchNetworks()
-        }*/
+
+
+    LaunchedEffect(activeWalletId) {
+        if (!activeWalletId.isNullOrEmpty()) {
+            networkViewModel.initializeWithWallet(activeWalletId!!)
+        }
     }
+
 
 
     RepointAppBar("Manage Crypto", exp = {
@@ -109,15 +110,15 @@ fun CryptoManageScreen(navController: NavController) {
                         (selectedNetwork == "All Networks" || network.name == selectedNetwork) &&
                                 (network.name.contains(searchText, true))
                     }) { network ->
-                        CryptoAssetItem(network, networkViewModel) { updateToken ->
-                            blockchainNetworks = blockchainNetworks.map { blockchain ->
+                        CryptoAssetItem(network, networkViewModel, activeWalletId = activeWalletId!!, onToggle = {updateToken ->
+                             blockchainNetworks.map { blockchain ->
                                 if (blockchain.id == network.id) {
                                     blockchain.copy(tokens = blockchain.tokens.map {
                                         if (it.contractAddress == updateToken.contractAddress) updateToken else it
                                     })
                                 } else blockchain
                             }
-                        }
+                        })
                     }
                 }
             }
@@ -167,12 +168,15 @@ fun NetworkDropdown(
 fun CryptoAssetItem(
     asset: BlockchainNetwork,
     viewModel: NetworkViewModel,
-    onToggle: (Token) -> Unit
+    onToggle: (Token) -> Unit,
+    activeWalletId : String
 ) {
 
 
     val activeNetworks by viewModel.activeNetworks.collectAsState()
     val activeTokens by viewModel.activeTokens.collectAsState()
+    val activeTokenIds = remember(activeTokens) { activeTokens.map { it.tokenId }.toSet() }
+
     //val networks by viewModel.networks.collectAsState() // ✅ Observe the StateFlow
     //  val error by viewModel.apiError.collectAsState() // ✅ Observe errors
     Log.d("CryptoAssetItem", "Rendering ${asset.name} tokens: ${asset.tokens}")
@@ -180,20 +184,20 @@ fun CryptoAssetItem(
     val enabledTokens = remember { mutableStateMapOf<String, Boolean>() }
     val tokens = asset.tokens
     Log.d("CryptoManageScreen", "shows")
-  /*  LaunchedEffect(activeNetworks) {
-        Log.d("CryptoManageScreen", "Calling fetchNetworks()")
+    /*  LaunchedEffect(activeNetworks) {
+          Log.d("CryptoManageScreen", "Calling fetchNetworks()")
 
 
-        Log.d("repointnetwork", "network is : $asset")
+          Log.d("repointnetwork", "network is : $asset")
 
 
-        if (asset.tokens.isNotEmpty()) { // ✅ Ensure network has tokens
-            asset.tokens.forEach { token ->
-                enabledTokens[token.contractAddress] = activeTokens.any() { it.tokenId == token.tokenId} // ✅ Set it as enabled
-            }
-            Log.d("Network", "network tokens: ${asset.tokens}")
-        }
-    }*/
+          if (asset.tokens.isNotEmpty()) { // ✅ Ensure network has tokens
+              asset.tokens.forEach { token ->
+                  enabledTokens[token.contractAddress] = activeTokens.any() { it.tokenId == token.tokenId} // ✅ Set it as enabled
+              }
+              Log.d("Network", "network tokens: ${asset.tokens}")
+          }
+      }*/
 
     Column(
         modifier = Modifier
@@ -230,11 +234,15 @@ fun CryptoAssetItem(
                         .crossfade(true)
                         .diskCacheKey(token.logoUrl) // helps prevent cache miss
                         .memoryCacheKey(token.logoUrl).listener(
-                            onError = {request , throwable ->
-                            Log.e("COIL_IMAGE","Image Load failed : ${token.logoUrl}",throwable.throwable)
+                            onError = { request, throwable ->
+                                Log.e(
+                                    "COIL_IMAGE",
+                                    "Image Load failed : ${token.logoUrl}",
+                                    throwable.throwable
+                                )
                             },
-                            onSuccess = { _ , _ ->
-                                Log.d("COIL_IMAGE","Image Loaded Successfully ${token.logoUrl}")
+                            onSuccess = { _, _ ->
+                                Log.d("COIL_IMAGE", "Image Loaded Successfully ${token.logoUrl}")
                             }
                         )
                         .build(),
@@ -255,14 +263,15 @@ fun CryptoAssetItem(
                 }
 //enabledTokens[token.contractAddress] ?: false
                 Switch(
-                    checked = activeTokens.any {it.tokenId == token.tokenId},
+                    checked = activeTokenIds.contains(token.tokenId),
                     onCheckedChange = { checked ->
                         onToggle(token)
-                       // enabledTokens[token.contractAddress] = checked
+                        // enabledTokens[token.contractAddress] = checked
                         Log.d("CryptoAssetItem", "Toggling token: $token (checked: $checked)")
-                        viewModel.toggleActiveNetwork(token.tokenId,checked)
+                        viewModel.toggleActiveNetwork(token.tokenId, checked,activeWalletId)
                     }
-                ) }
+                )
+            }
         }
     }
 

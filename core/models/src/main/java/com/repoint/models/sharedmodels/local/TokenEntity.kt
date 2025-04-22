@@ -13,16 +13,24 @@ import androidx.room.PrimaryKey
             parentColumns = ["id"],
             childColumns = ["networkId"],
             onDelete = ForeignKey.CASCADE
+        ),
+        ForeignKey(
+            entity = MasterWallet::class, // ✅ Add this!
+            parentColumns = ["masterWalletId"],
+            childColumns = ["masterWalletId"],
+            onDelete = ForeignKey.CASCADE
         )
     ],
-    indices = [Index(value = ["networkId"])]
+    indices = [Index(value = ["networkId"]), Index(value = ["masterWalletId"])] // ✅ Index it for queries
 )
 data class TokenEntity(
-    @PrimaryKey val tokenId: Int,
+    @PrimaryKey(autoGenerate = true) val tokenId: Int,
     val name: String,
     val symbol: String,
     val contractAddress: String,
     val decimals: Int,
     val logoUrl: String,
-    val networkId : Int // Foreign key referencing BlockchainNetworkEntity
+    val networkId: Int, // FK to BlockchainNetworkEntity
+    // ✅ New fields:
+    val masterWalletId: String, // FK to MasterWallet
 )

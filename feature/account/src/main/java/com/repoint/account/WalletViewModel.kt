@@ -52,6 +52,7 @@ class WalletViewModel @Inject constructor(
 
             _walletCreated.value = masterWallet.masterWalletId
             Log.d("WalletViewModel", "Wallet created: $masterWallet with ${chainWallets.size} chains")
+            Log.d("WalletViewModel", "master wallet id is : ${masterWallet.masterWalletId} and actived in viewmodel")
 
 
             spManager.setActiveWallet(masterWallet.masterWalletId)
@@ -71,7 +72,7 @@ class WalletViewModel @Inject constructor(
             repository.insertMasterWallet(masterWallet)
             repository.insertChainWallets(chainWallets)
             Log.d("import", "Imported wallet: $masterWallet with ${chainWallets.size} chains")
-
+            spManager.setActiveWallet(walletId = masterWallet.masterWalletId)
         }
 
         return masterWallet.masterWalletId
@@ -90,6 +91,18 @@ class WalletViewModel @Inject constructor(
         return repository.getChainWalletsByMaster(masterWalletId)
     }
 
+    fun renameChainWallet(chainWalletId : String , newName : String) {
+        viewModelScope.launch {
+            repository.renameChainWallet(chainWalletId,newName)
+        }
+    }
+
+    fun deleteChainWallet(chainWalletId: String) {
+        viewModelScope.launch {
+            repository.deleteChainWallet(chainWalletId)
+        }
+    }
+
     suspend fun getChainWallet(masterWalletId : String, coinType : Int) : ChainWallet?{
         return repository.getChainWallet(masterWalletId,coinType)
     }
@@ -99,11 +112,6 @@ class WalletViewModel @Inject constructor(
             repository.linkMasterWalletToUser(masterWalletId,userId)
         }
     }
-
-
-
-
-
 
 
 

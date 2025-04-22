@@ -14,8 +14,11 @@ import com.repoint.network.util.NetworkApiService
 import com.repoint.sources.datarepo.datasource.NetworkDataSource
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -34,88 +37,26 @@ class NetworkViewModel @Inject constructor(
     private val _activeNetworks = MutableStateFlow<List<LocalActiveNetworks>>(emptyList())
     val activeNetworks: StateFlow<List<LocalActiveNetworks>> = _activeNetworks.asStateFlow()
 
+
     private val _activeTokens = MutableStateFlow<List<TokenEntity>>(emptyList())
     val activeTokens : StateFlow<List<TokenEntity>> = _activeTokens.asStateFlow()
-
-    private val _apiMessage = MutableStateFlow<String?>(null)
-    val apiMessage: StateFlow<String?> = _apiMessage
 
     private val _tokenWithNetworks = MutableStateFlow<TokenWithNetwork?>(null)
     val tokenWithNetworks: StateFlow<TokenWithNetwork?> = _tokenWithNetworks.asStateFlow()
 
     init {
         Log.d("NetworkViewModel", "NetworkViewModel Created!") // ✅ Add this log
-        fetchNetworks()
-        fetchActiveTokens()
     }
-  /*  fun fetchNetworks() {
-        viewModelScope.launch {
-            val networkWithTokens = repository.getNetworkWithTokens()
+
+    fun initializeWithWallet(walletId : String){
+        fetchActiveTokens(walletId)
+        fetchNetworks(walletId)
+    }
 
 
-            if (repository.isDatabaseEmpty()) {
-                Log.d("NetworkViewModel", "Database empty! Fetching from Api")
-
-
-                if (_networks.value.isNotEmpty()) { // ✅ Prevent unnecessary calls
-                    Log.d("NetworkViewModel", "Skipping fetchNetworks(), data already exists")
-                    return@launch
-                }
-                try {
-                    Log.d("NetworkViewModel", "Fetching networks...")
-
-                    val response = networkApi.getNetworkSummary()
-                    Log.d("NetworkViewModel", "Response received: $response")
-
-                    val blockChainEntities = response.result.map { network ->
-                        BlockchainNetworkEntity(
-                            id = network.id,
-                            name = network.name,
-                            chainId = network.chainId,
-                            rpcUrl = network.rpcUrl,
-                            explorerUrl = network.explorerUrl,
-                            nativeToken = network.nativeToken,
-                            dexRouter = network.dexRouter,
-                        )
-                    }
-
-                    // 🔹 Prevent Overwriting Tokens
-                    val existingNetworks = _networks.value.associateBy { it.id }
-                    val updatedNetworks = response.result.map { network ->
-                        existingNetworks[network.id]?.copy(tokens = network.tokens) ?: network
-                    }
-
-                    _networks.value = updatedNetworks
-                    Log.d(
-                        "NetworkViewModel",
-                        "Inserting ${blockChainEntities.size} networks into DB"
-                    )
-                    repository.insertNetworks(blockChainEntities)
-
-                    //fetch from local db & update StateFlow
-                } catch (e: Exception) {
-                    //TODO ADD API ERROR
-                    e.printStackTrace()
-                    Log.e("NetworkViewModel", "Error fetching networks: ${e.localizedMessage}", e)
-                    getLocalNetworks()
-                }
-            } else {
-                Log.d("NetworkViewModel", "Loading networks from database.")
-                getLocalNetworks()
-            }
-        }
-    }*/
-
-
-    fun fetchNetworks() {
+    private fun fetchNetworks(masterWalletId: String) {
         viewModelScope.launch {
 
-           /*     if (_networks.value.isNotEmpty()) {
-                    Log.d("NetworkViewModel", "Skipping fetchNetworks(), data already exists")
-                    return@launch
-                }*/
-
-            val activeTokensIds = repository.getActiveNetworks().map { it.tokenId }
 
 
                 try {
@@ -148,7 +89,8 @@ class NetworkViewModel @Inject constructor(
                                 contractAddress = token.contractAddress,
                                 decimals = token.decimals,
                                 logoUrl = token.logoUrl,
-                                networkId = network.id // Foreign key to BlockchainNetworkEntity
+                                networkId = network.id, // Foreign key to BlockchainNetworkEntity
+                                masterWalletId = masterWalletId
                             )
                         }
                     }
@@ -156,10 +98,8 @@ class NetworkViewModel @Inject constructor(
                     // Store networks & tokens
                     repository.insertNetworks(blockChainEntities)
                     repository.insertToken(tokenEntities) // ✅ Insert tokens into database
+                    repository.debugActiveNetworks(masterWalletId)
 
-                    activeTokensIds.forEach{ tokenId ->
-                        repository.insertActiveNetwork(LocalActiveNetworks(tokenId))
-                    }
                     Log.d("insert", "Inserted ${blockChainEntities.size} networks")
                     Log.d("insert", "Inserted ${tokenEntities.size} tokens")
 
@@ -187,17 +127,10 @@ class NetworkViewModel @Inject constructor(
                 val tokens = repository.getTokensForNetwork(it.id)
                 Log.d("net-debug", "${it.name} tokens: $tokens")
             }
-        /*    // 🔹 Merge Local Data With Existing Networks
-            val existingNetworks = _networks.value.associateBy { it.id }
-            val mergedNetworks = storedNetworks.map { it.toDomainModel() }.map { network ->
-                existingNetworks[network.id]?.copy(tokens = network.tokens) ?: network
-            }
-*/
             val mergedNetworks = storedNetworks.map { networkEntity ->
                 val tokens = repository.getTokensForNetwork(networkEntity.id) // 🔹 Fetch tokens per network
                 networkEntity.toDomainModel(tokens)
             }
-
             _networks.value = mergedNetworks
             Log.d("NetworkViewModel", "Merged networks: $_networks")
         }
@@ -229,39 +162,54 @@ class NetworkViewModel @Inject constructor(
         }
     }
 
-    private fun fetchActiveNetworks() {
+    suspend fun observeActiveTokens(walletId: String): StateFlow<List<TokenEntity>> {
+        return repository.getActiveTokens(walletId)
+            .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
+    }
+
+
+    /*
+        private fun fetchActiveNetworks() {
+            viewModelScope.launch {
+                _activeNetworks.value = repository.getActiveNetworks(walletId = )
+            }
+        }
+    */
+
+    fun fetchActiveTokens(masterWalletId: String) {
         viewModelScope.launch {
-            _activeNetworks.value = repository.getActiveNetworks()
+            repository.getActiveTokens(masterWalletId)
+                .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
+                .collect {
+                    _activeTokens.value = it
+                }
         }
     }
 
-    fun fetchActiveTokens() {
-        viewModelScope.launch {
-            val tokens = repository.getActiveTokens()
-            Log.d("NetworkViewModel", "Fetched active tokens: $tokens")
-            _activeTokens.value = tokens // ✅ This will now be safe
-        }
-    }
 
-    fun toggleActiveNetwork(tokenId : Int,isActive : Boolean){
+    fun toggleActiveNetwork(tokenId : Int,isActive : Boolean,masterWalletId: String){
         viewModelScope.launch {
             if (isActive){
-                repository.insertActiveNetwork(LocalActiveNetworks(tokenId = tokenId))
+                Log.d("DEBUG", "Inserting token $tokenId for wallet $masterWalletId")
+                repository.insertActiveNetwork(LocalActiveNetworks(tokenId, masterWalletId))
+                val all = repository.debugActiveNetworks(masterWalletId)
+                Log.d("DEBUG", "All actives now:\n" + all.joinToString("\n"))
             }
             else{
-                repository.deleteActiveNetwork(tokenId)
+                repository.deleteActiveNetwork(tokenId,masterWalletId)
             }
-            fetchActiveNetworks()
-            fetchActiveTokens()
-            //_activeTokens.value = repository.getActiveTokens()
+            //fetchActiveNetworks()
+            fetchActiveTokens(masterWalletId)
+           // _activeTokens.value = repository.getActiveTokens()
+            Log.d("toggle", "${if (isActive) "Added" else "Removed"} token $tokenId for wallet $masterWalletId")
         }
     }
 
-    fun deleteActiveNetwork(networkId: Int) {
+    fun deleteActiveNetwork(networkId: Int,masterWalletId: String) {
         viewModelScope.launch {
             val networkExists = repository.getNetworkById(networkId)
             if (networkExists != null) {
-                repository.deleteActiveNetwork(networkId)
+                repository.deleteActiveNetwork(networkId, masterWalletId = masterWalletId)
 
                 Log.d("NetworkViewModel", "Deleted active network: $networkId")
             } else {

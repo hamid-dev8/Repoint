@@ -17,7 +17,7 @@ import com.repoint.models.sharedmodels.local.User
 
 @Database(
     entities = [BlockchainNetworkEntity::class, LocalActiveNetworks::class, User::class, RepointWallet::class, TokenEntity::class, MasterWallet::class, ChainWallet::class],
-    version = 5,
+    version = 1,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {

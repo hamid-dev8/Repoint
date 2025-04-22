@@ -7,16 +7,10 @@ import androidx.room.PrimaryKey
 
 @Entity(
     tableName = "actives",
-    foreignKeys = [
-        ForeignKey(
-            entity = TokenEntity::class, // Link with BlockchainNetwork
-            parentColumns = ["tokenId"], // Foreign Key Parent
-            childColumns = ["tokenId"], // Foreign Key Child
-            onDelete = ForeignKey.CASCADE
-        )
-    ],
-    indices = [Index(value = ["tokenId"])]
+    primaryKeys = ["tokenId", "masterWalletId"]
 )
 data class LocalActiveNetworks(
-    @PrimaryKey val tokenId: Int // Stores active network IDs
+    val tokenId: Int,
+    val masterWalletId: String
 )
+

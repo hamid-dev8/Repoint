@@ -43,7 +43,6 @@ fun PreviewLogin() {
 fun LoginScreen(
     navController: NavController,
     viewModel: WalletViewModel = hiltViewModel(),
-    userViewModel : UserViewModel = hiltViewModel(),
     onConfirm: (String) -> Unit
 ) {
     var walletNameInput by remember { mutableStateOf("") } // State to hold the user input

@@ -55,9 +55,9 @@ fun SplashScreenRepoint(onStay: () -> Unit, onProceed: () -> Unit) {
         isSplashFinished = true
 
         Log.d("userId", " User id is : ${userIdFlow.value}")
-        if (userIdFlow.value != null && userIdFlow.value != "0") {
+        if (!userIdFlow.value.isNullOrEmpty()) {
             onProceed()
-        } else if (userIdFlow.value == null) {
+        } else {
             onStay()
         }
     }

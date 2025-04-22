@@ -9,20 +9,26 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.rounded.RemoveRedEye
+import androidx.compose.material3.Divider
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -45,8 +51,9 @@ fun PreviewBalanceScreen() {
 
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun BalanceScreen(items: List<MasterWallet>, balance: String) {
+fun BalanceScreen(items: List<MasterWallet>,selectedWalletName : String, balance: String,onAddWallet: () -> Unit,onWalletSelected : (MasterWallet) -> Unit) {
     var isHiddenBalance by remember { mutableStateOf(false) }
 
     Column(
@@ -57,9 +64,10 @@ fun BalanceScreen(items: List<MasterWallet>, balance: String) {
     ) {
 
         if (items.isNotEmpty()) {
-            DropDownList(items, items[0].name, onItemSelected = {
-
-            }, Modifier.align(Alignment.CenterHorizontally))
+            DropDownList(items, selectedItem =  selectedWalletName, onItemSelected = { selectedWallet ->
+                //todo change active wallet
+                onWalletSelected(selectedWallet)
+            }, onAddWalletClick = {onAddWallet()}, Modifier.align(Alignment.CenterHorizontally))
 
         }
         Spacer(Modifier.padding(top = 8.dp))
@@ -91,12 +99,16 @@ fun BalanceScreen(items: List<MasterWallet>, balance: String) {
 fun DropDownList(
     items: List<MasterWallet>,
     selectedItem: String?,
-    onItemSelected: (String) -> Unit,
+    onItemSelected: (MasterWallet) -> Unit,
+    onAddWalletClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
 
     var expanded by remember { mutableStateOf(false) } // Controls the dropdown visibility
     var selectedText by remember { mutableStateOf(selectedItem ?: "") } // Stores the selected item
+
+
+
 
     ExposedDropdownMenuBox(
         expanded = expanded,
@@ -133,16 +145,33 @@ fun DropDownList(
             onDismissRequest = { expanded = false },
             modifier.wrapContentWidth()
         ) {
+
             items.forEach { item ->
                 DropdownMenuItem(
                     text = { Text(text = item.name.toString(), Modifier) },
                     onClick = {
                         selectedText = item.name.toString()
-                        onItemSelected(item.name.toString())
+                        onItemSelected(item)
                         expanded = false
-                    }
+                    },
+                    // Optional:
+                    trailingIcon = if (item.masterWalletId == selectedItem) {
+                        { Icon(Icons.Default.Check, contentDescription = null) }
+                    } else null
                 )
             }
+
+            HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+
+            // ✅ Add New Wallet option
+            DropdownMenuItem(
+                text = { Text("➕ Add New Wallet", style = RepointTypography.labelSmall) },
+                onClick = {
+                    expanded = false
+                    onAddWalletClick()
+                }
+            )
+
         }
     }
 

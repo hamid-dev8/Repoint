@@ -21,6 +21,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -57,7 +58,18 @@ fun ChooseTokenScreen(
     val activeTokens by viewModel.activeTokens.collectAsState()
     val context = LocalContext.current
     val spManager = SpManager(context)
-    val masterWalletId = spManager.getActiveWalletId().collectAsState(null)
+    val masterWalletId by spManager.getActiveWalletId().collectAsState(null)
+
+    LaunchedEffect(masterWalletId) {
+
+        if  (!masterWalletId.isNullOrEmpty()){
+
+            Log.d("chooseToken" , "Fetching active tokens for wallet : $masterWalletId")
+            viewModel.fetchActiveTokens(masterWalletId!!)
+
+        }
+
+    }
 
     RepointAppBar(
         title = if (isSend) "Send" else "Receive", exp = {
@@ -83,6 +95,16 @@ fun ChooseTokenScreen(
 
                 LazyColumn {
 
+                    if (activeTokens.isEmpty()) {
+                        item {
+                            Text(
+                                text = "No activated tokens found. Go to the Network screen and enable some.",
+                                modifier = Modifier.padding(16.dp),
+                                color = Color.Gray
+                            )
+                        }
+                    }
+
                     items(activeTokens.filter {
                         it.symbol.contains(searchQuery, ignoreCase = true) ||
                                 it.name.contains(searchQuery, ignoreCase = true)
@@ -107,11 +129,11 @@ fun ChooseTokenScreen(
                                 }
 
                                 val chainWallet = walletViewModel.getChainWallet(
-                                    masterWalletId.value.toString(),
+                                    masterWalletId.toString(),
                                     coinType!!
                                 )
                                 Log.d("chooseToken","the chainWAllet is : $chainWallet")
-                                Log.d("chooseToken","the masterWAllet id is : ${masterWalletId.value}")
+                                Log.d("chooseToken","the masterWAllet id is : ${masterWalletId}")
                                 val walletAddress = chainWallet?.address ?: ""
                                 val tokenBalances = navController.previousBackStackEntry
                                     ?.savedStateHandle
@@ -130,15 +152,6 @@ fun ChooseTokenScreen(
                             }
                         })
                     }
-
-                    /*items( {
-                        it.symbol.contains(searchQuery, ignoreCase = true) || it.name.contains(
-                            searchQuery,
-                            ignoreCase = true
-                        )
-                    }) { token ->
-                        TokenItem(token = token, onClick = { onTokenSelected(token.tokenId) })
-                    }*/
                 }
             }
         }, navController = navController
@@ -148,6 +161,7 @@ fun ChooseTokenScreen(
 
 @Composable
 fun TokenItem(token: TokenEntity, onClick: () -> Unit) {
+
 
     Row(
         verticalAlignment = Alignment.CenterVertically,
