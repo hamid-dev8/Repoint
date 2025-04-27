@@ -43,18 +43,14 @@ class WalletViewModel @Inject constructor(
     * saves all Wallets into the database.
     * */
 
-    private var tempMasterWallet : MasterWallet? = null
-    private  var tempChainWallet : List<ChainWallet> = emptyList()
+    var tempMasterWallet : MasterWallet? = null
+    var tempChainWallet : List<ChainWallet> = emptyList()
 
     suspend fun generateWalletInMemory(walletName: String,userId: String?) : List<String>{
         val (masterWallet , chainWallets) = EcGenerator.generateMasterAndChainWallets(walletName,userId)
 
-        val finalName = if (masterWallet.name.isBlank() && userId != null) {
-            generateDefaultWalletName(userId)
-        } else {
-            masterWallet.name
-        }
-        tempMasterWallet = masterWallet.copy(name = finalName)
+
+        tempMasterWallet = masterWallet.copy(name = walletName, walletIndex = masterWallet.walletIndex)
         tempChainWallet = chainWallets
 
         return masterWallet.phrase.split(" ")
@@ -124,9 +120,21 @@ class WalletViewModel @Inject constructor(
     }
 
     // Utility to auto-name wallet
-    private suspend fun generateDefaultWalletName(userId : String): String {
+/*    private suspend fun generateDefaultWalletName(userId : String): String {
         val count = repository.getAllMasterWallets(userId).size
         return "Wallet ${count + 1}"
+    }*/
+
+    suspend fun generateNextWalletIndex(userId: String?): Int {
+        if (userId.isNullOrEmpty()) {
+            return 1 // ✅ If no user yet, treat as first wallet
+        }
+        val allWallets = repository.getAllMasterWallets(userId)
+        val maxIndex = allWallets.maxOfOrNull { it.walletIndex ?: 0 } ?: 0
+        return maxIndex + 1
+    }
+     suspend fun generateDefaultWalletName(index: Int): String {
+        return "Wallet "
     }
 
     fun deleteChainWallet(chainWalletId: String) {

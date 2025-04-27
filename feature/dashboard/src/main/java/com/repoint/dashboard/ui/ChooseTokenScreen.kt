@@ -144,7 +144,8 @@ fun ChooseTokenScreen(
                                 if (isSend) {
                                     //TODO add token balance
                                     //val balance = walletViewModel.gettok
-                                    val balance = tokenBalances?.find { it.symbol == token.symbol }?.balanceFormatted ?: "0"
+                                    val balance = tokenBalances?.find { it.name == token.name }?.balanceFormatted ?: "0"
+                                    Log.d("chooseToken","token is : $tokenBalances")
                                     navController.navigate("sendToken/$walletAddress/$balance")
                                 } else {
                                     navController.navigate("qrCode/$walletAddress/$masterWalletId/$tokenId")

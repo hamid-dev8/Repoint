@@ -119,6 +119,20 @@ fun LoginScreen(
 
                         val user = userViewModel.fetchUser()
 
+                        if (walletViewModel.tempMasterWallet != null) {
+                            val nextIndex = walletViewModel.generateNextWalletIndex(user?.userId)
+                            Log.d("confirm","next index is : ${walletViewModel.generateNextWalletIndex(user?.userId)}")
+                            Log.d("confirm","user id is : ${user?.userId}")
+                            val finalName = walletViewModel.tempMasterWallet!!.name.ifBlank {
+                                secretInput
+                            }
+
+                            walletViewModel.tempMasterWallet = walletViewModel.tempMasterWallet!!.copy(
+                                name = finalName,
+                                walletIndex = nextIndex,
+                                userId = user?.userId
+                            )
+                        }
 
                         val phrase = walletViewModel.generatedImportedWalletInMemory(
                             secretInput,
@@ -128,16 +142,16 @@ fun LoginScreen(
                         //walletViewModel.importWallet(phraseString,walletNameInput)
                         walletViewModel.confirmAndSaveWallet()
 
-                        val wallet = walletViewModel.getTempWallet()
 
-                        if (user != null && wallet?.masterWalletId != null) {
+
+                        if (user != null && walletViewModel.tempMasterWallet?.masterWalletId != null) {
                             Log.d("walletcreate", "phraseString with user is : $phraseString")
                             Log.d("walletcreate", "wallet name with user is : $walletNameInput")
-                            Log.d("walletcreate", "wallet with user is  : $wallet")
+                            Log.d("walletcreate", "wallet with user is  : ${walletViewModel.tempMasterWallet}")
 
 
                             walletViewModel.linkUserToMasterWallet(
-                                masterWalletId = wallet.masterWalletId,
+                                masterWalletId = walletViewModel.tempMasterWallet!!.masterWalletId,
                                 user.userId
                             )
                             navController.navigate("home") {
@@ -147,8 +161,8 @@ fun LoginScreen(
                             Log.d("walletcreate", "phraseString is : $phraseString")
                             //walletViewModel.importWallet(phraseString, walletName = walletNameInput)
                             Log.d("walletcreate", "wallet name is : $walletNameInput")
-                            Log.d("walletcreate", "wallet is : $wallet")
-                            wallet?.masterWalletId?.let { onConfirm(it) }
+                            Log.d("walletcreate", "wallet is : ${walletViewModel.tempMasterWallet}")
+                            walletViewModel.tempMasterWallet?.masterWalletId?.let { onConfirm(it) }
                             Toast.makeText(
                                 context,
                                 "its not a valid Wallet",

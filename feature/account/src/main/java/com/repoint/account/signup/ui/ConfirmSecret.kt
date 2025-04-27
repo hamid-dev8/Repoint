@@ -112,22 +112,38 @@ fun ConfirmPhrases(
 
                         val user = userViewModel.fetchUser()
 
+                        if (walletViewModel.tempMasterWallet != null) {
+                            val nextIndex = walletViewModel.generateNextWalletIndex(user?.userId)
+                            Log.d("confirm","next index is : ${walletViewModel.generateNextWalletIndex(user?.userId)}")
+                            Log.d("confirm","user id is : ${user?.userId}")
+                            val finalName = walletViewModel.tempMasterWallet!!.name.ifBlank {
+                                walletViewModel.generateDefaultWalletName(nextIndex)
+                            }
+
+                            walletViewModel.tempMasterWallet = walletViewModel.tempMasterWallet!!.copy(
+                                name = finalName,
+                                walletIndex = nextIndex,
+                                userId = user?.userId
+                            )
+                        }
 
                         Log.d("confirm", "wallet id is : ${wallet?.masterWalletId}")
-                        if (user != null && wallet?.masterWalletId != null) {
+                        if (user != null && walletViewModel.tempMasterWallet?.masterWalletId != null) {
                             //user Already exist
                             walletViewModel.confirmAndSaveWallet()
-                            walletViewModel.linkUserToMasterWallet(
-                                masterWalletId = wallet.masterWalletId,
-                                userId = user.userId
-                            )
+                            walletViewModel.tempMasterWallet?.masterWalletId?.let {
+                                walletViewModel.linkUserToMasterWallet(
+                                    masterWalletId = it,
+                                    userId = user.userId
+                                )
+                            }
                             navController.navigate("home") {
                                 popUpTo("auth") { inclusive = true }
                             }
                         } else {
                             Log.d("confirm","master wallet id is : ${wallet?.masterWalletId}")
                             walletViewModel.confirmAndSaveWallet()
-                            wallet?.masterWalletId?.let { onConfirm(it) }
+                            walletViewModel.tempMasterWallet?.masterWalletId?.let { onConfirm(it) }
                         }
                     }
                 }, enabled = isUserCorrect

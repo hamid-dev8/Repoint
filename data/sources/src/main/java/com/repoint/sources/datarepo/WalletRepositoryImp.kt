@@ -48,7 +48,7 @@ import javax.inject.Singleton
         authDao.linkMasterWalletToUser(masterWalletId,userId)
     }
 
-    override suspend fun getAllMasterWallets(userId: String): List<MasterWallet> {
+    override suspend fun getAllMasterWallets(userId: String?): List<MasterWallet> {
         return authDao.getAllMasterWallets(userId)
     }
 

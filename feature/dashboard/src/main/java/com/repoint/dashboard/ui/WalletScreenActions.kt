@@ -60,6 +60,7 @@ import com.repoint.account.WalletViewModel
 import com.repoint.basics.atoms.AuthBottomSheetContent
 import com.repoint.basics.atoms.BalanceScreen
 import com.repoint.basics.atoms.CircularButtonWithText
+import com.repoint.basics.atoms.LoaderAnimation
 import com.repoint.basics.atoms.RepointAppBar
 import com.repoint.basics.atoms.SearchTextField
 import com.repoint.basics.atoms.ViewPagerRobot
@@ -112,6 +113,8 @@ fun HomeScreen(
         derivedStateOf { chainWallets.firstOrNull { it.coinType == 60 } }
     }
 
+    var isLoading by remember { mutableStateOf(true) }
+
 
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val coroutineScope = rememberCoroutineScope()
@@ -150,6 +153,10 @@ fun HomeScreen(
 
                 selectedWallet = masterWallets.find { it.masterWalletId == activeWalletId }
                     ?: masterWallets.firstOrNull()
+                Log.d("main", "selected wallet is : ${selectedWallet?.name}")
+
+                selectedWalletName = selectedWallet?.name + selectedWallet?.walletIndex
+                Log.d("main", "selected Wallet name is : $selectedWalletName")
 
                 if (selectedWallet != null && selectedWallet!!.masterWalletId != activeWalletId) {
                     spManager.setActiveWallet(selectedWallet!!.masterWalletId)
@@ -166,7 +173,10 @@ fun HomeScreen(
                 if (address != null) {
                     activeAddress = address
                     web3ViewModel.testConnectionToWeb3()
-                    Log.d("token","active adress is : $activeAddress , selected wallet is : $selectedWallet , masterId is : ${selectedWallet?.masterWalletId}")
+                    Log.d(
+                        "token",
+                        "active adress is : $activeAddress , selected wallet is : $selectedWallet , masterId is : ${selectedWallet?.masterWalletId}"
+                    )
                     // tokenList = tokenViewModel.getTokenBalance(address = address, chain = "polygon")
 
                     tokenList = tokenViewModel.getMergedActivatedTokenBalances(
@@ -197,51 +207,63 @@ fun HomeScreen(
         //  ether = web3ViewModel.fetchNativeWalletBalance(wallets[0].address)
         Log.d("token", "token list are : $tokenList")
         Log.d("token", "ether is : $ether")
+
+        isLoading = false
     }
 
 
 
     RepointAppBar("wallet", exp = {
 
-
-        Column(
-            Modifier
-                .fillMaxSize()
-                .padding(8.dp)
-        ) {
-
-            SearchTextField("", onValueChange = { text ->
-
-            }, modifier = Modifier.padding(8.dp))
-
-
-            val amount = netWorthSection(tokenList?.result)
-            val formattedBalanceAmount = DecimalFormat("#0.00").format(amount)
-            BalanceScreen(masterWallets, balance = "$$formattedBalanceAmount", onAddWallet = {
-                showBottomSheet = true
-            }, onWalletSelected = { selectedWallet ->
-                coroutineScope.launch {
-                    spManager.setActiveWallet(selectedWallet.masterWalletId)
-                    networkViewModel.initializeWithWallet(selectedWallet.masterWalletId)
-                    Log.d("token", "selected wallet changed : ${selectedWallet.masterWalletId}")
-                    Log.d("token", "master wallet changed : $masterWallets")
-                }
-                //TODO ezafe kardane safe add wallet va sakht wallet jadid
-                //walletViewModel.createUserWallet()
-
-                val index = masterWallets.indexOfFirst { it.masterWalletId == selectedWallet.masterWalletId }
-                selectedWalletName = selectedWallet.name.ifBlank { "Wallet + $index" }
-            }, selectedWalletName = selectedWalletName)
-
-            if (masterWallets.isNotEmpty() && !activeAddress.isNullOrEmpty()) {
-                ActionsRow(navController, wallet = selectedWallet, tokenList, activeAddress!!)
+        if (isLoading) {
+            // 🔥 Show Loading Animation Centered
+            Box(
+                Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                LoaderAnimation()
             }
-            ViewPagerRobot()
+        } else {
 
-            AssetsTabLayout(tokenList?.result.orEmpty())
-            //BasicTabLayout(actions = )
+
+            Column(
+                Modifier
+                    .fillMaxSize()
+                    .padding(8.dp)
+            ) {
+
+                SearchTextField("", onValueChange = { text ->
+
+                }, modifier = Modifier.padding(8.dp))
+
+
+                val amount = netWorthSection(tokenList?.result)
+                val formattedBalanceAmount = DecimalFormat("#0.00").format(amount)
+                BalanceScreen(masterWallets, balance = "$$formattedBalanceAmount", onAddWallet = {
+                    showBottomSheet = true
+                }, onWalletSelected = { selectedWallet ->
+                    coroutineScope.launch {
+                        spManager.setActiveWallet(selectedWallet.masterWalletId)
+                        networkViewModel.initializeWithWallet(selectedWallet.masterWalletId)
+                        Log.d("token", "selected wallet changed : ${selectedWallet.masterWalletId}")
+                        Log.d("token", "master wallet changed : $masterWallets")
+                    }
+                    //TODO ezafe kardane safe add wallet va sakht wallet jadid
+                    //walletViewModel.createUserWallet()
+
+                    selectedWalletName = selectedWallet?.name + selectedWallet?.walletIndex
+                }, selectedWalletName = selectedWalletName)
+
+                if (masterWallets.isNotEmpty() && !activeAddress.isNullOrEmpty()) {
+                    ActionsRow(navController, wallet = selectedWallet, tokenList, activeAddress!!)
+                }
+                ViewPagerRobot()
+
+                AssetsTabLayout(tokenList?.result.orEmpty())
+                //BasicTabLayout(actions = )
+            }
+
         }
-
     }, navController = navController, isSettings = true, onSettingsClick = {
         navController.navigate("settings")
     }, showEndIcon = true, onEndIconClick = {

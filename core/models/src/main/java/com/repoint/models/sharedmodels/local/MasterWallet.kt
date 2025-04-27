@@ -19,5 +19,6 @@ data class MasterWallet(
     val userId : String?,
     val phrase : String,
     val name : String,
+    val walletIndex : Int? = null,
     val creationDate : String
 )

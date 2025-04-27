@@ -16,7 +16,7 @@ interface AuthDataSource
     suspend fun getChainWallet(masterWalletId : String,coinType : Int) : ChainWallet?
     suspend fun getMasterWallet(masterWalletId : String) : MasterWallet
     suspend fun linkMasterWalletToUser(masterWalletId: String,userId: String)
-    suspend fun getAllMasterWallets(userId: String) : List<MasterWallet>
+    suspend fun getAllMasterWallets(userId: String?) : List<MasterWallet>
 
     ///////////////////////////////////////////////////////////////////
 

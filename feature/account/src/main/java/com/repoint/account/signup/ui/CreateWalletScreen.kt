@@ -12,6 +12,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateMapOf
@@ -20,6 +21,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -33,6 +35,7 @@ import com.repoint.basics.atoms.RepointCheckbox
 import com.repoint.basics.atoms.RepointCommonButton
 import com.repoint.dependencies.theme.RepointTypography
 import com.repoint.dependencies.theme.repointBlue
+import com.repoint.splash.accountmanager.SpManager
 import kotlinx.coroutines.launch
 
 
@@ -93,19 +96,27 @@ fun WalletConfirmSurface(
     val coroutineScope = rememberCoroutineScope()
 
     val isButtonEnabled = checkboxesState.values.all { it }
+    val context = LocalContext.current
+    val spManager = SpManager(context)
+    val userId = spManager.activeWalletIdFlow.collectAsState()
+    // val isCreating by remember { derivedStateOf { walletCreated == null } }
 
-   // val isCreating by remember { derivedStateOf { walletCreated == null } }
-
-   /* LaunchedEffect(walletCreated) {
-        walletCreated?.let{
-            onConfirm(it)
-        }
-    }*/
+    /* LaunchedEffect(walletCreated) {
+         walletCreated?.let{
+             onConfirm(it)
+         }
+     }*/
 
     RepointAppBar("", navController, exp = {
         Box(
-            Modifier.fillMaxSize().padding(16.dp)) {
-            Column(Modifier.padding(16.dp).padding(bottom = 16.dp))
+            Modifier
+                .fillMaxSize()
+                .padding(16.dp)
+        ) {
+            Column(
+                Modifier
+                    .padding(16.dp)
+                    .padding(bottom = 16.dp))
             {
 
                 BigPng(
@@ -124,7 +135,9 @@ fun WalletConfirmSurface(
                     checkboxesState.forEach { (label, state) ->
 
                         Row(
-                            Modifier.padding(16.dp,top = 28.dp).clickable { checkboxesState[label] = !state  },
+                            Modifier
+                                .padding(16.dp, top = 28.dp)
+                                .clickable { checkboxesState[label] = !state },
                             verticalAlignment = Alignment.CenterVertically
                         ) {
 
@@ -156,13 +169,14 @@ fun WalletConfirmSurface(
                 "Confirm",
                 modifier = Modifier.align(Alignment.BottomCenter),
                 onClick = {
-                   // viewModel.createUserWallet(walletName = "Wallet 1" , userId = null)
-                  //  viewModel.walletCreated.value?.let { onConfirm(it) }
+                    // viewModel.createUserWallet(walletName = "Wallet 1" , userId = null)
+                    //  viewModel.walletCreated.value?.let { onConfirm(it) }
 
                     coroutineScope.launch {
-                        val phrase = viewModel.generateWalletInMemory(walletName = "", userId = null)
+                        val phrase =
+                            viewModel.generateWalletInMemory(walletName = "", userId = userId.value)
                         val phraseString = phrase.joinToString(" ")
-                        Log.d("walletcreate","phraseString is : $phraseString")
+                        Log.d("walletcreate", "phraseString is : $phraseString")
                         onConfirm(phraseString)
 
                     }

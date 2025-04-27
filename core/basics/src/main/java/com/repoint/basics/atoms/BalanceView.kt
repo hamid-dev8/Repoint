@@ -148,7 +148,7 @@ fun DropDownList(
 
             items.forEach { item ->
                 DropdownMenuItem(
-                    text = { Text(text = item.name.toString(), Modifier) },
+                    text = { Text(text = item.name + item.walletIndex, Modifier) },
                     onClick = {
                         selectedText = item.name.toString()
                         onItemSelected(item)

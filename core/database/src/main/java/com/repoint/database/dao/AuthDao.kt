@@ -50,7 +50,7 @@ interface AuthDao {
 
     //get all master Wallets of a user
     @Query("SELECT * FROM master_wallets WHERE userId = :userId")
-    suspend fun getAllMasterWallets(userId : String) : List<MasterWallet>
+    suspend fun getAllMasterWallets(userId : String?) : List<MasterWallet>
     /////////////////////////////////////////////////////////////
 
 
