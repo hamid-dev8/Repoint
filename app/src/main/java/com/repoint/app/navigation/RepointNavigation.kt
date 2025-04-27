@@ -1,6 +1,7 @@
 package com.repoint.app.navigation
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.fragment.app.FragmentActivity
 import androidx.navigation.NavType
@@ -8,6 +9,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import coil3.Uri
 import com.google.gson.Gson
 import com.repoint.account.login.LoginScreen
 import com.repoint.account.signup.ui.AuthScreen
@@ -64,17 +66,19 @@ fun RepointNavigation(activity: FragmentActivity) {
         }
         composable("auth") { AuthScreen(navController) }
         composable("walletConfirm") {
-            WalletConfirmSurface(navController, onConfirm = { walletId ->
-                navController.navigate("phrase/$walletId")
+            WalletConfirmSurface(navController, onConfirm = { phraseList ->
+                navController.navigate("phrase/$phraseList")
             })
         }
 
         composable("phrase/{phrases}") { backStackEntry ->
-            val walletId = backStackEntry.arguments?.getString("phrases") ?: ""
-            ShowPhrase(masterWalletId = walletId, navController, onConfirm = { phrasesList ->
-                navController.navigate("confirmPhrases/$walletId/$phrasesList")
+            val phrase = backStackEntry.arguments?.getString("phrases") ?: ""
+            ShowPhrase(phrases = phrase, navController, onConfirm = { phrasesList ->
+                val encodedPhrases = android.net.Uri.encode(phrasesList)
+                navController.navigate("confirmPhrases/$encodedPhrases")
             })
         }
+        //$walletId
 
         //login
         composable("login") { backStackEntry ->
@@ -83,10 +87,10 @@ fun RepointNavigation(activity: FragmentActivity) {
             })
         }
 
-        composable("confirmPhrases/{walletId}/{phraseList}") { backStackEntry ->
-            val phrases = backStackEntry.arguments?.getString("phraseList") ?: ""
-            val walletId = backStackEntry.arguments?.getString("walletId") ?: ""
-            ConfirmPhrases(phrases = phrases, navController, onConfirm = {
+        composable("confirmPhrases/{phraseList}") { backStackEntry ->
+            val encodedPhrases = backStackEntry.arguments?.getString("phraseList") ?: ""
+            //val walletId = backStackEntry.arguments?.getString("walletId") ?: ""
+            ConfirmPhrases(phrases = encodedPhrases, navController, onConfirm = { walletId ->
                 navController.navigate("setPin/$walletId")
             })
         }
@@ -123,11 +127,13 @@ fun RepointNavigation(activity: FragmentActivity) {
 
         //afterhome
         composable(
-            "qrCode/{walletAddress}",
+            "qrCode/{walletAddress}/{masterWalletId}/{tokenId}",
             arguments = listOf(navArgument("walletAddress") { type = NavType.StringType })
         ) { backStackEntry ->
             val walletAddress = backStackEntry.arguments?.getString("walletAddress") ?: ""
-            WalletQrCodeScreen(navController, walletAddress = walletAddress)
+            val masterWalletId = backStackEntry.arguments?.getString("masterWalletId") ?: ""
+            val tokenId = backStackEntry.arguments?.getString("tokenId")?.toIntOrNull()
+            WalletQrCodeScreen(navController, walletAddress = walletAddress, masterWalletId = masterWalletId, tokenId = tokenId)
         }
 
         composable(

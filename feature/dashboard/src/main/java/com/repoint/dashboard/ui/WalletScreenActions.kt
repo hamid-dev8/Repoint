@@ -96,7 +96,7 @@ fun HomeScreen(
     walletViewModel: WalletViewModel = hiltViewModel<WalletViewModel>(),
     userViewModel: UserViewModel = hiltViewModel<UserViewModel>(),
     tokenViewModel: TokenViewModel = hiltViewModel<TokenViewModel>(),
-    networkViewModel : NetworkViewModel = hiltViewModel<NetworkViewModel>(),
+    networkViewModel: NetworkViewModel = hiltViewModel<NetworkViewModel>(),
     web3ViewModel: Web3ViewModel = hiltViewModel<Web3ViewModel>()
 ) {
 
@@ -121,15 +121,15 @@ fun HomeScreen(
     val spManager = SpManager(context)
 
     //val selectedWalletName = selectedWallet?.name ?: masterWallets.firstOrNull()?.name ?: "No Wallet"
-
-    val selectedWalletName by remember(selectedWallet) {
-        mutableStateOf(selectedWallet?.name ?: "")
+    val walletNames = masterWallets.mapIndexed { index, wallet ->
+        wallet.name.ifBlank { "Wallet ${index + 1}" }
     }
+    var selectedWalletName by remember { mutableStateOf("") }
 
 
     val activeWalletId by spManager.activeWalletIdFlow.collectAsState()
 
-    LaunchedEffect(selectedWallet?.masterWalletId,activeWalletId,masterWallets) {
+    LaunchedEffect(selectedWallet?.masterWalletId, activeWalletId, masterWallets) {
 
         tokenList = null
         tokensOf = emptyList()
@@ -148,22 +148,31 @@ fun HomeScreen(
 
             if (masterWallets.isNotEmpty() && !activeWalletId.isNullOrEmpty()) {
 
-               selectedWallet = masterWallets.find { it.masterWalletId == activeWalletId }
+                selectedWallet = masterWallets.find { it.masterWalletId == activeWalletId }
+                    ?: masterWallets.firstOrNull()
+
+                if (selectedWallet != null && selectedWallet!!.masterWalletId != activeWalletId) {
+                    spManager.setActiveWallet(selectedWallet!!.masterWalletId)
+                }
 
                 //TODO generic the wallet
                 chainWallets = walletViewModel.getAllChainWallets(activeWalletId!!)
-             //   spManager.setActiveWallet(masterWallets[0].masterWalletId)
+                //   spManager.setActiveWallet(masterWallets[0].masterWalletId)
 
                 Log.d("token", "selected wallet is currently : $selectedWallet")
 
                 //Default to Polygon chain for balances
                 val address = chainWallets.firstOrNull { it.coinType == 60 }?.address
-                if  (address != null){
+                if (address != null) {
                     activeAddress = address
                     web3ViewModel.testConnectionToWeb3()
+                    Log.d("token","active adress is : $activeAddress , selected wallet is : $selectedWallet , masterId is : ${selectedWallet?.masterWalletId}")
                     // tokenList = tokenViewModel.getTokenBalance(address = address, chain = "polygon")
-                    tokenList = tokenViewModel.getMergedActivatedTokenBalances(activeAddress!!, "polygon",
-                        selectedWallet!!.masterWalletId)
+
+                    tokenList = tokenViewModel.getMergedActivatedTokenBalances(
+                        activeAddress!!, "polygon",
+                        selectedWallet!!.masterWalletId
+                    )
 
                     selectedWallet?.let { networkViewModel.initializeWithWallet(it.masterWalletId) }
 
@@ -209,20 +218,23 @@ fun HomeScreen(
             val amount = netWorthSection(tokenList?.result)
             val formattedBalanceAmount = DecimalFormat("#0.00").format(amount)
             BalanceScreen(masterWallets, balance = "$$formattedBalanceAmount", onAddWallet = {
-                    showBottomSheet = true
+                showBottomSheet = true
             }, onWalletSelected = { selectedWallet ->
                 coroutineScope.launch {
                     spManager.setActiveWallet(selectedWallet.masterWalletId)
                     networkViewModel.initializeWithWallet(selectedWallet.masterWalletId)
-                    Log.d("token","selected wallet changed : ${selectedWallet.masterWalletId}")
-                    Log.d("token" , "master wallet changed : $masterWallets")
+                    Log.d("token", "selected wallet changed : ${selectedWallet.masterWalletId}")
+                    Log.d("token", "master wallet changed : $masterWallets")
                 }
                 //TODO ezafe kardane safe add wallet va sakht wallet jadid
                 //walletViewModel.createUserWallet()
+
+                val index = masterWallets.indexOfFirst { it.masterWalletId == selectedWallet.masterWalletId }
+                selectedWalletName = selectedWallet.name.ifBlank { "Wallet + $index" }
             }, selectedWalletName = selectedWalletName)
 
             if (masterWallets.isNotEmpty() && !activeAddress.isNullOrEmpty()) {
-                ActionsRow(navController, wallet = selectedWallet, tokenList,activeAddress!!)
+                ActionsRow(navController, wallet = selectedWallet, tokenList, activeAddress!!)
             }
             ViewPagerRobot()
 
@@ -260,7 +272,12 @@ fun HomeScreen(
 
 
 @Composable
-fun ActionsRow(navController: NavController, wallet: MasterWallet?, tokenList: NativesBalance?,activeAddress : String) {
+fun ActionsRow(
+    navController: NavController,
+    wallet: MasterWallet?,
+    tokenList: NativesBalance?,
+    activeAddress: String
+) {
 
     Row(
         Modifier
@@ -317,9 +334,11 @@ fun ActionsRow(navController: NavController, wallet: MasterWallet?, tokenList: N
             icon = Icons.Filled.History,
             "History",
             onClick = {
-                val balance = tokenList?.result?.get(0)?.usdPrice
                 val encodedAddress = Uri.encode(activeAddress)
-                navController.navigate("history/$balance/$encodedAddress")
+                val balance = tokenList?.result?.firstOrNull()?.usdPrice ?: 0.0
+                val formattedBalance = DecimalFormat("#0.00").format(balance)
+
+                navController.navigate("history/$formattedBalance/$encodedAddress")
             },
             Modifier.padding(12.dp),
             buttonSize = 48.dp

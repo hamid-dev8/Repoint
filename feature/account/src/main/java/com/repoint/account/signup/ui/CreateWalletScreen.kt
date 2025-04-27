@@ -1,5 +1,6 @@
 package com.repoint.account.signup.ui
 
+import android.util.Log
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -10,8 +11,12 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -28,6 +33,7 @@ import com.repoint.basics.atoms.RepointCheckbox
 import com.repoint.basics.atoms.RepointCommonButton
 import com.repoint.dependencies.theme.RepointTypography
 import com.repoint.dependencies.theme.repointBlue
+import kotlinx.coroutines.launch
 
 
 @Preview
@@ -84,7 +90,17 @@ fun WalletConfirmSurface(
         )
     }
 
+    val coroutineScope = rememberCoroutineScope()
+
     val isButtonEnabled = checkboxesState.values.all { it }
+
+   // val isCreating by remember { derivedStateOf { walletCreated == null } }
+
+   /* LaunchedEffect(walletCreated) {
+        walletCreated?.let{
+            onConfirm(it)
+        }
+    }*/
 
     RepointAppBar("", navController, exp = {
         Box(
@@ -140,12 +156,17 @@ fun WalletConfirmSurface(
                 "Confirm",
                 modifier = Modifier.align(Alignment.BottomCenter),
                 onClick = {
-                    viewModel.createUserWallet(walletName = "Wallet 1" , userId = null)
-                    viewModel.walletCreated.value?.let { onConfirm(it) }
+                   // viewModel.createUserWallet(walletName = "Wallet 1" , userId = null)
+                  //  viewModel.walletCreated.value?.let { onConfirm(it) }
 
-                    //walletId?.let { onConfirm(it) }
-                    //navController.navigate("phrase")
-                }, enabled = isButtonEnabled,
+                    coroutineScope.launch {
+                        val phrase = viewModel.generateWalletInMemory(walletName = "", userId = null)
+                        val phraseString = phrase.joinToString(" ")
+                        Log.d("walletcreate","phraseString is : $phraseString")
+                        onConfirm(phraseString)
+
+                    }
+                }, enabled = isButtonEnabled
             )
         }
     })

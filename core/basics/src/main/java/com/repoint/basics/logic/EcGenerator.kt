@@ -17,7 +17,6 @@ object EcGenerator {
         userId: String? = null
     ): Pair<MasterWallet, List<ChainWallet>> {
 
-
         val phrase = EntropyManager.getPhrase()
         val seed = MnemonicUtils.generateSeed(phrase, "")
         val masterKeyPair = Bip32ECKeyPair.generateKeyPair(seed)

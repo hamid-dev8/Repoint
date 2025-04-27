@@ -147,7 +147,7 @@ fun ChooseTokenScreen(
                                     val balance = tokenBalances?.find { it.symbol == token.symbol }?.balanceFormatted ?: "0"
                                     navController.navigate("sendToken/$walletAddress/$balance")
                                 } else {
-                                    navController.navigate("qrCode/$walletAddress")
+                                    navController.navigate("qrCode/$walletAddress/$masterWalletId/$tokenId")
                                 }
                             }
                         })

@@ -1,5 +1,7 @@
 package com.repoint.account.signup.ui
 
+import android.annotation.SuppressLint
+import android.net.Uri
 import android.util.Log
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -8,7 +10,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -29,21 +30,26 @@ import com.repoint.basics.atoms.RepointCommonButton
 import com.repoint.basics.atoms.RepointThreeTextSelectable
 import com.repoint.dependencies.theme.RepointTypography
 import com.repoint.splash.accountmanager.SpManager
-import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import kotlin.random.Random
 
 
+@SuppressLint("UnrememberedGetBackStackEntry")
 @Composable
 fun ConfirmPhrases(
     phrases: String,
     navController: NavController,
-    onConfirm: () -> Unit,
+    onConfirm: (walletId: String) -> Unit,
     userViewModel: UserViewModel = hiltViewModel(),
-    walletViewModel: WalletViewModel = hiltViewModel()
 ) {
 
-    val phraseList = phrases.split(" ")
+    val parentEntry = remember(navController) {
+        navController.getBackStackEntry("walletConfirm")
+    }
+    val walletViewModel: WalletViewModel = hiltViewModel(parentEntry)
+
+    val decodedPhrases = Uri.decode(phrases)
+    val phraseList = decodedPhrases.split(" ")
     val shuffledList = phraseList.chunked(3).flatMap { it.shuffled() }
     val resultPair = calculateRandomStrings(phraseList)
     var isUserCorrect by remember { mutableStateOf(false) }
@@ -52,6 +58,10 @@ fun ConfirmPhrases(
     val spManager = remember { SpManager(context) }
     val coroutineScope = rememberCoroutineScope()
 
+    val walletCreated = walletViewModel.walletCreated.value
+
+    val wallet = walletViewModel.getTempWallet()
+
 
     for (index in 0..3) {
         Log.d("confirmsss", " the result pair is : ${resultPair.get(index).first}")
@@ -59,7 +69,6 @@ fun ConfirmPhrases(
     Log.d("confirmsss", "orginal list : $phraseList")
     Log.d("confirmsss", "shuffled by 3 : $shuffledList")
 
-    val masterWalletId by spManager.activeWalletIdFlow.collectAsState()
 
     RepointAppBar("Confirm Secret Phrase", navController = navController, exp = {
 
@@ -91,7 +100,7 @@ fun ConfirmPhrases(
                 }
             }
 
-            Log.d("confirmsss", "masterWalletId is   sss : $masterWalletId")
+            Log.d("confirmsss", "wallet is   sss : $wallet")
 
 
             RepointCommonButton(
@@ -103,21 +112,25 @@ fun ConfirmPhrases(
 
                         val user = userViewModel.fetchUser()
 
-                        if (user != null && masterWalletId != null) {
+
+                        Log.d("confirm", "wallet id is : ${wallet?.masterWalletId}")
+                        if (user != null && wallet?.masterWalletId != null) {
                             //user Already exist
+                            walletViewModel.confirmAndSaveWallet()
                             walletViewModel.linkUserToMasterWallet(
-                                masterWalletId = masterWalletId!!,
+                                masterWalletId = wallet.masterWalletId,
                                 userId = user.userId
                             )
                             navController.navigate("home") {
                                 popUpTo("auth") { inclusive = true }
                             }
                         } else {
-                            onConfirm()
+                            Log.d("confirm","master wallet id is : ${wallet?.masterWalletId}")
+                            walletViewModel.confirmAndSaveWallet()
+                            wallet?.masterWalletId?.let { onConfirm(it) }
                         }
-
                     }
-                }, enabled = isUserCorrect && masterWalletId != null
+                }, enabled = isUserCorrect
             )
         }
     })

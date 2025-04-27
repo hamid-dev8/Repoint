@@ -25,6 +25,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -43,28 +44,28 @@ import com.repoint.dependencies.theme.Purple40
 import com.repoint.dependencies.theme.RepointTypography
 import com.repoint.models.sharedmodels.local.MasterWallet
 import com.repoint.models.sharedmodels.local.RepointWallet
+import kotlinx.coroutines.launch
 
 
 @Composable
 fun ShowPhrase(
-    masterWalletId  : String,
+    phrases  : String,
     navController: NavController,
-    viewModel: WalletViewModel = hiltViewModel<WalletViewModel>(),
     onConfirm: (String?) -> Unit
 ) {
     val context = LocalContext.current
-    var masterWallet by remember { mutableStateOf<MasterWallet?>(null) }
     val clipboardManager = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
 
 //val phraseList = viewModel.showPhrase(id)
     RepointAppBar("Secret phrase", navController, exp = {
         Box(Modifier.fillMaxSize().padding(16.dp)) {
-            LaunchedEffect(masterWalletId) {
-                masterWallet = viewModel.getMasterWallet(masterWalletId)
-                Log.d("phrase","phrase is : $masterWallet")
+            LaunchedEffect(phrases) {
+
+                //masterWallet = viewModel.getMasterWallet(masterWalletId)
+                Log.d("phrase","phrase is : $phrases")
             }
 
-            val phraseList = masterWallet?.phrase?.split(" ")
+            val phraseList = phrases.split(" ")
 
             Column(
                 modifier = Modifier
@@ -99,7 +100,7 @@ fun ShowPhrase(
                     "I saved And Confirmed",
                     onClick = {
                         //TODO ADD CONFIRM TO CONFIRM
-                        onConfirm(masterWallet?.phrase)
+                        onConfirm(phrases)
                         Log.d("saved", "halaloua")
 
                     }, modifier = Modifier.padding(top = 32.dp))
