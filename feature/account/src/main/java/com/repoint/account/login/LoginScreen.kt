@@ -123,9 +123,12 @@ fun LoginScreen(
                             val nextIndex = walletViewModel.generateNextWalletIndex(user?.userId)
                             Log.d("confirm","next index is : ${walletViewModel.generateNextWalletIndex(user?.userId)}")
                             Log.d("confirm","user id is : ${user?.userId}")
-                            val finalName = walletViewModel.tempMasterWallet!!.name.ifBlank {
-                                secretInput
+                            val finalName = if (walletNameInput.trim().isNotBlank()) {
+                                walletNameInput.trim()
+                            } else {
+                                walletViewModel.generateDefaultWalletName(nextIndex)
                             }
+
 
                             walletViewModel.tempMasterWallet = walletViewModel.tempMasterWallet!!.copy(
                                 name = finalName,

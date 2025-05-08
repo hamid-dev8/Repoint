@@ -28,12 +28,12 @@ import javax.inject.Singleton
         return authDao.getChainWalletsByMaster(masterWalletId)
     }
 
-    override suspend fun renameChainWallet(chainWalletId: String, newName: String) {
-        return authDao.renameChainWallet(chainWalletId,newName)
+    override suspend fun renameMasterWallet(masterWalletId : String, newName: String) {
+        return authDao.renameMasterWallet(masterWalletId,newName)
     }
 
-    override suspend fun deleteChainWallet(chainWalletId: String) {
-        return authDao.deleteChainWallet(chainWalletId)
+    override suspend fun deleteMasterWallet(chainWalletId: String) {
+        return authDao.deleteMasterWallet(chainWalletId)
     }
 
     override suspend fun getChainWallet(masterWalletId: String, coinType: Int): ChainWallet? {

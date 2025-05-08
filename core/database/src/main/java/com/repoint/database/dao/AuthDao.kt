@@ -4,7 +4,6 @@ import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
-import androidx.room.Update
 import com.repoint.models.sharedmodels.local.ChainWallet
 import com.repoint.models.sharedmodels.local.MasterWallet
 import com.repoint.models.sharedmodels.local.RepointWallet
@@ -29,11 +28,11 @@ interface AuthDao {
     suspend fun getChainWalletsByMaster(masterWalletId : String) : List<ChainWallet>
 
     //rename chain wallet
-    @Query("UPDATE chain_wallets SET networkName = :newName WHERE chainWalletId = :chainWalletId")
-    suspend fun renameChainWallet(chainWalletId : String,newName : String)
+    @Query("UPDATE master_wallets SET name = :newName WHERE masterWalletId = :masterWalletId")
+    suspend fun renameMasterWallet(masterWalletId: String, newName : String)
 
-    @Query("DELETE FROM chain_wallets WHERE chainWalletId= :chainWalletId")
-    suspend fun deleteChainWallet(chainWalletId : String)
+    @Query("DELETE FROM master_wallets WHERE masterWalletId= :masterWalletId")
+    suspend fun deleteMasterWallet(masterWalletId : String)
 
     //Get specific chain wallet by masterWalletId and coinType
     @Query("SELECT * FROM chain_wallets WHERE masterWalletId = :masterWalletId AND coinType = :coinType LIMIT 1")

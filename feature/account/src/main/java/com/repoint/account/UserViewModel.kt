@@ -9,7 +9,7 @@ import com.repoint.basics.logic.generateSalt
 import com.repoint.basics.logic.hashPasscode
 import com.repoint.models.sharedmodels.local.User
 import com.repoint.sources.datarepo.datasource.UserDataSource
-import com.repoint.splash.accountmanager.SpManager
+import com.repoint.dependencies.accountmanager.SpManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.async
 import kotlinx.coroutines.delay

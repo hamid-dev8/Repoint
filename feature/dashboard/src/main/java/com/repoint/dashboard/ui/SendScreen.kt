@@ -46,24 +46,34 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import com.repoint.account.UserViewModel
 import com.repoint.account.WalletViewModel
+import com.repoint.basics.atoms.LoaderAnimation
 import com.repoint.basics.atoms.RepointAppBar
 import com.repoint.basics.atoms.RepointCommonButton
+import com.repoint.basics.logic.SendRoutes
+import com.repoint.dashboard.NetworkViewModel
+import com.repoint.dashboard.TokenViewModel
 import com.repoint.dashboard.Web3ViewModel
+import com.repoint.dependencies.accountmanager.SpManager
 import com.repoint.dependencies.theme.PurpleGrey80
 import com.repoint.dependencies.theme.RepointTypography
 import com.repoint.dependencies.theme.richBlack
-import com.repoint.splash.accountmanager.SpManager
 import kotlinx.coroutines.launch
 import org.web3j.crypto.Credentials
+import java.math.BigInteger
+import java.math.RoundingMode
 
 
 @Composable
 fun SendTokenScreen(
-    walletAddress : String,
-    tokenBalance : String,
+    walletAddress: String,
+    tokenBalance: String,
+    coinType: Int,
+    contractAddress: String,
+    chainId: Int,
     navController: NavController,
     web3ViewModel: Web3ViewModel = hiltViewModel<Web3ViewModel>(),
-    walletViewModel : WalletViewModel = hiltViewModel<WalletViewModel>(),
+    walletViewModel: WalletViewModel = hiltViewModel<WalletViewModel>(),
+    tokenViewModel: TokenViewModel = hiltViewModel(),
     userViewModel: UserViewModel = hiltViewModel<UserViewModel>()
 ) {
 
@@ -72,21 +82,47 @@ fun SendTokenScreen(
     var recipientAddress by remember { mutableStateOf("") }
     var amount by remember { mutableStateOf("") }
     val context = LocalContext.current
-    val gasPrice by web3ViewModel.gasPrice.collectAsState() // ✅ Observe StateFlow properly
+    val gasPriceInGwei by web3ViewModel.gasPrice.collectAsState() // ✅ Observe StateFlow properly
 
     val coroutineScope = rememberCoroutineScope()
 
     val spManager = SpManager(context)
     val userIdFlow = spManager.getUserIdFlow().collectAsState(initial = null)
     var credentials by remember { mutableStateOf<Credentials?>(null) }
+    val masterWalletId by spManager.getActiveWalletId().collectAsState(initial = null)
+
+    val nativePrice by tokenViewModel.nativeTokenPriceUsd.collectAsState()
+
+    var isSending by remember { mutableStateOf(false) }
+    var txHash by remember { mutableStateOf<String?>(null) }
+    var errorMessage by remember { mutableStateOf<String?>(null) }
+
     //
     LaunchedEffect(walletAddress) {
         val userId = userViewModel.fetchUser()
-        Log.d("transaction" , "user id is : $userId")
-      //  val privateKey = userIdFlow.value?.let { walletViewModel.getAllMasterWallets(it)[0]. }
-        Log.d("transaction" , "user id flow is : ${userIdFlow.value}")
-        //     credentials = Credentials.create(privateKey)
-    //    Log.d("transaction", "crendentials is : $credentials and private key is  : $privateKey")
+        Log.d("transaction", "user id is : $userId")
+        //  val privateKey = userIdFlow.value?.let { walletViewModel.getAllMasterWallets(it)[0]. }
+        Log.d("transaction", "user id flow is : ${userIdFlow.value}")
+        Log.d("transaction", "coinType is : $coinType")
+
+        web3ViewModel.fetchGasPrice(chainId.toLong())
+        tokenViewModel.getNativeTokenPrice(chainId.toLong())
+
+        val chainWallet =
+            masterWalletId?.let { walletViewModel.getChainWallet(masterWalletId = it, coinType) }
+        val privateKey = chainWallet?.privateKey
+        val decimalKey = privateKey?.let { BigInteger(it) }
+        val hexKey = decimalKey?.toString(16)
+        if (!hexKey.isNullOrEmpty()) {
+            credentials = Credentials.create(hexKey)
+            Log.d("transaction", "🧾 ChainWallet address: ${chainWallet?.address}")
+            Log.d("transaction", "🔑 Credentials address: ${credentials?.address}")
+            Log.d("SendToken", "Credentials created for $walletAddress")
+        } else {
+            Log.e("SendToken", "Missing private key for wallet $walletAddress")
+        }
+
+        //    Log.d("transaction", "crendentials is : $credentials and private key is  : $privateKey")
     }
 
     val isButtonEnabled = recipientAddress.isNotBlank() && amount.isNotBlank()
@@ -97,8 +133,8 @@ fun SendTokenScreen(
 
             val scannedAddress = result.data?.getStringExtra("SCANNED_ADDRESS")
             if (!scannedAddress.isNullOrEmpty()) recipientAddress = scannedAddress
-            else Toast.makeText(context," Invalid Qr Code", Toast.LENGTH_SHORT).show()
-        }   else Toast.makeText(context,"QR Scan Canceled",Toast.LENGTH_SHORT).show()
+            else Toast.makeText(context, " Invalid Qr Code", Toast.LENGTH_SHORT).show()
+        } else Toast.makeText(context, "QR Scan Canceled", Toast.LENGTH_SHORT).show()
     }
 
     // Permission Request Launcher
@@ -114,6 +150,15 @@ fun SendTokenScreen(
             }
         }
     )
+    val estimatedGasFee = remember(gasPriceInGwei, nativePrice) {
+        if (gasPriceInGwei != null && nativePrice != null) {
+            tokenViewModel.calculateGasFeeUsd(
+                gasLimit = BigInteger.valueOf(21999), // Use your actual gasLimit if available
+                gasPriceGwei = gasPriceInGwei!!,
+                nativeTokenUsdPrice = nativePrice!!
+            ).setScale(4, RoundingMode.HALF_UP).toPlainString()
+        } else null
+    }
 
     RepointAppBar("send", navController = navController, exp = {
         Box(
@@ -121,104 +166,186 @@ fun SendTokenScreen(
                 .fillMaxSize()
                 .padding(12.dp)
         ) {
+            when {
+                isSending -> {
+                    LoaderAnimation(modifier = Modifier.align(Alignment.Center))
+                }
 
-
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
-            ) {
-
-                Text(text = "Send Pol", style = RepointTypography.titleMedium)
-
-                OutlinedTextField(
-                    value = recipientAddress,
-                    onValueChange = { recipientAddress = it },
-                    label = { Text("recipient address") },
-                    trailingIcon = {
-                        Row {
-                            TextButton(onClick = {
-                                // Get clipboard text
-                                val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                                val clipData = clipboard.primaryClip
-                                if (clipData != null && clipData.itemCount > 0) {
-                                    val clipboardText = clipData.getItemAt(0)?.text?.toString()
-                                        ?: "" // Safe null check
-                                    if (clipboardText.isNotEmpty()) {
-                                        if (isValidWalletAddress(clipboardText)) {
-                                            recipientAddress = clipboardText
-                                        } else {
-                                            Toast.makeText(context, "Invalid Wallet Address", Toast.LENGTH_SHORT).show()
-                                        }
-                                    }
-                                }
-                            }) { Text("Paste") }
-                            IconButton(onClick = {
-                                when {
-                                    ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED -> {
-                                        // Permission already granted, launch QR Scanner
-                                        val intent = Intent(context, QrScannerActivity::class.java)
-                                        qrScannerLauncher.launch(intent)
-                                    }
-                                    else -> {
-                                        // Request Camera Permission
-                                        permissionLauncher.launch(Manifest.permission.CAMERA)
-                                    }
-                                }
-                            }) {
-                                Icon(
-                                    imageVector = Icons.Default.QrCode,
-                                    contentDescription = "Scan QR"
-                                )
-                            }
-                        }
-                    }, modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(8.dp)
-                )
-
-                OutlinedTextField(
-                    value = amount,
-                    onValueChange = { input ->
-                        // Allow only digits and at most one decimal point
-                        if (input.matches(Regex("^\\d*\\.?\\d*\$"))) {
-                            amount = input
-                        } },
-                    label = { Text("Amount") },
-                    keyboardOptions =  KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                    trailingIcon = {
-                        TextButton(onClick = {
-                            amount = tokenBalance
-                        }) {
-                            Text("Max")
-                        }
-                    }, modifier = Modifier.fillMaxWidth()
-                )
-
-                Text(text = "Available POL : $tokenBalance", style = RepointTypography.bodySmall, color = PurpleGrey80)
-                Text(text = "Gas Price : $gasPrice", style = RepointTypography.bodySmall, color = richBlack)
-            }
-            RepointCommonButton(
-                text = "Confirm",
-                onClick = {
-                    if (recipientAddress.isNotEmpty() && amount.isNotEmpty() && isValidWalletAddress(recipientAddress)) {
-                        coroutineScope.launch {
-                            credentials?.let { web3ViewModel.sendNativeToken(credentials = it,recipientAddress,amount.toBigDecimal()) }
-                            Log.d("transaction","transaction is going to start with credentials : $credentials && amount is : $amount && amount.toBigDecimal is : ${amount.toBigDecimal()}")
+                txHash != null -> {
+                    LaunchedEffect(txHash) {
+                        navController.currentBackStackEntry?.savedStateHandle?.set("txHash", txHash)
+                        navController.navigate(SendRoutes.ROUTE_SEND_SUCCESS) {
+                            popUpTo("sendToken") { inclusive = true }
                         }
                     }
-                    else Toast.makeText(context,"fields are empty or Not Correct",Toast.LENGTH_SHORT).show()
+                }
+                errorMessage != null -> {
+                    LaunchedEffect(errorMessage) {
+                        navController.currentBackStackEntry?.savedStateHandle?.set(
+                            "error",
+                            errorMessage
+                        )
+                        navController.navigate(SendRoutes.ROUTE_SEND_ERROR) {
+                            popUpTo("sendToken") { inclusive = true }
+                        }
+                    }
+                }
+                else -> {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
 
-                },
-                enabled = isButtonEnabled && credentials != null,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(50.dp)
-                    .align(Alignment.BottomCenter)
-            )
+                        Text(text = "Send Pol", style = RepointTypography.titleMedium)
+
+                        OutlinedTextField(
+                            value = recipientAddress,
+                            onValueChange = { recipientAddress = it },
+                            label = { Text("recipient address") },
+                            trailingIcon = {
+                                Row {
+                                    TextButton(onClick = {
+                                        // Get clipboard text
+                                        val clipboard =
+                                            context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                                        val clipData = clipboard.primaryClip
+                                        if (clipData != null && clipData.itemCount > 0) {
+                                            val clipboardText =
+                                                clipData.getItemAt(0)?.text?.toString()
+                                                    ?: "" // Safe null check
+                                            if (clipboardText.isNotEmpty()) {
+                                                if (isValidWalletAddress(clipboardText)) {
+                                                    recipientAddress = clipboardText
+                                                } else {
+                                                    Toast.makeText(
+                                                        context,
+                                                        "Invalid Wallet Address",
+                                                        Toast.LENGTH_SHORT
+                                                    ).show()
+                                                }
+                                            }
+                                        }
+                                    }) { Text("Paste") }
+                                    IconButton(onClick = {
+                                        when {
+                                            ContextCompat.checkSelfPermission(
+                                                context,
+                                                Manifest.permission.CAMERA
+                                            ) == PackageManager.PERMISSION_GRANTED -> {
+                                                // Permission already granted, launch QR Scanner
+                                                val intent =
+                                                    Intent(context, QrScannerActivity::class.java)
+                                                qrScannerLauncher.launch(intent)
+                                            }
+
+                                            else -> {
+                                                // Request Camera Permission
+                                                permissionLauncher.launch(Manifest.permission.CAMERA)
+                                            }
+                                        }
+                                    }) {
+                                        Icon(
+                                            imageVector = Icons.Default.QrCode,
+                                            contentDescription = "Scan QR"
+                                        )
+                                    }
+                                }
+                            }, modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(8.dp)
+                        )
+
+                        OutlinedTextField(
+                            value = amount,
+                            onValueChange = { input ->
+                                // Allow only digits and at most one decimal point
+                                if (input.matches(Regex("^\\d*\\.?\\d*\$"))) {
+                                    amount = input
+                                }
+                            },
+                            label = { Text("Amount") },
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                            trailingIcon = {
+                                TextButton(onClick = {
+                                    amount = tokenBalance
+                                }) {
+                                    Text("Max")
+                                }
+                            }, modifier = Modifier.fillMaxWidth()
+                        )
+
+                        Text(
+                            text = "Available POL : $tokenBalance",
+                            style = RepointTypography.bodySmall,
+                            color = PurpleGrey80
+                        )
+
+                        Text(text = estimatedGasFee?.let { "Estimated Gas Fee: $it USD" }
+                            ?: "Estimating fee...",
+                            style = RepointTypography.bodyMedium, color = richBlack)
+                    }
+
+                    RepointCommonButton(
+                        text = "Confirm",
+                        onClick = {
+                            if (recipientAddress.isNotEmpty() && amount.isNotEmpty() && isValidWalletAddress(
+                                    recipientAddress
+                                )
+                            ) {
+                                isSending = true
+                                coroutineScope.launch {
+                                    val result = credentials?.let {
+                                        web3ViewModel.sendTokenDynamic(
+                                            credentials = it,
+                                            recipientAddress = recipientAddress,
+                                            amount = amount.toBigDecimal(),
+                                            contractAddress = contractAddress,
+                                            chainId = chainId.toLong()
+                                        )
+                                    }
+                                    Log.d(
+                                        "transaction",
+                                        "transaction is going to start with credentials : ${credentials?.address} && amount is : $amount && amount.toBigDecimal is : ${amount.toBigDecimal()}"
+                                    )
+                                    Log.d(
+                                        "transaction",
+                                        "transaction is going to start with to ADddress : $recipientAddress"
+                                    )
+                                    isSending = false
+                                    if (result != null) {
+                                        txHash = result
+                                    } else {
+                                        errorMessage = " Transaction Failed "
+                                    }
+                                }
+                            } else Toast.makeText(
+                                context,
+                                "fields are empty or Not Correct",
+                                Toast.LENGTH_SHORT
+                            ).show()
+
+                        },
+                        enabled = isButtonEnabled && credentials != null,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(50.dp)
+                            .align(Alignment.BottomCenter)
+                    )
+                }
+            }
+
         }
     })
 
+}
+
+@Composable
+fun SendLoadingScreen() {
+    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+        LoaderAnimation()
+        Text("Sending transaction...", modifier = Modifier.padding(top = 150.dp))
+    }
 }
 
 fun isValidWalletAddress(address: String): Boolean {

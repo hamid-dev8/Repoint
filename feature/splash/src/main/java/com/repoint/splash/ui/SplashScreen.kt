@@ -1,6 +1,10 @@
 package com.repoint.splash.ui
 
 import android.util.Log
+import android.widget.Toast
+import androidx.biometric.BiometricManager
+import androidx.biometric.BiometricManager.Authenticators.BIOMETRIC_STRONG
+import androidx.biometric.BiometricPrompt
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -22,8 +26,13 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.core.app.ActivityCompat.finishAffinity
+import androidx.core.content.ContextCompat
+import androidx.fragment.app.FragmentActivity
+import androidx.hilt.navigation.compose.hiltViewModel
+import com.repoint.account.WalletViewModel
 import com.repoint.dependencies.theme.ghostWhite
-import com.repoint.splash.accountmanager.SpManager
+import com.repoint.dependencies.accountmanager.SpManager
 import kotlinx.coroutines.delay
 
 
@@ -38,7 +47,7 @@ private fun PreviewSplashScreen() {
 }
 
 @Composable
-fun SplashScreenRepoint(onStay: () -> Unit, onProceed: () -> Unit) {
+fun SplashScreenRepoint(onStay: () -> Unit, onProceed: () -> Unit,onAuthRequest : (onSuccess : () -> Unit) -> Unit,walletViewModel : WalletViewModel = hiltViewModel()) {
 
     val splashTimeout = 3000L
 
@@ -50,13 +59,24 @@ fun SplashScreenRepoint(onStay: () -> Unit, onProceed: () -> Unit) {
     var isSplashFinished by remember { mutableStateOf(false) }
 
 
-    LaunchedEffect(Unit) {
+    LaunchedEffect(userIdFlow.value) {
         delay(splashTimeout)
         isSplashFinished = true
 
+
+        val userId = userIdFlow.value
         Log.d("userId", " User id is : ${userIdFlow.value}")
-        if (!userIdFlow.value.isNullOrEmpty()) {
-            onProceed()
+        if (!userId.isNullOrEmpty()) {
+            val wallets = walletViewModel.getAllMasterWallets(userId)
+            if (wallets.isNotEmpty()){
+                onAuthRequest{
+                    onProceed()
+                }
+            }
+            else{
+                spManager.clearAllSessionData()
+                onStay()
+            }
         } else {
             onStay()
         }

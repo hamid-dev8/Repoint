@@ -30,6 +30,7 @@ import androidx.compose.ui.unit.dp
 import com.repoint.dependencies.theme.RepointTypography
 import com.repoint.dependencies.theme.ghostWhite
 import com.repoint.dependencies.theme.repointOrange
+import com.repoint.dependencies.theme.richBlack
 
 
 @Preview
@@ -147,6 +148,7 @@ fun SelectableRow(
                     text = phrase,
                     style = RepointTypography.bodyMedium,
                     textAlign = TextAlign.Center,
+                    color = if (selectedIndex == columnIndex) ghostWhite else richBlack,
                     modifier = Modifier.padding(4.dp)
                 )
             }

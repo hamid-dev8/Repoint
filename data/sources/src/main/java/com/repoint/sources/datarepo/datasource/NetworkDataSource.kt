@@ -12,8 +12,10 @@ interface NetworkDataSource
     suspend fun isDatabaseEmpty() : Boolean
     suspend fun insertToken(tokens : List<TokenEntity>)
     suspend fun getTokensForNetwork(networkId: Int): List<TokenEntity>
-
+    suspend fun getAllTokens(masterWalletId: String?) : List<TokenEntity>
     suspend fun getTokensWithNetwork(tokenId : Int) : TokenWithNetwork
+
+    suspend fun getNetworkByTokenId(tokenId: Int) : BlockchainNetworkEntity?
 
     //suspend fun getActiveTokens() : List<TokenEntity>
     suspend fun getActiveTokens(walletId : String) : Flow<List<TokenEntity>>

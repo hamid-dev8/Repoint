@@ -1,7 +1,7 @@
 package com.repoint.app.di
 
 import android.content.Context
-import com.repoint.splash.accountmanager.SpManager
+import com.repoint.dependencies.accountmanager.SpManager
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -18,7 +18,7 @@ object AppModule {
 
     @Provides
     @Singleton
-    fun provideSpManager(@ApplicationContext context : Context) : SpManager{
+    fun provideSpManager(@ApplicationContext context : Context) : SpManager {
         return SpManager(context)
     }
 

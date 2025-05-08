@@ -35,7 +35,7 @@ import com.repoint.basics.atoms.RepointCheckbox
 import com.repoint.basics.atoms.RepointCommonButton
 import com.repoint.dependencies.theme.RepointTypography
 import com.repoint.dependencies.theme.repointBlue
-import com.repoint.splash.accountmanager.SpManager
+import com.repoint.dependencies.accountmanager.SpManager
 import kotlinx.coroutines.launch
 
 
@@ -106,6 +106,8 @@ fun WalletConfirmSurface(
              onConfirm(it)
          }
      }*/
+
+
 
     RepointAppBar("", navController, exp = {
         Box(

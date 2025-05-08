@@ -1,4 +1,4 @@
-package com.repoint.splash.accountmanager
+package com.repoint.dependencies.accountmanager
 
 import android.content.Context
 import androidx.datastore.core.DataStore
@@ -24,6 +24,19 @@ class SpManager(private val context: Context) {
 
     private val USER_ID_KEY = stringPreferencesKey("user_id")
     private val WALLET_ID_KEY = stringPreferencesKey("wallet_id")
+    private val PASSCODE_ENABLED_KEY = booleanPreferencesKey("passcode_enabled")
+
+    suspend fun setPasscodeEnabled(enabled : Boolean){
+        context.dataStore.edit { prefs ->
+            prefs[PASSCODE_ENABLED_KEY] = enabled
+        }
+    }
+
+    fun getPasscodeEnabled() : Flow<Boolean>{
+        return context.dataStore.data.map { prefs ->
+            prefs[PASSCODE_ENABLED_KEY] ?: false
+        }
+    }
 
     suspend fun setUserId(userId: String) {
         context.dataStore.edit { preferences ->
@@ -34,6 +47,12 @@ class SpManager(private val context: Context) {
     fun getUserIdFlow() : Flow<String?>{
         return context.dataStore.data.map { preferences ->
             preferences[USER_ID_KEY]
+        }
+    }
+
+    suspend fun clearUserId() {
+        context.dataStore.edit{ preferences ->
+            preferences.remove(USER_ID_KEY)
         }
     }
 
@@ -48,6 +67,15 @@ class SpManager(private val context: Context) {
             prefrences[WALLET_ID_KEY]
         }
     }
+
+    suspend fun clearAllSessionData() {
+        context.dataStore.edit { preferences ->
+            preferences.remove(USER_ID_KEY)
+            preferences.remove(WALLET_ID_KEY) // use your defined key
+            // remove others if needed
+        }
+    }
+
 
     // ✅ StateFlow version — always available, real-time observable
     val activeWalletIdFlow: StateFlow<String?> by lazy {

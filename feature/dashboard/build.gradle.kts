@@ -61,7 +61,7 @@ dependencies {
     implementation(project(":core:models"))
     implementation(project(":core:network"))
     implementation(project(":feature:account"))
-    implementation(project(":feature:splash"))
+   // implementation(project(":feature:splash"))
     implementation(libs.androidx.runtime.livedata)
     implementation(project(":core:database"))
     implementation(project(":data:sources"))

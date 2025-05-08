@@ -8,4 +8,4 @@ import java.util.UUID
 
 
 @Entity(tableName = "users")
-data class User(@PrimaryKey val userId: String = UUID.randomUUID().toString(), val salt : String, val passwordHash : String = "0", val createdAt : String)
+data class User(@PrimaryKey val userId: String = UUID.randomUUID().toString(), val salt : String, val passwordHash : String = "0", val biometricEnabled : Boolean = false,val createdAt : String)

@@ -1,9 +1,14 @@
 package com.repoint.dashboard.ui
 
+import android.widget.Toast
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
@@ -18,9 +23,13 @@ fun SecurityScreen(
     viewModel: SecurityViewModel = hiltViewModel<SecurityViewModel>()
 ) {
 
+    val usePasscode by viewModel.isPasscodeEnabled.collectAsState()
+
+    val context = LocalContext.current
+
     RepointAppBar(title = "Security", navController, exp = {
 
-        Column(Modifier.padding(horizontal = 16.dp)) {
+        Column(Modifier.fillMaxSize().padding(horizontal = 16.dp)) {
 
             SecuritySettingItem(
                 title = "Security Scanner",
@@ -31,7 +40,7 @@ fun SecurityScreen(
 
             SecuritySettingItem(
                 title = "passcode",
-                checked = viewModel.isPasscodeEnabled.value,
+                checked = usePasscode,
                 onToggle = { viewModel.togglePasscode(it) }
             )
 
@@ -44,7 +53,10 @@ fun SecurityScreen(
             TextSettingItem(
                 title = "Lock method",
                 subtitle = "Passcode",
-                onClick = { /*show Dialog : FingerPrint / Passcode */ }
+                onClick = {
+                    Toast.makeText(context,"clicked",Toast.LENGTH_SHORT).show()
+                }
+
             )
 
             SecuritySettingItem(

@@ -26,8 +26,16 @@ class NetworkRepositoryImp @Inject constructor(private val networkDao : NetworkD
         return networkDao.getTokensForNetwork(networkId)
     }
 
+    override suspend fun getAllTokens(masterWalletId: String?): List<TokenEntity> {
+        return networkDao.getAllTokens(masterWalletId)
+    }
+
     override suspend fun getTokensWithNetwork(tokenId: Int): TokenWithNetwork {
         return networkDao.getTokenWithNetwork(tokenId)
+    }
+
+    override suspend fun getNetworkByTokenId(tokenId: Int): BlockchainNetworkEntity? {
+        return networkDao.getNetworkByTokenId(tokenId)
     }
 
     override suspend fun getActiveTokens(walletId : String): Flow<List<TokenEntity>> {
@@ -59,6 +67,8 @@ class NetworkRepositoryImp @Inject constructor(private val networkDao : NetworkD
         Log.d("DEBUG_ACTIVE_NETS", "All active networks on $masterWalletId:\n" + all.joinToString("\n") { it.toString() })
         return all
     }
+
+
 
 
     override suspend fun insertNetworks(networks: List<BlockchainNetworkEntity>) {

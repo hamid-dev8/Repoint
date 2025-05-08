@@ -24,6 +24,8 @@ interface NetworkDao
     @Query("SELECT * FROM tokens WHERE  networkId= :networkId")
     suspend fun getTokensForNetwork(networkId: Int): List<TokenEntity>
 
+    @Query("SELECT * FROM tokens WHERE masterWalletId = :masterWalletId")
+    suspend fun getAllTokens(masterWalletId: String?) : List<TokenEntity>
 
     /* get embeded token cointype!*/
     @Transaction
@@ -51,6 +53,12 @@ interface NetworkDao
     @Query("SELECT * FROM actives WHERE masterWalletId =:masterWalletId")
     suspend fun getAllActiveNetworksDebug(masterWalletId: String): List<LocalActiveNetworks>
 
+    @Query("""
+    SELECT networks.* FROM networks
+    INNER JOIN tokens ON tokens.networkId = networks.id
+    WHERE tokens.tokenId = :tokenId
+""")
+    suspend fun getNetworkByTokenId(tokenId: Int): BlockchainNetworkEntity?
 
     /*
 

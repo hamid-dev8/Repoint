@@ -3,22 +3,18 @@ package com.repoint.account
 import android.annotation.SuppressLint
 import android.util.Log
 import androidx.compose.runtime.State
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
-import androidx.lifecycle.asLiveData
-import androidx.lifecycle.flowWithLifecycle
 import androidx.lifecycle.viewModelScope
-import com.repoint.basics.logic.EcGen
 import com.repoint.basics.logic.EcGenerator
 import com.repoint.models.sharedmodels.local.ChainWallet
 import com.repoint.models.sharedmodels.local.MasterWallet
-import com.repoint.models.sharedmodels.local.RepointWallet
 import com.repoint.sources.datarepo.datasource.AuthDataSource
-import com.repoint.splash.accountmanager.SpManager
+import com.repoint.dependencies.accountmanager.SpManager
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.async
-import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -45,6 +41,11 @@ class WalletViewModel @Inject constructor(
 
     var tempMasterWallet : MasterWallet? = null
     var tempChainWallet : List<ChainWallet> = emptyList()
+
+
+    private val _masterWallets = MutableStateFlow<List<MasterWallet>>(emptyList())
+    val masterWallets: StateFlow<List<MasterWallet>> = _masterWallets.asStateFlow()
+
 
     suspend fun generateWalletInMemory(walletName: String,userId: String?) : List<String>{
         val (masterWallet , chainWallets) = EcGenerator.generateMasterAndChainWallets(walletName,userId)
@@ -104,6 +105,14 @@ class WalletViewModel @Inject constructor(
         return repository.getMasterWallet(masterWalletId)
     }
 
+
+    fun loadMasterWallets(userId : String) {
+        viewModelScope.launch {
+            val wallets = getAllMasterWallets(userId)
+            _masterWallets.value = wallets
+        }
+    }
+
     suspend fun getAllMasterWallets(userId: String) : List<MasterWallet> {
         return repository.getAllMasterWallets(userId)
     }
@@ -113,9 +122,10 @@ class WalletViewModel @Inject constructor(
         return repository.getChainWalletsByMaster(masterWalletId)
     }
 
-    fun renameChainWallet(chainWalletId : String , newName : String) {
+    fun renameMasterWallet(chainWalletId : String, newName : String,userId : String) {
         viewModelScope.launch {
-            repository.renameChainWallet(chainWalletId,newName)
+            repository.renameMasterWallet(chainWalletId,newName)
+            loadMasterWallets(userId)
         }
     }
 
@@ -137,9 +147,10 @@ class WalletViewModel @Inject constructor(
         return "Wallet "
     }
 
-    fun deleteChainWallet(chainWalletId: String) {
+    fun deleteMasterWallet(masterWalletId: String,userId : String) {
         viewModelScope.launch {
-            repository.deleteChainWallet(chainWalletId)
+            repository.deleteMasterWallet(masterWalletId)
+            loadMasterWallets(userId)
         }
     }
 

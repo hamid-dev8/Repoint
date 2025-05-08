@@ -352,7 +352,9 @@ fun RepointNumPad(
             },
             onConfirmClick = {
                 showBiometricDialog = false
-                navController.navigate("home")
+                navController.navigate("home"){
+                    popUpTo(0){inclusive = true}
+                }
                 Log.d("focus", "biometric Confirmed")
             },
             fingerprintIcon = painterResource(com.repoint.dependencies.R.drawable.biometric_ic),

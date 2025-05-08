@@ -6,7 +6,10 @@ import android.util.Log
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -29,7 +32,7 @@ import com.repoint.basics.atoms.RepointAppBar
 import com.repoint.basics.atoms.RepointCommonButton
 import com.repoint.basics.atoms.RepointThreeTextSelectable
 import com.repoint.dependencies.theme.RepointTypography
-import com.repoint.splash.accountmanager.SpManager
+import com.repoint.dependencies.accountmanager.SpManager
 import kotlinx.coroutines.launch
 import kotlin.random.Random
 
@@ -62,6 +65,7 @@ fun ConfirmPhrases(
 
     val wallet = walletViewModel.getTempWallet()
 
+    val defaultName = remember { mutableStateOf(wallet?.name.orEmpty()) }
 
     for (index in 0..3) {
         Log.d("confirmsss", " the result pair is : ${resultPair.get(index).first}")
@@ -89,10 +93,18 @@ fun ConfirmPhrases(
                         color = Color.Gray,
                         modifier = Modifier
                             .align(Alignment.Start)
-                            .padding(8.dp)
+                            .padding(16.dp)
                             .padding(bottom = 8.dp)
                     )
-
+                    OutlinedTextField(
+                        value = defaultName.value,
+                        onValueChange = { defaultName.value = it },
+                        label = { Text("Wallet Name") },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(bottom = 16.dp),
+                        singleLine = true
+                    )
                     RepointThreeTextSelectable(shuffledList, resultPair, isSelectedCorrectly = {
                         isUserCorrect = it
                         Log.d("isSelected", "is it ok? : $isUserCorrect")
@@ -116,10 +128,16 @@ fun ConfirmPhrases(
                             val nextIndex = walletViewModel.generateNextWalletIndex(user?.userId)
                             Log.d("confirm","next index is : ${walletViewModel.generateNextWalletIndex(user?.userId)}")
                             Log.d("confirm","user id is : ${user?.userId}")
-                            val finalName = walletViewModel.tempMasterWallet!!.name.ifBlank {
+                            /*val finalName = walletViewModel.tempMasterWallet!!.name.ifBlank {
                                 walletViewModel.generateDefaultWalletName(nextIndex)
                             }
-
+*/
+                            val enteredName = defaultName.value.trim()
+                            val finalName = if (enteredName.isNotBlank()) {
+                                enteredName // custom name, no index
+                            } else {
+                                walletViewModel.generateDefaultWalletName(nextIndex) // default auto-named
+                            }
                             walletViewModel.tempMasterWallet = walletViewModel.tempMasterWallet!!.copy(
                                 name = finalName,
                                 walletIndex = nextIndex,

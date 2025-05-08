@@ -17,11 +17,16 @@ import com.repoint.account.signup.ui.ConfirmPhrases
 import com.repoint.account.signup.ui.SetPinCode
 import com.repoint.account.signup.ui.ShowPhrase
 import com.repoint.account.signup.ui.WalletConfirmSurface
+import com.repoint.basics.logic.SendRoutes
+import com.repoint.basics.logic.authenticateUser
 import com.repoint.dashboard.ui.ChainWalletsScreen
 import com.repoint.dashboard.ui.ChooseTokenScreen
 import com.repoint.dashboard.ui.CryptoManageScreen
 import com.repoint.dashboard.ui.HomeScreen
 import com.repoint.dashboard.ui.SecurityScreen
+import com.repoint.dashboard.ui.SendErrorScreen
+import com.repoint.dashboard.ui.SendLoadingScreen
+import com.repoint.dashboard.ui.SendSuccessScreen
 import com.repoint.dashboard.ui.SendTokenScreen
 import com.repoint.dashboard.ui.SettingsScreen
 import com.repoint.dashboard.ui.TransactionHistoryScreen
@@ -57,7 +62,10 @@ fun RepointNavigation(activity: FragmentActivity) {
                 navController.navigate("home") {
                     popUpTo("splash") { inclusive = true }
                 }
-            })
+            }, onAuthRequest = { onAuthSuccess ->
+                authenticateUser(onAuthSuccess, activity)
+            }
+            )
         }
         composable("hedgehog") {
             Web3WalletScreen(onConfirm = {
@@ -119,7 +127,7 @@ fun RepointNavigation(activity: FragmentActivity) {
 
         composable(
             "chooseToken/{isSend}",
-            arguments = listOf(navArgument("isSend"){type = NavType.BoolType})
+            arguments = listOf(navArgument("isSend") { type = NavType.BoolType })
         ) { backStackEntry ->
             val isSend = backStackEntry.arguments?.getBoolean("isSend") ?: false
             ChooseTokenScreen(navController, isSend = isSend)
@@ -133,29 +141,72 @@ fun RepointNavigation(activity: FragmentActivity) {
             val walletAddress = backStackEntry.arguments?.getString("walletAddress") ?: ""
             val masterWalletId = backStackEntry.arguments?.getString("masterWalletId") ?: ""
             val tokenId = backStackEntry.arguments?.getString("tokenId")?.toIntOrNull()
-            WalletQrCodeScreen(navController, walletAddress = walletAddress, masterWalletId = masterWalletId, tokenId = tokenId)
+            WalletQrCodeScreen(
+                navController,
+                walletAddress = walletAddress,
+                masterWalletId = masterWalletId,
+                tokenId = tokenId
+            )
         }
 
         composable(
-            "sendToken/{walletAddress}/{tokenBalance}",
+            "sendToken/{walletAddress}/{tokenBalance}/{coinType}/{contractAddress}/{chainId}",
             arguments = listOf(navArgument("walletAddress") { type = NavType.StringType },
-                navArgument("tokenBalance") { type = NavType.StringType })
+                navArgument("tokenBalance") { type = NavType.StringType },
+                navArgument("coinType") { type = NavType.IntType },
+                navArgument("contractAddress") { type = NavType.StringType },
+                navArgument("chainId") { type = NavType.IntType }
+            )
         ) { backStackEntry ->
             val walletAddress = backStackEntry.arguments?.getString("walletAddress") ?: ""
             val tokenBalance = backStackEntry.arguments?.getString("tokenBalance") ?: "0"
-            SendTokenScreen(walletAddress, tokenBalance, navController)
+            val coinType = backStackEntry.arguments?.getInt("coinType") ?: -1
+            val contractAddress = backStackEntry.arguments?.getString("contractAddress") ?: ""
+            val chainId = backStackEntry.arguments?.getInt("chainId") ?: -1
+            SendTokenScreen(
+                walletAddress,
+                tokenBalance,
+                coinType,
+                contractAddress,
+                chainId,
+                navController
+            )
         }
+
+        composable(SendRoutes.ROUTE_SEND_LOADING) {
+            SendLoadingScreen()
+        }
+        composable(SendRoutes.ROUTE_SEND_SUCCESS) {
+            val txHash = navController
+                .previousBackStackEntry
+                ?.savedStateHandle
+                ?.get<String>("txHash")
+                ?: "Unknown"
+            SendSuccessScreen(txHash, navController)
+        }
+        composable(SendRoutes.ROUTE_SEND_ERROR) { navBackStackEntry ->
+            val errorMessage = navBackStackEntry
+                .savedStateHandle
+                .get<String>("error")
+                ?: "Transaction failed"
+            SendErrorScreen(errorMessage, navController)
+        }
+
 
         composable(
             "history/{balance}/{walletAddress}",
             arguments = listOf(navArgument("balance") { type = NavType.FloatType },
-                navArgument("walletAddress"){type = NavType.StringType}
+                navArgument("walletAddress") { type = NavType.StringType }
             )
         ) { backstackEntry ->
             val balance = backstackEntry.arguments?.getFloat("balance") ?: 0.0f
             val walletAddress = backstackEntry.arguments?.getString("walletAddress") ?: ""
             // val nativeBalance = gson.fromJson(balance,NativesBalance::class.java) // Convert back to object
-            TransactionHistoryScreen(navController, balance = balance, walletAddress = walletAddress)
+            TransactionHistoryScreen(
+                navController,
+                balance = balance,
+                walletAddress = walletAddress
+            )
         }
 
         composable(
@@ -165,7 +216,7 @@ fun RepointNavigation(activity: FragmentActivity) {
             CryptoManageScreen(navController)
         }
 
-        composable("settings") {navBackStackEntry ->
+        composable("settings") { navBackStackEntry ->
             SettingsScreen(navController)
         }
 

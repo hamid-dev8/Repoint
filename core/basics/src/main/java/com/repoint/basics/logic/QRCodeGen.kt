@@ -61,10 +61,11 @@ fun saveBitmapToFile(context: Context, bitmap: Bitmap): Uri? {
 }
 
 
-fun shareImage(context: Context, file: Uri) {
+fun shareImage(context: Context, file: Uri,walletAddress : String) {
 
     val shareIntent = Intent(Intent.ACTION_SEND).apply {
         putExtra(Intent.EXTRA_STREAM, file)
+        putExtra(Intent.EXTRA_TEXT, "My wallet address: $walletAddress")
         type = "image/jpeg"
         addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
     }

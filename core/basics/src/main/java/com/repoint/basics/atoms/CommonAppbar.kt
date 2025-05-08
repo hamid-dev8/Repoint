@@ -144,7 +144,7 @@ fun RepointAppBar(
             )
         }
     ) { paddingValues ->
-        Surface(modifier = Modifier.padding(paddingValues)) {
+        Surface(modifier = Modifier.padding(paddingValues).fillMaxSize()) {
             exp()
         }
     }

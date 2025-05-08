@@ -3,21 +3,30 @@ package com.repoint.dashboard.ui
 import android.annotation.SuppressLint
 import android.net.Uri
 import android.util.Log
+import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.pager.VerticalPager
 import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.CallMade
@@ -26,6 +35,7 @@ import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.rounded.SwapVert
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Tab
 import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
@@ -51,10 +61,12 @@ import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.zIndex
 import androidx.constraintlayout.compose.ConstraintLayout
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import coil3.compose.AsyncImage
+import com.google.gson.Gson
 import com.repoint.account.UserViewModel
 import com.repoint.account.WalletViewModel
 import com.repoint.basics.atoms.AuthBottomSheetContent
@@ -62,21 +74,24 @@ import com.repoint.basics.atoms.BalanceScreen
 import com.repoint.basics.atoms.CircularButtonWithText
 import com.repoint.basics.atoms.LoaderAnimation
 import com.repoint.basics.atoms.RepointAppBar
+import com.repoint.basics.atoms.RepointSearchBar
 import com.repoint.basics.atoms.SearchTextField
 import com.repoint.basics.atoms.ViewPagerRobot
 import com.repoint.dashboard.NetworkViewModel
 import com.repoint.dashboard.TokenViewModel
 import com.repoint.dashboard.Web3ViewModel
 import com.repoint.dependencies.R
+import com.repoint.dependencies.accountmanager.SpManager
 import com.repoint.dependencies.theme.RepointTypography
 import com.repoint.dependencies.theme.ghostWhite
 import com.repoint.dependencies.theme.richBlack
 import com.repoint.models.sharedmodels.local.ChainWallet
 import com.repoint.models.sharedmodels.local.MasterWallet
+import com.repoint.models.sharedmodels.local.TokenEntity
 import com.repoint.models.sharedmodels.remote.NativesBalance
 import com.repoint.models.sharedmodels.remote.TokensBalance
-import com.repoint.splash.accountmanager.SpManager
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.math.BigDecimal
 import java.text.DecimalFormat
@@ -112,6 +127,11 @@ fun HomeScreen(
     val ethereumWallet = remember(chainWallets) {
         derivedStateOf { chainWallets.firstOrNull { it.coinType == 60 } }
     }
+    var searchText by remember { mutableStateOf("") }
+    var searchActive by remember { mutableStateOf(false) }
+
+    var selectedTab by remember { mutableStateOf(0) }
+    val tabs = listOf("Tokens", "NFTs")
 
     var isLoading by remember { mutableStateOf(true) }
 
@@ -129,10 +149,18 @@ fun HomeScreen(
     }
     var selectedWalletName by remember { mutableStateOf("") }
 
+    //val listState = rememberLazyListState()
 
     val activeWalletId by spManager.activeWalletIdFlow.collectAsState()
+    val allTokens by tokenViewModel.allTokens.collectAsState()
+    val activeTokens by networkViewModel.activeTokens.collectAsState()
+
+    val sheetTokenState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    var showTokenBottomSheet by remember { mutableStateOf(false) }
+
 
     LaunchedEffect(selectedWallet?.masterWalletId, activeWalletId, masterWallets) {
+
 
         tokenList = null
         tokensOf = emptyList()
@@ -146,7 +174,6 @@ fun HomeScreen(
         if (userId != null) {
 
             masterWallets = walletViewModel.getAllMasterWallets(userId)
-
             Log.d("token", "Master Wallets: $masterWallets")
 
             if (masterWallets.isNotEmpty() && !activeWalletId.isNullOrEmpty()) {
@@ -161,6 +188,7 @@ fun HomeScreen(
                 if (selectedWallet != null && selectedWallet!!.masterWalletId != activeWalletId) {
                     spManager.setActiveWallet(selectedWallet!!.masterWalletId)
                 }
+                tokenViewModel.getAllTokens(masterWalletId = selectedWallet?.masterWalletId)
 
                 //TODO generic the wallet
                 chainWallets = walletViewModel.getAllChainWallets(activeWalletId!!)
@@ -172,7 +200,8 @@ fun HomeScreen(
                 val address = chainWallets.firstOrNull { it.coinType == 60 }?.address
                 if (address != null) {
                     activeAddress = address
-                    web3ViewModel.testConnectionToWeb3()
+                    //todo
+                  //  web3ViewModel.testConnectionToWeb3(chainId = )
                     Log.d(
                         "token",
                         "active adress is : $activeAddress , selected wallet is : $selectedWallet , masterId is : ${selectedWallet?.masterWalletId}"
@@ -188,7 +217,7 @@ fun HomeScreen(
 
                     // tokensOf = tokenViewModel.getAllActivatedTokenBalances(activeAddress, "polygon")
                     //tokensOf = tokenViewModel.getMergedActivatedTokenBalances(address,"polygon")
-                    ether = web3ViewModel.fetchNativeWalletBalance(activeAddress!!)
+                    //ether = web3ViewModel.fetchNativeWalletBalance(activeAddress!!)
 
                     Log.d("token", "Chain Wallets: $chainWallets")
                     Log.d("assets", "active Address used: $activeAddress")
@@ -225,50 +254,161 @@ fun HomeScreen(
             }
         } else {
 
-
-            Column(
-                Modifier
-                    .fillMaxSize()
-                    .padding(8.dp)
-            ) {
-
-                SearchTextField("", onValueChange = { text ->
-
-                }, modifier = Modifier.padding(8.dp))
+            Box(modifier = Modifier.fillMaxSize()) {
+                LazyColumn(
+                    Modifier
+                        .fillMaxSize()
+                        .padding(8.dp)
+                ) {
 
 
-                val amount = netWorthSection(tokenList?.result)
-                val formattedBalanceAmount = DecimalFormat("#0.00").format(amount)
-                BalanceScreen(masterWallets, balance = "$$formattedBalanceAmount", onAddWallet = {
-                    showBottomSheet = true
-                }, onWalletSelected = { selectedWallet ->
-                    coroutineScope.launch {
-                        spManager.setActiveWallet(selectedWallet.masterWalletId)
-                        networkViewModel.initializeWithWallet(selectedWallet.masterWalletId)
-                        Log.d("token", "selected wallet changed : ${selectedWallet.masterWalletId}")
-                        Log.d("token", "master wallet changed : $masterWallets")
+
+
+                    val amount = netWorthSection(tokenList?.result)
+                    val formattedBalanceAmount = DecimalFormat("#0.00").format(amount)
+                    item {
+                        RepointSearchBar(query = searchText,
+                            onQueryChange = { searchText = it },
+                            active = searchActive,
+                            onActiveChange = {
+                                searchActive = it
+                                if (searchActive)showTokenBottomSheet = true
+                            }, onSearch = {
+
+                            }, content = {
+                            })
+
+
+
+                        BalanceScreen(
+                            masterWallets,
+                            balance = "$$formattedBalanceAmount",
+                            onAddWallet = {
+                                showBottomSheet = true
+                            },
+                            onWalletSelected = { selectedWallet ->
+                                coroutineScope.launch {
+                                    spManager.setActiveWallet(selectedWallet.masterWalletId)
+                                    networkViewModel.initializeWithWallet(selectedWallet.masterWalletId)
+                                    Log.d(
+                                        "token",
+                                        "selected wallet changed : ${selectedWallet.masterWalletId}"
+                                    )
+                                    Log.d("token", "master wallet changed : $masterWallets")
+                                }
+                                //TODO ezafe kardane safe add wallet va sakht wallet jadid
+                                //walletViewModel.createUserWallet()
+
+                                selectedWalletName =
+                                    selectedWallet?.name + selectedWallet?.walletIndex
+                            },
+                            selectedWalletName = selectedWalletName
+                        )
                     }
-                    //TODO ezafe kardane safe add wallet va sakht wallet jadid
-                    //walletViewModel.createUserWallet()
-
-                    selectedWalletName = selectedWallet?.name + selectedWallet?.walletIndex
-                }, selectedWalletName = selectedWalletName)
-
-                if (masterWallets.isNotEmpty() && !activeAddress.isNullOrEmpty()) {
-                    ActionsRow(navController, wallet = selectedWallet, tokenList, activeAddress!!)
+                    if (masterWallets.isNotEmpty() && !activeAddress.isNullOrEmpty()) {
+                        item {
+                            ActionsRow(
+                                navController,
+                                wallet = selectedWallet,
+                                tokenList,
+                                activeAddress!!
+                            )
+                        }
+                    }
+                    item {
+                        ViewPagerRobot()
+                    }
+                    // ─── sticky TabRow ─────────────────────────────────────
+                    // ① sticky header for your tabs
+                    stickyHeader {
+                        TabRow(
+                            selectedTabIndex = selectedTab,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .background(ghostWhite)
+                        ) {
+                            listOf("Tokens", "NFTs").forEachIndexed { idx, title ->
+                                Tab(
+                                    selected = selectedTab == idx,
+                                    onClick = { selectedTab = idx },
+                                    text = { Text(title, style = RepointTypography.titleSmall) }
+                                )
+                            }
+                        }
+                    }
+                    // ② under that header, show either your token rows or NFT placeholder
+                    if (selectedTab == 0) {
+                        items(tokenList?.result.orEmpty()) { token ->
+                            TokenRow(token)
+                        }
+                    } else {
+                        item {
+                            Box(
+                                Modifier
+                                    .fillMaxWidth()
+                                    .padding(24.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text("Coming Soon", style = RepointTypography.headlineSmall)
+                            }
+                        }
+                    }
                 }
-                ViewPagerRobot()
 
-                AssetsTabLayout(tokenList?.result.orEmpty())
-                //BasicTabLayout(actions = )
+
             }
-
+            //BasicTabLayout(actions = )
         }
+
+
     }, navController = navController, isSettings = true, onSettingsClick = {
         navController.navigate("settings")
     }, showEndIcon = true, onEndIconClick = {
         navController.navigate("networks")
     })
+
+    val filtered = remember(searchText, allTokens) {
+        allTokens.filter {
+            it.name.contains(searchText, ignoreCase = true) ||
+                    it.symbol.contains(searchText, ignoreCase = true)
+        }
+    }
+    // after your normal LazyColumn or Column…
+    /*   if (searchActive) {
+           Box(
+               modifier = Modifier
+                   .fillMaxSize()
+                   .heightIn(max = 600.dp)
+                   .background(ghostWhite.copy(alpha = 0.97f)) // optional
+                   .animateContentSize() // 👈 Smooths layout size change
+
+           ) {
+
+               LazyColumn(
+                   state = listState,
+                   modifier = Modifier
+                       .fillMaxSize()
+                       .padding(top = 72.dp) // 🔥 LIMIT height properly
+               ) {
+                   items(filtered) { token ->
+                       SearchTokenItem(
+                           token = token,
+                           isActive = networkViewModel.activeTokens.collectAsState().value
+                               .any { it.tokenId == token.tokenId },
+                           onToggle = { checked ->
+                               networkViewModel.toggleActiveNetwork(
+                                   tokenId = token.tokenId,
+                                   isActive = checked,
+                                   masterWalletId = selectedWallet!!.masterWalletId
+                               )
+                           }
+                       )
+                   }
+               }
+
+           }
+
+       }*/
 
     if (showBottomSheet) {
         ModalBottomSheet(
@@ -290,8 +430,129 @@ fun HomeScreen(
 
         }
     }
+
+    if (showTokenBottomSheet) {
+        ModalBottomSheet(
+            sheetState = sheetTokenState,
+            onDismissRequest = { showTokenBottomSheet = false }
+        ) {
+            TokenToggleSheet(
+                allTokens = allTokens,
+                activeTokens = activeTokens,
+                onToggle = { token, isActive ->
+                    networkViewModel.toggleActiveNetwork(
+                        tokenId = token.tokenId,
+                        isActive = isActive,
+                        masterWalletId = selectedWallet?.masterWalletId ?: ""
+                    )
+                }
+            )
+        }
+    }
 }
 
+
+@Composable
+fun TokenToggleSheet(
+    allTokens: List<TokenEntity>,
+    activeTokens: List<TokenEntity>,
+    onToggle: (TokenEntity, Boolean) -> Unit
+) {
+    val activeTokenIds = remember(activeTokens) { activeTokens.map { it.tokenId }.toSet() }
+
+    var tokenImageLoaded by remember { mutableStateOf(false) }
+    var networkImageLoaded by remember { mutableStateOf(false) }
+
+    LazyColumn(modifier = Modifier.fillMaxHeight(0.9f)) {
+        items(allTokens) { token ->
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(12.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                TokenWithNetworkDb(token, allTokens[0].logoUrl,
+                    onTokenImageLoaded = { tokenImageLoaded = true },
+                    onNetworkImageLoaded = { networkImageLoaded = true })
+                Spacer(modifier = Modifier.width(12.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(token.symbol, style = RepointTypography.titleSmall)
+                    Text(token.name, style = RepointTypography.labelSmall, color = Color.Gray)
+                }
+                Switch(
+                    checked = activeTokenIds.contains(token.tokenId),
+                    onCheckedChange = { checked ->
+                        onToggle(token, checked)
+                    }
+                )
+            }
+        }
+    }
+}
+
+
+@Composable
+fun TokenRow(item: TokensBalance) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(8.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        AsyncImage(
+            model = item.logo,
+            contentDescription = item.symbol,
+            modifier = Modifier
+                .size(48.dp)
+                .clip(RoundedCornerShape(8.dp))
+        )
+        Spacer(Modifier.width(8.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(item.symbol.uppercase(), style = RepointTypography.titleMedium)
+            Text(item.name, style = RepointTypography.labelSmall, color = richBlack)
+        }
+        Column(horizontalAlignment = Alignment.End) {
+            val amt = item.balanceFormatted.toDoubleOrNull() ?: 0.0
+            Text(DecimalFormat("#0.00").format(amt), style = RepointTypography.titleMedium)
+            Text(
+                "$${DecimalFormat("#0.00").format(item.usdPrice)}",
+                style = RepointTypography.titleSmall
+            )
+        }
+    }
+}
+
+@Composable
+fun SearchTokenItem(
+    token: TokenEntity,
+    isActive: Boolean,
+    onToggle: (Boolean) -> Unit
+) {
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .clickable { /* optional: navigate or copy address */ }
+            .padding(horizontal = 16.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        AsyncImage(
+            model = token.logoUrl,
+            contentDescription = token.name,
+            modifier = Modifier
+                .size(40.dp)
+                .clip(CircleShape)
+        )
+        Spacer(Modifier.width(12.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(token.symbol.uppercase(), style = RepointTypography.titleMedium)
+            Text(token.name, style = RepointTypography.labelSmall, color = Color.Gray)
+        }
+        Switch(
+            checked = isActive,
+            onCheckedChange = onToggle
+        )
+    }
+}
 
 @Composable
 fun ActionsRow(
@@ -317,9 +578,11 @@ fun ActionsRow(
                 //send choose token // Todo modify send
 
                 //navController.navigate("sendToken/${wallet?.address}/${tokenList?.result?.get(0)?.balanceFormatted}")
+                val gson = Gson()
+                val jsonString = gson.toJson(tokenList?.result)
                 navController.currentBackStackEntry?.savedStateHandle?.set(
                     "tokenBalances",
-                    tokenList?.result
+                    jsonString
                 )
                 navController.navigate("chooseToken/${true}")
             },
@@ -369,7 +632,7 @@ fun ActionsRow(
     }
 }
 
-@SuppressLint("UnusedBoxWithConstraintsScope")
+//@SuppressLint("UnusedBoxWithConstraintsScope")
 @Composable
 fun AssetsTabLayout(tokenList: List<TokensBalance>) {
     val tabs = listOf("Token", "NFTs")
@@ -558,4 +821,3 @@ fun netWorthSection(tokenList: List<TokensBalance>?): Float {
         )
     }
 }*/
-

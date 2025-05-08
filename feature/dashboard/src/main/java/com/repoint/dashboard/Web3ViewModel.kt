@@ -15,6 +15,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.web3j.crypto.Credentials
 import org.web3j.protocol.core.methods.response.EthSendTransaction
+import org.web3j.protocol.core.methods.response.TransactionReceipt
 import org.web3j.utils.Convert
 import java.math.BigDecimal
 import java.math.BigInteger
@@ -37,19 +38,23 @@ class Web3ViewModel @Inject constructor(
     val gasPrice: StateFlow<BigDecimal?> = _gasPrice
 
 
-    init {
-        fetchGasPrice()
+        init {
+            /*viewModelScope.launch {
+                val chainId = repository.getChainId()
+                fetchGasPrice(chainId)
+            }*/
+        }
+
+
+    suspend fun testConnectionToWeb3(chainId: Long): Boolean {
+        return repository.testWeb3Connection(chainId)
     }
 
-    suspend fun testConnectionToWeb3(): Boolean {
-        return repository.testWeb3Connection()
-    }
-
-    suspend fun fetchNativeWalletBalance(walletAddress: String): BigDecimal? {
+    suspend fun fetchNativeWalletBalance(walletAddress: String,chainId: Long): BigDecimal? {
 
         return withContext(Dispatchers.IO) {
             try {
-                val weiBalance = repository.getWalletBalance(walletAddress)
+                val weiBalance = repository.getWalletBalance(walletAddress, chainId = chainId)
                 // Convert wei to ether and return it
                 Convert.fromWei(weiBalance.toString(), Convert.Unit.ETHER)
             } catch (ex: Exception) {
@@ -62,28 +67,36 @@ class Web3ViewModel @Inject constructor(
     suspend fun sendTokenOnChain(
         credentials: Credentials,
         amount: BigDecimal,
-        recipientAddress: String
-    ): String? {
+        recipientAddress: String,
+        contractAddress : String,
+        networkChainId : Long
+    ) : TransactionReceipt? {
         try {
             val transactionReceipt =
-                repository.sendTokenOnChain(credentials, amount, recipientAddress)
+                repository.sendTokenOnChain(credentials, amount, recipientAddress = recipientAddress, contractAddress = contractAddress,networkChainId)
             Log.d(
                 "transaction",
                 "\uD83E\uDDE0 Sending Transaction : ${transactionReceipt?.transactionHash}"
             )
+
+
+            if (transactionReceipt == null) {
+                Log.e("transaction", "❌ Transaction receipt polling failed or timed out")
+            }
             if (transactionReceipt?.isStatusOK!!) {
                 Log.d(
                     "transaction",
                     "✅ Transaction Successful: ${transactionReceipt.transactionHash}"
                 )
-                return transactionReceipt.transactionHash
-            } else {
-                Log.e("transaction", "❌ Transaction Failed!")
+                return transactionReceipt
+            }
+            else{
+                Log.d("transaction"," error in transit for address : $recipientAddress")
                 return null
             }
         } catch (e: Exception) {
             Log.e("transaction", "❌ Error Sending Tokens", e)
-            return null
+           return null
         }
 
     }
@@ -91,10 +104,11 @@ class Web3ViewModel @Inject constructor(
     suspend fun sendNativeToken(
         credentials: Credentials,
         recipientAddress: String,
-        amount: BigDecimal
+        amount: BigDecimal,
+        chainId : Long
     ): EthSendTransaction? {
         try {
-            val ethResponse = repository.sendNativeToken(credentials, recipientAddress, amount)
+            val ethResponse = repository.sendNativeToken(credentials, recipientAddress, amount, networkChainId = chainId)
             Log.d(
                 "transaction",
                 "\uD83E\uDDE0 Sending Transaction : ${ethResponse?.transactionHash}"
@@ -115,10 +129,51 @@ class Web3ViewModel @Inject constructor(
         return null
     }
 
-    private fun fetchGasPrice() {
+    suspend fun sendTokenDynamic(
+        credentials: Credentials,
+        amount: BigDecimal,
+        recipientAddress: String,
+        contractAddress: String?,
+        chainId: Long
+    ): String? = withContext(Dispatchers.IO) {
+
+
+        return@withContext try {
+            val txHash = if (isNativeToken(contractAddress)) {
+                val tx = sendNativeToken(credentials, recipientAddress, amount, chainId)
+                Log.d("tx", "✅ Native Token TX Sent: ${tx?.transactionHash}")
+                tx?.transactionHash
+            } else {
+                val receipt = sendTokenOnChain(
+                    credentials = credentials,
+                    amount = amount,
+                    recipientAddress = recipientAddress,
+                    contractAddress = contractAddress!!,
+                    networkChainId = chainId
+                )
+                receipt?.transactionHash.also {
+                    Log.d("tx", "✅ ERC20 Token TX Sent: $it")
+                }
+            }
+            txHash
+        } catch (e: Exception) {
+            Log.e("tx", "❌ Error sending token", e)
+            null
+        }
+    }
+
+    fun isNativeToken(contractAddress: String?): Boolean {
+        return contractAddress.isNullOrBlank() || contractAddress.lowercase() in listOf(
+            "0x0000000000000000000000000000000000000000", // Common native fallback
+            "0x0000000000000000000000000000000000001010"  // Polygon native (POL) pseudo-address
+        )
+    }
+
+
+     fun fetchGasPrice(chainId: Long) {
         viewModelScope.launch {
             try {
-                val gasPriceWei = repository.getGasPrice()
+                val gasPriceWei = repository.getGasPrice(chainId = chainId)
                 val gasPriceGwei = gasPriceWei.toBigDecimal()
                     .divide(BigDecimal.TEN.pow(9), 2, RoundingMode.HALF_UP)
                 _gasPrice.value = gasPriceGwei // ✅ Convert Wei to Gwei

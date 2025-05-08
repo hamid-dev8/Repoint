@@ -37,6 +37,9 @@ class NetworkViewModel @Inject constructor(
     private val _activeNetworks = MutableStateFlow<List<LocalActiveNetworks>>(emptyList())
     val activeNetworks: StateFlow<List<LocalActiveNetworks>> = _activeNetworks.asStateFlow()
 
+    private val _specificNetworkByToken = MutableStateFlow<BlockchainNetworkEntity?>(null)
+    val specificNetworkByToken : StateFlow<BlockchainNetworkEntity?> = _specificNetworkByToken.asStateFlow()
+
 
     private val _activeTokens = MutableStateFlow<List<TokenEntity>>(emptyList())
     val activeTokens : StateFlow<List<TokenEntity>> = _activeTokens.asStateFlow()
@@ -155,6 +158,12 @@ class NetworkViewModel @Inject constructor(
         return repository.getNetworkById(id)
     }
 
+     fun getNetworkForToken(tokenId : Int)
+    {
+         viewModelScope.launch {
+             _specificNetworkByToken.value = repository.getNetworkByTokenId(tokenId)
+         }
+    }
     fun fetchTokensWithNetwork(tokenId : Int) {
         viewModelScope.launch {
             _tokenWithNetworks.value = repository.getTokensWithNetwork(tokenId)
@@ -185,6 +194,8 @@ class NetworkViewModel @Inject constructor(
                 }
         }
     }
+
+
 
 
     fun toggleActiveNetwork(tokenId : Int,isActive : Boolean,masterWalletId: String){
