@@ -41,6 +41,7 @@ import com.repoint.dependencies.accountmanager.SpManager
 import com.repoint.dependencies.theme.RepointTypography
 import com.repoint.models.sharedmodels.local.MasterWallet
 import com.repoint.models.sharedmodels.local.User
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 
@@ -58,7 +59,7 @@ fun ChainWalletsScreen(
     val reactiveMasterWallets by walletViewModel.masterWallets.collectAsState()
     //val userId = remember(user) { user?.userId }
 
-    LaunchedEffect(Unit) {
+    LaunchedEffect(Unit,reactiveMasterWallets) {
         user = userViewModel.fetchUser()
 
         val userId = user?.userId
@@ -95,10 +96,14 @@ fun ChainWalletsScreen(
                                 if (userId != null) {
                                     walletViewModel.deleteMasterWallet(wallet.masterWalletId,userId)
                                     val remainingWallets = walletViewModel.getAllMasterWallets(userId)
+                                    Log.d("wallets" , "remaining wallets : $remainingWallets")
                                     if (remainingWallets.isEmpty()){
                                         spManager.clearAllSessionData()
+                                        delay(300)
                                         navController.navigate("splash"){
-                                            popUpTo(0){inclusive = true}
+                                            popUpTo(navController.graph.startDestinationId) {
+                                                inclusive = true
+                                            }
                                         }
                                     }
                                 }

@@ -77,6 +77,7 @@ import com.repoint.basics.atoms.RepointAppBar
 import com.repoint.basics.atoms.RepointSearchBar
 import com.repoint.basics.atoms.SearchTextField
 import com.repoint.basics.atoms.ViewPagerRobot
+import com.repoint.basics.atoms.launchBotTab
 import com.repoint.dashboard.NetworkViewModel
 import com.repoint.dashboard.TokenViewModel
 import com.repoint.dashboard.Web3ViewModel
@@ -562,6 +563,7 @@ fun ActionsRow(
     activeAddress: String
 ) {
 
+    val context = LocalContext.current
     Row(
         Modifier
             .fillMaxWidth()
@@ -611,7 +613,11 @@ fun ActionsRow(
         CircularButtonWithText(
             icon = ImageVector.vectorResource(R.drawable.ic_robot),
             "To Bot",
-            onClick = { },
+            onClick = {
+               /* val encodedUrl = Uri.encode("https://app.re-point.net") // or your actual bot URL
+                navController.navigate("bot/$encodedUrl")*/
+                launchBotTab(context = context, "https://app.re-point.net")
+            },
             Modifier.padding(12.dp),
             buttonSize = 48.dp
         )

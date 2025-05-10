@@ -3,6 +3,7 @@ package com.repoint.app
 import android.app.Application
 import android.content.Context
 import android.content.SharedPreferences
+import android.webkit.WebView
 import dagger.hilt.android.HiltAndroidApp
 
 
@@ -23,6 +24,8 @@ class App : Application() {
     override fun onCreate() {
         super.onCreate()
         appContext = applicationContext
+        WebView.setWebContentsDebuggingEnabled(true)
+
     }
 
 

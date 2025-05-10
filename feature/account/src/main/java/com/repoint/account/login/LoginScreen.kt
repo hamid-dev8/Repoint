@@ -27,6 +27,7 @@ import com.repoint.account.WalletViewModel
 import com.repoint.basics.atoms.RepointAppBar
 import com.repoint.basics.atoms.RepointCommonButton
 import com.repoint.basics.atoms.SimpleEditText
+import com.repoint.dependencies.accountmanager.SpManager
 import com.repoint.dependencies.theme.RepointTypography
 import kotlinx.coroutines.launch
 
@@ -58,6 +59,7 @@ fun LoginScreen(
     val clipboardManager = LocalClipboardManager.current
     val clipboardText = clipboardManager.getText()?.text
     val context = LocalContext.current
+    val spManager = SpManager(context)
 
 
     val coroutineScope = rememberCoroutineScope()
@@ -157,6 +159,7 @@ fun LoginScreen(
                                 masterWalletId = walletViewModel.tempMasterWallet!!.masterWalletId,
                                 user.userId
                             )
+
                             navController.navigate("home") {
                                 popUpTo("auth") { inclusive = true }
                             }

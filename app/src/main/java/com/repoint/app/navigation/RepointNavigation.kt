@@ -19,6 +19,7 @@ import com.repoint.account.signup.ui.ShowPhrase
 import com.repoint.account.signup.ui.WalletConfirmSurface
 import com.repoint.basics.logic.SendRoutes
 import com.repoint.basics.logic.authenticateUser
+import com.repoint.dashboard.ui.BotScreen
 import com.repoint.dashboard.ui.ChainWalletsScreen
 import com.repoint.dashboard.ui.ChooseTokenScreen
 import com.repoint.dashboard.ui.CryptoManageScreen
@@ -124,6 +125,13 @@ fun RepointNavigation(activity: FragmentActivity) {
         composable("home") { //navigating from home with a button to qrCode screen
             HomeScreen(navController)
         }
+
+        composable("bot/{url}") { backStackEntry ->
+            val raw = backStackEntry.arguments?.getString("url") ?: ""
+            val decode = android.net.Uri.decode(raw)
+            BotScreen(url = decode)
+        }
+
 
         composable(
             "chooseToken/{isSend}",

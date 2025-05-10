@@ -95,6 +95,7 @@ dependencies {
     //web3j
     //java//implementation (libs.core)
 
+    api("androidx.browser:browser:1.8.0")  // or latest stable version
 
     //web3 android
     //noinspection GradleDependency

@@ -25,40 +25,47 @@ class WalletViewModel @Inject constructor(
     private val spManager: SpManager
 ) :
     ViewModel() {
-/*
-    private val _data = mutableStateOf("Nothing Yet!")
-    val data: State<String> = _data
-    val result = mutableStateOf<String?>(null)*/
+    /*
+        private val _data = mutableStateOf("Nothing Yet!")
+        val data: State<String> = _data
+        val result = mutableStateOf<String?>(null)*/
 
 
-        private val _walletCreated = mutableStateOf<String?>(null)
-        val walletCreated : State<String?> = _walletCreated
+    private val _walletCreated = mutableStateOf<String?>(null)
+    val walletCreated: State<String?> = _walletCreated
 
     /*
     * Creates a new MasterWallet and derives ChainWallets for supported chains.
     * saves all Wallets into the database.
     * */
 
-    var tempMasterWallet : MasterWallet? = null
-    var tempChainWallet : List<ChainWallet> = emptyList()
+    var tempMasterWallet: MasterWallet? = null
+    var tempChainWallet: List<ChainWallet> = emptyList()
 
 
     private val _masterWallets = MutableStateFlow<List<MasterWallet>>(emptyList())
     val masterWallets: StateFlow<List<MasterWallet>> = _masterWallets.asStateFlow()
 
 
-    suspend fun generateWalletInMemory(walletName: String,userId: String?) : List<String>{
-        val (masterWallet , chainWallets) = EcGenerator.generateMasterAndChainWallets(walletName,userId)
+    suspend fun generateWalletInMemory(walletName: String, userId: String?): List<String> {
+        val (masterWallet, chainWallets) = EcGenerator.generateMasterAndChainWallets(
+            walletName,
+            userId
+        )
 
 
-        tempMasterWallet = masterWallet.copy(name = walletName, walletIndex = masterWallet.walletIndex)
+        tempMasterWallet =
+            masterWallet.copy(name = walletName, walletIndex = masterWallet.walletIndex)
         tempChainWallet = chainWallets
 
         return masterWallet.phrase.split(" ")
     }
 
-    fun generatedImportedWalletInMemory(walletName: String,userId: String) : List<String>{
-        val (masterWallet , chainWallets) = EcGenerator.importMasterAndChainWallets(walletName,userId)
+    fun generatedImportedWalletInMemory(walletName: String, userId: String): List<String> {
+        val (masterWallet, chainWallets) = EcGenerator.importMasterAndChainWallets(
+            walletName,
+            userId
+        )
         tempMasterWallet = masterWallet
         tempChainWallet = chainWallets
 
@@ -70,20 +77,23 @@ class WalletViewModel @Inject constructor(
     fun getTempPhrase(): List<String> = tempMasterWallet?.phrase?.split(" ") ?: emptyList()
 
 
-    suspend fun confirmAndSaveWallet() : String?  {
-                val master = tempMasterWallet ?: return null
-                repository.insertMasterWallet(master)
-                repository.insertChainWallets(tempChainWallet)
-                spManager.setActiveWallet(master.masterWalletId)
-
-                Log.d("WalletViewModel", "Wallet created: $master with ${tempChainWallet.size} chains")
-                Log.d("WalletViewModel", "master wallet id is : ${master.masterWalletId} and actived in viewmodel")
-                _walletCreated.value = master.masterWalletId
+    suspend fun confirmAndSaveWallet(): String? {
+        val master = tempMasterWallet ?: return null
+        repository.insertMasterWallet(master)
+        repository.insertChainWallets(tempChainWallet)
+        spManager.setUserId(master.userId ?: "") // ✅ Save session properly
+        spManager.setActiveWallet(master.masterWalletId)
+        Log.d("WalletViewModel", "Wallet created: $master with ${tempChainWallet.size} chains")
+        Log.d(
+            "WalletViewModel",
+            "master wallet id is : ${master.masterWalletId} and actived in viewmodel"
+        )
+        _walletCreated.value = master.masterWalletId
         return master.masterWalletId
     }
 
     @SuppressLint("SuspiciousIndentation")
-    fun importWallet(mnemonic : String, walletName : String) : String? {
+    fun importWallet(mnemonic: String, walletName: String): String? {
         val isValid = EcGenerator.isValidMnemonic(mnemonic)
 
         if (!isValid) return null
@@ -91,49 +101,48 @@ class WalletViewModel @Inject constructor(
         val master = tempMasterWallet ?: return null
         val chainWallet = tempChainWallet
 
-            viewModelScope.launch {
-                repository.insertMasterWallet(master)
-                repository.insertChainWallets(chainWallet)
-                Log.d("import", "Imported wallet: $master with ${master} chains")
-                spManager.setActiveWallet(walletId = master.masterWalletId)
-            }
+        viewModelScope.launch {
+            repository.insertMasterWallet(master)
+            repository.insertChainWallets(chainWallet)
+            Log.d("import", "Imported wallet: $master with ${master} chains")
+            spManager.setActiveWallet(walletId = master.masterWalletId)
+        }
 
-            return master.masterWalletId
+        return master.masterWalletId
     }
 
-    suspend fun getMasterWallet(masterWalletId: String) : MasterWallet{
+    suspend fun getMasterWallet(masterWalletId: String): MasterWallet {
         return repository.getMasterWallet(masterWalletId)
     }
 
 
-    fun loadMasterWallets(userId : String) {
+    fun loadMasterWallets(userId: String) {
         viewModelScope.launch {
             val wallets = getAllMasterWallets(userId)
             _masterWallets.value = wallets
         }
     }
 
-    suspend fun getAllMasterWallets(userId: String) : List<MasterWallet> {
+    suspend fun getAllMasterWallets(userId: String): List<MasterWallet> {
         return repository.getAllMasterWallets(userId)
     }
 
-    suspend fun getAllChainWallets(masterWalletId : String) : List<ChainWallet>
-    {
+    suspend fun getAllChainWallets(masterWalletId: String): List<ChainWallet> {
         return repository.getChainWalletsByMaster(masterWalletId)
     }
 
-    fun renameMasterWallet(chainWalletId : String, newName : String,userId : String) {
+    fun renameMasterWallet(chainWalletId: String, newName: String, userId: String) {
         viewModelScope.launch {
-            repository.renameMasterWallet(chainWalletId,newName)
+            repository.renameMasterWallet(chainWalletId, newName)
             loadMasterWallets(userId)
         }
     }
 
     // Utility to auto-name wallet
-/*    private suspend fun generateDefaultWalletName(userId : String): String {
-        val count = repository.getAllMasterWallets(userId).size
-        return "Wallet ${count + 1}"
-    }*/
+    /*    private suspend fun generateDefaultWalletName(userId : String): String {
+            val count = repository.getAllMasterWallets(userId).size
+            return "Wallet ${count + 1}"
+        }*/
 
     suspend fun generateNextWalletIndex(userId: String?): Int {
         if (userId.isNullOrEmpty()) {
@@ -143,92 +152,92 @@ class WalletViewModel @Inject constructor(
         val maxIndex = allWallets.maxOfOrNull { it.walletIndex ?: 0 } ?: 0
         return maxIndex + 1
     }
-     suspend fun generateDefaultWalletName(index: Int): String {
+
+    suspend fun generateDefaultWalletName(index: Int): String {
         return "Wallet "
     }
 
-    fun deleteMasterWallet(masterWalletId: String,userId : String) {
+    fun deleteMasterWallet(masterWalletId: String, userId: String) {
         viewModelScope.launch {
             repository.deleteMasterWallet(masterWalletId)
             loadMasterWallets(userId)
         }
     }
 
-    suspend fun getChainWallet(masterWalletId : String, coinType : Int) : ChainWallet?{
-        return repository.getChainWallet(masterWalletId,coinType)
+    suspend fun getChainWallet(masterWalletId: String, coinType: Int): ChainWallet? {
+        return repository.getChainWallet(masterWalletId, coinType)
     }
 
-    fun linkUserToMasterWallet(masterWalletId: String, userId : String) {
+    fun linkUserToMasterWallet(masterWalletId: String, userId: String) {
         viewModelScope.launch {
-            repository.linkMasterWalletToUser(masterWalletId,userId)
+            repository.linkMasterWalletToUser(masterWalletId, userId)
         }
     }
 
 
+}
+//val ecGen = EcGen.instance
 
-    }
-    //val ecGen = EcGen.instance
-
-   /* fun createUserWallet(): String? {
-
-
-        val wallet = ecGen.getFromMnemonic()
-
-        viewModelScope.launch {
-            wallet.let { repository.authWallet(it) }
-            Log.d(
-                "viewww",
-                "wallet id is : ${wallet.} ,user id is : ${wallet.userId}, wallet address is : ${wallet.privateKey} , wallet phrase is : ${wallet.phrase}"
-            )
-        }
-        return wallet.walletId
-    }
-    //return wallet.phrase    }
-
-    suspend fun showPhrase(walletId : String): RepointWallet {
-        val deferredWallet = viewModelScope.async {
-            val wallet = repository.getWallet(walletId)
-            Log.d("showPh", walletId.toString())
-            wallet
-        }
-
-        return deferredWallet.await()
-    }
-
-    suspend fun getAllWallets(userId : String) : List<RepointWallet>{
-
-        val deferredWallets = viewModelScope.async {
-            delay(20)
-            val wallets = repository.getAllWallets(userId)
-            wallets
-        }
-
-        return deferredWallets.await()
-    }
-
-     fun importWallet(mnemonic: String, walletName: String): String? {
-        val wallet = ecGen.importWithMnemonic(mnemonic, walletName = walletName)
-
-        if (wallet != null) {
-            viewModelScope.launch {
-                Log.d("import", "wallet is = $wallet")
-                wallet.let { repository.authWallet(it) }
-            }
-        }
-
-        return wallet?.walletId
-    }
-
-     fun linkUserToWallet(walletId : String, userId : String) {
-
-        viewModelScope.launch {
-            repository.linkWalletToUser(walletId,userId)
-        }
-
-    }
+/* fun createUserWallet(): String? {
 
 
-    override fun onCleared() {
-        super.onCleared()
-    }
+     val wallet = ecGen.getFromMnemonic()
+
+     viewModelScope.launch {
+         wallet.let { repository.authWallet(it) }
+         Log.d(
+             "viewww",
+             "wallet id is : ${wallet.} ,user id is : ${wallet.userId}, wallet address is : ${wallet.privateKey} , wallet phrase is : ${wallet.phrase}"
+         )
+     }
+     return wallet.walletId
+ }
+ //return wallet.phrase    }
+
+ suspend fun showPhrase(walletId : String): RepointWallet {
+     val deferredWallet = viewModelScope.async {
+         val wallet = repository.getWallet(walletId)
+         Log.d("showPh", walletId.toString())
+         wallet
+     }
+
+     return deferredWallet.await()
+ }
+
+ suspend fun getAllWallets(userId : String) : List<RepointWallet>{
+
+     val deferredWallets = viewModelScope.async {
+         delay(20)
+         val wallets = repository.getAllWallets(userId)
+         wallets
+     }
+
+     return deferredWallets.await()
+ }
+
+  fun importWallet(mnemonic: String, walletName: String): String? {
+     val wallet = ecGen.importWithMnemonic(mnemonic, walletName = walletName)
+
+     if (wallet != null) {
+         viewModelScope.launch {
+             Log.d("import", "wallet is = $wallet")
+             wallet.let { repository.authWallet(it) }
+         }
+     }
+
+     return wallet?.walletId
+ }
+
+  fun linkUserToWallet(walletId : String, userId : String) {
+
+     viewModelScope.launch {
+         repository.linkWalletToUser(walletId,userId)
+     }
+
+ }
+
+
+ override fun onCleared() {
+     super.onCleared()
+ }
 }*/
