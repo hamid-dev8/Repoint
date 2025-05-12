@@ -160,7 +160,7 @@ fun SendTokenScreen(
         } else null
     }
 
-    RepointAppBar("send", navController = navController, exp = {
+    RepointAppBar("send", navController = navController, exp = {_,_,_ ->
         Box(
             modifier = Modifier
                 .fillMaxSize()

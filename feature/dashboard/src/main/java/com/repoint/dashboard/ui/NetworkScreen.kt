@@ -81,7 +81,7 @@ fun CryptoManageScreen(navController: NavController) {
 
 
 
-    RepointAppBar("Manage Crypto", exp = {
+    RepointAppBar("Manage Crypto", exp = {_,_,_ ->
 
         if (isLoading) {
             // 🔥 Show Loading Animation Centered

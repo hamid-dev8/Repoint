@@ -89,7 +89,7 @@ fun ChooseTokenScreen(
     }
 
     RepointAppBar(
-        title = if (isSend) "Send" else "Receive", exp = {
+        title = if (isSend) "Send" else "Receive", exp = {_,_,_ ->
 
 
             if (isLoading) {

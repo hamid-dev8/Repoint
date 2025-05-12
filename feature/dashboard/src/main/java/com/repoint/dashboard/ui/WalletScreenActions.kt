@@ -1,29 +1,23 @@
 package com.repoint.dashboard.ui
 
-import android.annotation.SuppressLint
 import android.net.Uri
 import android.util.Log
-import androidx.compose.animation.animateContentSize
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.pager.VerticalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
@@ -33,7 +27,10 @@ import androidx.compose.material.icons.automirrored.rounded.CallMade
 import androidx.compose.material.icons.automirrored.rounded.CallReceived
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.rounded.SwapVert
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Tab
@@ -45,7 +42,6 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -55,13 +51,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.painter.BitmapPainter
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.zIndex
 import androidx.constraintlayout.compose.ConstraintLayout
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
@@ -74,8 +71,6 @@ import com.repoint.basics.atoms.BalanceScreen
 import com.repoint.basics.atoms.CircularButtonWithText
 import com.repoint.basics.atoms.LoaderAnimation
 import com.repoint.basics.atoms.RepointAppBar
-import com.repoint.basics.atoms.RepointSearchBar
-import com.repoint.basics.atoms.SearchTextField
 import com.repoint.basics.atoms.ViewPagerRobot
 import com.repoint.basics.atoms.launchBotTab
 import com.repoint.dashboard.NetworkViewModel
@@ -84,15 +79,15 @@ import com.repoint.dashboard.Web3ViewModel
 import com.repoint.dependencies.R
 import com.repoint.dependencies.accountmanager.SpManager
 import com.repoint.dependencies.theme.RepointTypography
+import com.repoint.dependencies.theme.aliceBlue
 import com.repoint.dependencies.theme.ghostWhite
+import com.repoint.dependencies.theme.pureWhite
 import com.repoint.dependencies.theme.richBlack
 import com.repoint.models.sharedmodels.local.ChainWallet
 import com.repoint.models.sharedmodels.local.MasterWallet
 import com.repoint.models.sharedmodels.local.TokenEntity
 import com.repoint.models.sharedmodels.remote.NativesBalance
 import com.repoint.models.sharedmodels.remote.TokensBalance
-import kotlinx.coroutines.coroutineScope
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.math.BigDecimal
 import java.text.DecimalFormat
@@ -148,7 +143,7 @@ fun HomeScreen(
     val walletNames = masterWallets.mapIndexed { index, wallet ->
         wallet.name.ifBlank { "Wallet ${index + 1}" }
     }
-    var selectedWalletName by remember { mutableStateOf("") }
+    var selectedWalletId by remember { mutableStateOf("") }
 
     //val listState = rememberLazyListState()
 
@@ -183,8 +178,8 @@ fun HomeScreen(
                     ?: masterWallets.firstOrNull()
                 Log.d("main", "selected wallet is : ${selectedWallet?.name}")
 
-                selectedWalletName = selectedWallet?.name + selectedWallet?.walletIndex
-                Log.d("main", "selected Wallet name is : $selectedWalletName")
+                selectedWalletId = selectedWallet?.masterWalletId.toString()
+                Log.d("main", "selected Wallet name is : $selectedWalletId")
 
                 if (selectedWallet != null && selectedWallet!!.masterWalletId != activeWalletId) {
                     spManager.setActiveWallet(selectedWallet!!.masterWalletId)
@@ -202,7 +197,7 @@ fun HomeScreen(
                 if (address != null) {
                     activeAddress = address
                     //todo
-                  //  web3ViewModel.testConnectionToWeb3(chainId = )
+                    //  web3ViewModel.testConnectionToWeb3(chainId = )
                     Log.d(
                         "token",
                         "active adress is : $activeAddress , selected wallet is : $selectedWallet , masterId is : ${selectedWallet?.masterWalletId}"
@@ -243,7 +238,7 @@ fun HomeScreen(
 
 
 
-    RepointAppBar("wallet", exp = {
+    RepointAppBar("", exp = { isSearchActive, searchQuery, onSearchQueryChange ->
 
         if (isLoading) {
             // 🔥 Show Loading Animation Centered
@@ -262,79 +257,90 @@ fun HomeScreen(
                         .padding(8.dp)
                 ) {
 
-
-
-
                     val amount = netWorthSection(tokenList?.result)
                     val formattedBalanceAmount = DecimalFormat("#0.00").format(amount)
                     item {
-                        RepointSearchBar(query = searchText,
-                            onQueryChange = { searchText = it },
-                            active = searchActive,
-                            onActiveChange = {
-                                searchActive = it
-                                if (searchActive)showTokenBottomSheet = true
-                            }, onSearch = {
+                        Card(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(8.dp),
+                            shape = RoundedCornerShape(16.dp),
+                            border = BorderStroke(1.dp, richBlack),
+                            colors = CardDefaults.cardColors(containerColor = pureWhite)
+                        ) {
 
-                            }, content = {
-                            })
+                            Spacer(Modifier.padding(top = 8.dp))
 
+                            BalanceScreen(
+                                masterWallets,
+                                balance = "$$formattedBalanceAmount",
+                                onAddWallet = {
+                                    showBottomSheet = true
+                                },
+                                onWalletSelected = { selectedWallet ->
+                                    coroutineScope.launch {
+                                        spManager.setActiveWallet(selectedWallet.masterWalletId)
+                                        networkViewModel.initializeWithWallet(selectedWallet.masterWalletId)
+                                        Log.d(
+                                            "token",
+                                            "selected wallet changed : ${selectedWallet.masterWalletId}"
+                                        )
+                                        Log.d("token", "master wallet changed : $masterWallets")
+                                    }
+                                    //TODO ezafe kardane safe add wallet va sakht wallet jadid
+                                    //walletViewModel.createUserWallet()
 
-
-                        BalanceScreen(
-                            masterWallets,
-                            balance = "$$formattedBalanceAmount",
-                            onAddWallet = {
-                                showBottomSheet = true
-                            },
-                            onWalletSelected = { selectedWallet ->
-                                coroutineScope.launch {
-                                    spManager.setActiveWallet(selectedWallet.masterWalletId)
-                                    networkViewModel.initializeWithWallet(selectedWallet.masterWalletId)
-                                    Log.d(
-                                        "token",
-                                        "selected wallet changed : ${selectedWallet.masterWalletId}"
-                                    )
-                                    Log.d("token", "master wallet changed : $masterWallets")
-                                }
-                                //TODO ezafe kardane safe add wallet va sakht wallet jadid
-                                //walletViewModel.createUserWallet()
-
-                                selectedWalletName =
-                                    selectedWallet?.name + selectedWallet?.walletIndex
-                            },
-                            selectedWalletName = selectedWalletName
-                        )
-                    }
-                    if (masterWallets.isNotEmpty() && !activeAddress.isNullOrEmpty()) {
-                        item {
-                            ActionsRow(
-                                navController,
-                                wallet = selectedWallet,
-                                tokenList,
-                                activeAddress!!
+                                    selectedWalletId =
+                                        selectedWallet.masterWalletId
+                                },
+                                selectedWalletName = selectedWalletId
                             )
+                            if (masterWallets.isNotEmpty() && !activeAddress.isNullOrEmpty()) {
+                                ActionsRow(
+                                    navController,
+                                    wallet = selectedWallet,
+                                    tokenList,
+                                    activeAddress!!
+                                )
+                            }
                         }
+                        Spacer(Modifier.padding(bottom = 24.dp))
                     }
+
                     item {
                         ViewPagerRobot()
                     }
                     // ─── sticky TabRow ─────────────────────────────────────
-                    // ① sticky header for your tabs
+                    // ① sticky header for your tab
+                    // s
                     stickyHeader {
-                        TabRow(
-                            selectedTabIndex = selectedTab,
-                            modifier = Modifier
+                        Row(
+                            Modifier
                                 .fillMaxWidth()
-                                .background(ghostWhite)
-                        ) {
-                            listOf("Tokens", "NFTs").forEachIndexed { idx, title ->
-                                Tab(
-                                    selected = selectedTab == idx,
-                                    onClick = { selectedTab = idx },
-                                    text = { Text(title, style = RepointTypography.titleSmall) }
-                                )
-                            }
+                                .padding(4.dp)) {
+                                TabRow(
+                                    selectedTabIndex = selectedTab,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .background(ghostWhite)
+                                ) {
+                                    //
+                                    Text( text = "Portfolio",modifier = Modifier.padding(2.dp), style = RepointTypography.labelMedium)
+
+                                }
+                        }
+
+                        listOf("Tokens", "NFTs").forEachIndexed { idx, title ->
+                            Tab(
+                                selected = selectedTab == idx,
+                                onClick = { selectedTab = idx },
+                                text = {
+                                    Text(
+                                        title,
+                                        style = RepointTypography.titleSmall
+                                    )
+                                }
+                            )
                         }
                     }
                     // ② under that header, show either your token rows or NFT placeholder
@@ -365,8 +371,9 @@ fun HomeScreen(
     }, navController = navController, isSettings = true, onSettingsClick = {
         navController.navigate("settings")
     }, showEndIcon = true, onEndIconClick = {
-        navController.navigate("networks")
-    })
+        //navController.navigate("networks")
+        searchActive = true
+    }, isSearchActive = searchActive, setSearchActive = { searchActive = it })
 
     val filtered = remember(searchText, allTokens) {
         allTokens.filter {
@@ -567,13 +574,13 @@ fun ActionsRow(
     Row(
         Modifier
             .fillMaxWidth()
-            .padding(4.dp),
+            .padding(12.dp),
         horizontalArrangement = Arrangement.SpaceEvenly
     ) {
 
         //arrowUp
         CircularButtonWithText(
-            icon = Icons.AutoMirrored.Rounded.CallMade,
+            icon = painterResource(R.drawable.wallet_send),
             "Send",
             onClick = {
                 //todo handle which is native token to do gas fees
@@ -589,10 +596,10 @@ fun ActionsRow(
                 navController.navigate("chooseToken/${true}")
             },
             Modifier.padding(12.dp),
-            buttonSize = 48.dp
+            buttonSize = 28.dp
         )
         CircularButtonWithText(
-            icon = Icons.AutoMirrored.Rounded.CallReceived,
+            icon = painterResource(R.drawable.wallet_receive),
             "Receive",
             onClick = {
                 //receive choose token // Todo modify receive
@@ -601,28 +608,28 @@ fun ActionsRow(
                 navController.navigate("chooseToken/${false}")
             },
             Modifier.padding(12.dp),
-            buttonSize = 48.dp
+            buttonSize = 28.dp
         )
         CircularButtonWithText(
-            icon = Icons.Rounded.SwapVert,
+            icon = painterResource(R.drawable.swap),
             "Swap",
             onClick = { },
             Modifier.padding(12.dp),
-            buttonSize = 48.dp
+            buttonSize = 28.dp
         )
         CircularButtonWithText(
-            icon = ImageVector.vectorResource(R.drawable.ic_robot),
+            painterResource(R.drawable.bot),
             "To Bot",
             onClick = {
-               /* val encodedUrl = Uri.encode("https://app.re-point.net") // or your actual bot URL
-                navController.navigate("bot/$encodedUrl")*/
+                /* val encodedUrl = Uri.encode("https://app.re-point.net") // or your actual bot URL
+                 navController.navigate("bot/$encodedUrl")*/
                 launchBotTab(context = context, "https://app.re-point.net")
             },
             Modifier.padding(12.dp),
-            buttonSize = 48.dp
+            buttonSize = 28.dp
         )
         CircularButtonWithText(
-            icon = Icons.Filled.History,
+            icon = painterResource(R.drawable.history),
             "History",
             onClick = {
                 val encodedAddress = Uri.encode(activeAddress)
@@ -632,7 +639,7 @@ fun ActionsRow(
                 navController.navigate("history/$formattedBalance/$encodedAddress")
             },
             Modifier.padding(12.dp),
-            buttonSize = 48.dp
+            buttonSize = 28.dp
         )
 
     }

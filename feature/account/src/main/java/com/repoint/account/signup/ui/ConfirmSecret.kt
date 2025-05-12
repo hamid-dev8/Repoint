@@ -74,7 +74,7 @@ fun ConfirmPhrases(
     Log.d("confirmsss", "shuffled by 3 : $shuffledList")
 
 
-    RepointAppBar("Confirm Secret Phrase", navController = navController, exp = {
+    RepointAppBar("Confirm Secret Phrase", navController = navController, exp = { _,_,_ ->
 
         Box(
             Modifier

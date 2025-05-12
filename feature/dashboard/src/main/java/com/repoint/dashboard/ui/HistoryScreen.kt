@@ -59,7 +59,7 @@ fun TransactionHistoryScreen(
 
     var wallets by remember { mutableStateOf<List<RepointWallet>>(emptyList()) }
 
-    RepointAppBar("Transactions history", exp = {
+    RepointAppBar("Transactions history", exp = {_,_,_ ->
 
 
         val transactions by historyViewModel.transactions.observeAsState() // ✅ Observe StateFlow properly

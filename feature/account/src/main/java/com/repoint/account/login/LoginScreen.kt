@@ -64,7 +64,7 @@ fun LoginScreen(
 
     val coroutineScope = rememberCoroutineScope()
 
-    RepointAppBar("Multi-CoinWallet", exp = {
+    RepointAppBar("Multi-CoinWallet", exp = { _,_,_ ->
         Box(Modifier.fillMaxSize()) {
             Column(
                 Modifier

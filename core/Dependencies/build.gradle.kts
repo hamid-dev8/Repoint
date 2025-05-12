@@ -125,6 +125,10 @@ dependencies {
     //gson
     api(libs.gson)
 
+    //carousel & material3
+    api(libs.material3)
+    api(libs.androidx.material3.adaptive)
+
 
     // Jetpack Compose integration
     api(libs.navigation.compose)

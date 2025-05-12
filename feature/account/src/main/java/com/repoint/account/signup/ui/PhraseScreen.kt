@@ -57,7 +57,7 @@ fun ShowPhrase(
     val clipboardManager = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
 
 //val phraseList = viewModel.showPhrase(id)
-    RepointAppBar("Secret phrase", navController, exp = {
+    RepointAppBar("Secret phrase", navController, exp = {_,_,_ ->
         Box(Modifier.fillMaxSize().padding(16.dp)) {
             LaunchedEffect(phrases) {
 

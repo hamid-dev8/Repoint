@@ -63,7 +63,7 @@ fun WalletQrCodeScreen(
     networkViewModel: NetworkViewModel = hiltViewModel()
 ) {
 
-    RepointAppBar("Receive", exp = {
+    RepointAppBar("Receive", exp = {_,_,_ ->
 
         Log.d("ReceiveScreen", "wallet address is : $walletAddress")
         val context = LocalContext.current

@@ -73,7 +73,7 @@ fun ChainWalletsScreen(
         }
     }
 
-    RepointAppBar("Your Wallets", exp = {
+    RepointAppBar("Your Wallets", exp = {_,_,_ ->
 
         LazyColumn(modifier = Modifier.fillMaxSize()) {
             items(reactiveMasterWallets) { wallet ->

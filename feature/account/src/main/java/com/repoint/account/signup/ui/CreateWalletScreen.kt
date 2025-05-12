@@ -109,7 +109,7 @@ fun WalletConfirmSurface(
 
 
 
-    RepointAppBar("", navController, exp = {
+    RepointAppBar("", navController, exp = {_,_,_ ->
         Box(
             Modifier
                 .fillMaxSize()

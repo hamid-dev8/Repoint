@@ -20,6 +20,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextAlign
@@ -29,36 +30,40 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.repoint.dependencies.theme.RepointTypography
 import com.repoint.dependencies.theme.ghostWhite
+import com.repoint.dependencies.theme.grayHound
+import com.repoint.dependencies.theme.pureWhite
 import com.repoint.dependencies.theme.richBlack
 
 @Composable
 @Preview
 fun PreviewIconButton() {
 
-    CircularButtonWithText(
+/*    CircularButtonWithText(
         icon = Icons.Default.KeyboardArrowUp,
         text = "Send",
         onClick = {},
         modifier = Modifier.padding(18.dp)
-    )
+    )*/
 
 }
 
 
 @Composable
 fun CircularButtonWithText(
-    icon: ImageVector,
+    icon: Painter,
     text: String,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     buttonSize: Dp = 64.dp,
     iconSize: Dp = 32.dp,
-    textStyle: TextStyle = TextStyle(fontSize = 14.sp, textAlign = TextAlign.Center)
+    textStyle: TextStyle = TextStyle(fontSize = 14.sp, textAlign = TextAlign.Center),
+    backgroundColor : Color = pureWhite
 ) {
 
+    val padding = ((buttonSize - iconSize) / 2).coerceAtLeast(0.dp)
+
+
     Box() {
-
-
         Column(
             modifier = modifier,
             horizontalAlignment = Alignment.CenterHorizontally,
@@ -68,13 +73,13 @@ fun CircularButtonWithText(
                 onClick = onClick,
                 shape = CircleShape,
                 modifier = Modifier.size(buttonSize),
-                colors = ButtonDefaults.buttonColors(containerColor = ghostWhite),
-                contentPadding = PaddingValues(0.dp)
+                colors = ButtonDefaults.buttonColors(containerColor = backgroundColor),
+                contentPadding = PaddingValues(padding) // ✅ dynamic padding
             ) {
                 Icon(
-                    imageVector = icon,
+                    painter = icon,
                     contentDescription = null,
-                    modifier = Modifier.size(iconSize),
+                    modifier = Modifier.size(iconSize).padding(4.dp),
                     tint = richBlack
                 )
             }
