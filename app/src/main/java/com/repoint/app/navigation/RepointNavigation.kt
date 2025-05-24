@@ -1,5 +1,14 @@
 package com.repoint.app.navigation
 
+import androidx.compose.animation.AnimatedContentTransitionScope
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
+import androidx.compose.animation.core.EaseIn
+import androidx.compose.animation.core.EaseOut
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.tooling.preview.Preview
@@ -51,9 +60,13 @@ fun PreViewNav() {
 fun RepointNavigation(activity: FragmentActivity) {
     val navController = rememberNavController()
 
-
     //auth and signup
-    NavHost(navController = navController, startDestination = "splash") {
+    NavHost(
+        navController = navController,
+        startDestination = "splash",
+        enterTransition = { EnterTransition.None },
+        exitTransition = { ExitTransition.None }
+    ) {
         composable("splash") {
             SplashScreenRepoint(onStay = {
                 navController.navigate("hedgehog") {
@@ -68,19 +81,76 @@ fun RepointNavigation(activity: FragmentActivity) {
             }
             )
         }
-        composable("hedgehog") {
+        composable("hedgehog",
+            enterTransition = {
+                fadeIn(
+                    animationSpec = tween(
+                        300, easing = LinearEasing
+                    )
+                ) + slideIntoContainer(
+                    animationSpec = tween(300, easing = EaseIn),
+                    towards = AnimatedContentTransitionScope.SlideDirection.Start
+                )
+            } ,
+            exitTransition = {
+                fadeOut(animationSpec = tween(
+                    300, easing = LinearEasing
+                )
+                ) + slideOutOfContainer(
+                    animationSpec = tween(300, easing = EaseOut),
+                    towards = AnimatedContentTransitionScope.SlideDirection.End
+                )
+            }) {
             Web3WalletScreen(onConfirm = {
                 navController.navigate("auth")
             })
         }
-        composable("auth") { AuthScreen(navController) }
+        composable("auth",
+            enterTransition = {
+                fadeIn(
+                    animationSpec = tween(
+                        300, easing = LinearEasing
+                    )
+                ) + slideIntoContainer(
+                    animationSpec = tween(300, easing = EaseIn),
+                    towards = AnimatedContentTransitionScope.SlideDirection.Start
+                )
+            } ,
+            exitTransition = {
+                fadeOut(animationSpec = tween(
+                    300, easing = LinearEasing
+                )
+                ) + slideOutOfContainer(
+                    animationSpec = tween(300, easing = EaseOut),
+                    towards = AnimatedContentTransitionScope.SlideDirection.End
+                )
+            }) { AuthScreen(navController) }
         composable("walletConfirm") {
             WalletConfirmSurface(navController, onConfirm = { phraseList ->
                 navController.navigate("phrase/$phraseList")
             })
         }
 
-        composable("phrase/{phrases}") { backStackEntry ->
+        composable("phrase/{phrases}",
+            enterTransition = {
+                fadeIn(
+                    animationSpec = tween(
+                        300, easing = LinearEasing
+                    )
+                ) + slideIntoContainer(
+                    animationSpec = tween(300, easing = EaseIn),
+                    towards = AnimatedContentTransitionScope.SlideDirection.Start
+                )
+            } ,
+            exitTransition = {
+                fadeOut(animationSpec = tween(
+                    300, easing = LinearEasing
+                )
+                ) + slideOutOfContainer(
+                    animationSpec = tween(300, easing = EaseOut),
+                    towards = AnimatedContentTransitionScope.SlideDirection.End
+                )
+            }) { backStackEntry ->
             val phrase = backStackEntry.arguments?.getString("phrases") ?: ""
             ShowPhrase(phrases = phrase, navController, onConfirm = { phrasesList ->
                 val encodedPhrases = android.net.Uri.encode(phrasesList)
@@ -90,13 +160,51 @@ fun RepointNavigation(activity: FragmentActivity) {
         //$walletId
 
         //login
-        composable("login") { backStackEntry ->
+        composable("login",
+            enterTransition = {
+                fadeIn(
+                    animationSpec = tween(
+                        300, easing = LinearEasing
+                    )
+                ) + slideIntoContainer(
+                    animationSpec = tween(300, easing = EaseIn),
+                    towards = AnimatedContentTransitionScope.SlideDirection.Start
+                )
+            } ,
+            exitTransition = {
+                fadeOut(animationSpec = tween(
+                    300, easing = LinearEasing
+                )
+                ) + slideOutOfContainer(
+                    animationSpec = tween(300, easing = EaseOut),
+                    towards = AnimatedContentTransitionScope.SlideDirection.End
+                )
+            }) { backStackEntry ->
             LoginScreen(navController, onConfirm = { walletId ->
                 navController.navigate("setPin/$walletId")
             })
         }
 
-        composable("confirmPhrases/{phraseList}") { backStackEntry ->
+        composable("confirmPhrases/{phraseList}",
+            enterTransition = {
+                fadeIn(
+                    animationSpec = tween(
+                        300, easing = LinearEasing
+                    )
+                ) + slideIntoContainer(
+                    animationSpec = tween(300, easing = EaseIn),
+                    towards = AnimatedContentTransitionScope.SlideDirection.Start
+                )
+            } ,
+            exitTransition = {
+                fadeOut(animationSpec = tween(
+                    300, easing = LinearEasing
+                )
+                ) + slideOutOfContainer(
+                    animationSpec = tween(300, easing = EaseOut),
+                    towards = AnimatedContentTransitionScope.SlideDirection.End
+                )
+            }) { backStackEntry ->
             val encodedPhrases = backStackEntry.arguments?.getString("phraseList") ?: ""
             //val walletId = backStackEntry.arguments?.getString("walletId") ?: ""
             ConfirmPhrases(phrases = encodedPhrases, navController, onConfirm = { walletId ->
@@ -104,14 +212,52 @@ fun RepointNavigation(activity: FragmentActivity) {
             })
         }
 
-        composable("setPin/{walletId}") { backStackEntry ->
+        composable("setPin/{walletId}",
+            enterTransition = {
+                fadeIn(
+                    animationSpec = tween(
+                        300, easing = LinearEasing
+                    )
+                ) + slideIntoContainer(
+                    animationSpec = tween(300, easing = EaseIn),
+                    towards = AnimatedContentTransitionScope.SlideDirection.Start
+                )
+            } ,
+            exitTransition = {
+                fadeOut(animationSpec = tween(
+                    300, easing = LinearEasing
+                )
+                ) + slideOutOfContainer(
+                    animationSpec = tween(300, easing = EaseOut),
+                    towards = AnimatedContentTransitionScope.SlideDirection.End
+                )
+            }) { backStackEntry ->
             val walletId = backStackEntry.arguments?.getString("walletId") ?: ""
             SetPinCode(walletId, digits = arrayOf(), navController, onConfirm = { digitStates ->
                 navController.navigate("confirmPin/$walletId/$digitStates")
             }, true, activity = activity)
         }
 
-        composable("confirmPin/{walletId}/{digitStates}") { backStateEntry ->
+        composable("confirmPin/{walletId}/{digitStates}",
+            enterTransition = {
+                fadeIn(
+                    animationSpec = tween(
+                        300, easing = LinearEasing
+                    )
+                ) + slideIntoContainer(
+                    animationSpec = tween(300, easing = EaseIn),
+                    towards = AnimatedContentTransitionScope.SlideDirection.Start
+                )
+            } ,
+            exitTransition = {
+                fadeOut(animationSpec = tween(
+                    300, easing = LinearEasing
+                )
+                ) + slideOutOfContainer(
+                    animationSpec = tween(300, easing = EaseOut),
+                    towards = AnimatedContentTransitionScope.SlideDirection.End
+                )
+            }) { backStateEntry ->
             val walletId = backStateEntry.arguments?.getString("walletId") ?: ""
             val digitStatesJson = backStateEntry.arguments?.getString("digitStates") ?: "[]"
             val digitStates: Array<String> =
@@ -126,7 +272,26 @@ fun RepointNavigation(activity: FragmentActivity) {
             HomeScreen(navController)
         }
 
-        composable("bot/{url}") { backStackEntry ->
+        composable("bot/{url}",
+            enterTransition = {
+                fadeIn(
+                    animationSpec = tween(
+                        300, easing = LinearEasing
+                    )
+                ) + slideIntoContainer(
+                    animationSpec = tween(300, easing = EaseIn),
+                    towards = AnimatedContentTransitionScope.SlideDirection.Start
+                )
+            } ,
+            exitTransition = {
+                fadeOut(animationSpec = tween(
+                    300, easing = LinearEasing
+                )
+                ) + slideOutOfContainer(
+                    animationSpec = tween(300, easing = EaseOut),
+                    towards = AnimatedContentTransitionScope.SlideDirection.End
+                )
+            }) { backStackEntry ->
             val raw = backStackEntry.arguments?.getString("url") ?: ""
             val decode = android.net.Uri.decode(raw)
             BotScreen(url = decode)
@@ -135,7 +300,26 @@ fun RepointNavigation(activity: FragmentActivity) {
 
         composable(
             "chooseToken/{isSend}",
-            arguments = listOf(navArgument("isSend") { type = NavType.BoolType })
+            arguments = listOf(navArgument("isSend") { type = NavType.BoolType }),
+            enterTransition = {
+                fadeIn(
+                    animationSpec = tween(
+                        300, easing = LinearEasing
+                    )
+                ) + slideIntoContainer(
+                    animationSpec = tween(300, easing = EaseIn),
+                    towards = AnimatedContentTransitionScope.SlideDirection.End
+                )
+            } ,
+            exitTransition = {
+                fadeOut(animationSpec = tween(
+                    300, easing = LinearEasing
+                )
+                ) + slideOutOfContainer(
+                    animationSpec = tween(300, easing = EaseOut),
+                    towards = AnimatedContentTransitionScope.SlideDirection.Start
+                )
+            }
         ) { backStackEntry ->
             val isSend = backStackEntry.arguments?.getBoolean("isSend") ?: false
             ChooseTokenScreen(navController, isSend = isSend)
@@ -144,7 +328,26 @@ fun RepointNavigation(activity: FragmentActivity) {
         //afterhome
         composable(
             "qrCode/{walletAddress}/{masterWalletId}/{tokenId}",
-            arguments = listOf(navArgument("walletAddress") { type = NavType.StringType })
+            arguments = listOf(navArgument("walletAddress") { type = NavType.StringType }),
+            enterTransition = {
+                fadeIn(
+                    animationSpec = tween(
+                        300, easing = LinearEasing
+                    )
+                ) + slideIntoContainer(
+                    animationSpec = tween(300, easing = EaseIn),
+                    towards = AnimatedContentTransitionScope.SlideDirection.End
+                )
+            } ,
+            exitTransition = {
+                fadeOut(animationSpec = tween(
+                    300, easing = LinearEasing
+                )
+                ) + slideOutOfContainer(
+                    animationSpec = tween(300, easing = EaseOut),
+                    towards = AnimatedContentTransitionScope.SlideDirection.Start
+                )
+            }
         ) { backStackEntry ->
             val walletAddress = backStackEntry.arguments?.getString("walletAddress") ?: ""
             val masterWalletId = backStackEntry.arguments?.getString("masterWalletId") ?: ""
@@ -158,25 +361,48 @@ fun RepointNavigation(activity: FragmentActivity) {
         }
 
         composable(
-            "sendToken/{walletAddress}/{tokenBalance}/{coinType}/{contractAddress}/{chainId}",
+            "sendToken/{walletAddress}/{tokenBalance}/{coinType}/{contractAddress}/{chainId}/{tokenName}",
             arguments = listOf(navArgument("walletAddress") { type = NavType.StringType },
                 navArgument("tokenBalance") { type = NavType.StringType },
                 navArgument("coinType") { type = NavType.IntType },
                 navArgument("contractAddress") { type = NavType.StringType },
-                navArgument("chainId") { type = NavType.IntType }
+                navArgument("chainId") { type = NavType.IntType },
+                navArgument("tokenName"){type = NavType.StringType}
             )
+            ,    enterTransition = {
+                fadeIn(
+                    animationSpec = tween(
+                        300, easing = LinearEasing
+                    )
+                ) + slideIntoContainer(
+                    animationSpec = tween(300, easing = EaseIn),
+                    towards = AnimatedContentTransitionScope.SlideDirection.End
+                )
+            } ,
+            exitTransition = {
+                fadeOut(animationSpec = tween(
+                    300, easing = LinearEasing
+                )
+                ) + slideOutOfContainer(
+                    animationSpec = tween(300, easing = EaseOut),
+                    towards = AnimatedContentTransitionScope.SlideDirection.Start
+                )
+            }
         ) { backStackEntry ->
             val walletAddress = backStackEntry.arguments?.getString("walletAddress") ?: ""
             val tokenBalance = backStackEntry.arguments?.getString("tokenBalance") ?: "0"
             val coinType = backStackEntry.arguments?.getInt("coinType") ?: -1
             val contractAddress = backStackEntry.arguments?.getString("contractAddress") ?: ""
             val chainId = backStackEntry.arguments?.getInt("chainId") ?: -1
+            val tokenName = backStackEntry.arguments?.getString("tokenName") ?: ""
+
             SendTokenScreen(
                 walletAddress,
                 tokenBalance,
                 coinType,
                 contractAddress,
                 chainId,
+                tokenName,
                 navController
             )
         }
@@ -205,7 +431,26 @@ fun RepointNavigation(activity: FragmentActivity) {
             "history/{balance}/{walletAddress}",
             arguments = listOf(navArgument("balance") { type = NavType.FloatType },
                 navArgument("walletAddress") { type = NavType.StringType }
-            )
+            ),
+            enterTransition = {
+                fadeIn(
+                    animationSpec = tween(
+                        300, easing = LinearEasing
+                    )
+                ) + slideIntoContainer(
+                    animationSpec = tween(300, easing = EaseIn),
+                    towards = AnimatedContentTransitionScope.SlideDirection.Start
+                )
+            } ,
+            exitTransition = {
+                fadeOut(animationSpec = tween(
+                    300, easing = LinearEasing
+                )
+                ) + slideOutOfContainer(
+                    animationSpec = tween(300, easing = EaseOut),
+                    towards = AnimatedContentTransitionScope.SlideDirection.End
+                )
+            }
         ) { backstackEntry ->
             val balance = backstackEntry.arguments?.getFloat("balance") ?: 0.0f
             val walletAddress = backstackEntry.arguments?.getString("walletAddress") ?: ""
@@ -218,21 +463,98 @@ fun RepointNavigation(activity: FragmentActivity) {
         }
 
         composable(
-            "networks"
+            "networks",
+            enterTransition = {
+                fadeIn(
+                    animationSpec = tween(
+                        300, easing = LinearEasing
+                    )
+                ) + slideIntoContainer(
+                    animationSpec = tween(300, easing = EaseIn),
+                    towards = AnimatedContentTransitionScope.SlideDirection.Up
+                )
+            } ,
+            exitTransition = {
+                fadeOut(animationSpec = tween(
+                    300, easing = LinearEasing
+                )
+                ) + slideOutOfContainer(
+                            animationSpec = tween(300, easing = EaseOut),
+                            towards = AnimatedContentTransitionScope.SlideDirection.Down
+                        )
+            }
         )
         { navBackStackEntry ->
             CryptoManageScreen(navController)
         }
 
-        composable("settings") { navBackStackEntry ->
+        composable("settings",
+            enterTransition = {
+                fadeIn(
+                    animationSpec = tween(
+                        300, easing = LinearEasing
+                    )
+                ) + slideIntoContainer(
+                    animationSpec = tween(300, easing = EaseIn),
+                    towards = AnimatedContentTransitionScope.SlideDirection.End
+                )
+            } ,
+            exitTransition = {
+                fadeOut(animationSpec = tween(
+                    300, easing = LinearEasing
+                )
+                ) + slideOutOfContainer(
+                    animationSpec = tween(300, easing = EaseOut),
+                    towards = AnimatedContentTransitionScope.SlideDirection.Start
+                )
+            }) { navBackStackEntry ->
             SettingsScreen(navController)
         }
 
-        composable("wallets") {
+        composable("wallets",
+            enterTransition = {
+                fadeIn(
+                    animationSpec = tween(
+                        300, easing = LinearEasing
+                    )
+                ) + slideIntoContainer(
+                    animationSpec = tween(300, easing = EaseIn),
+                    towards = AnimatedContentTransitionScope.SlideDirection.Start
+                )
+            } ,
+            exitTransition = {
+                fadeOut(animationSpec = tween(
+                    300, easing = LinearEasing
+                )
+                ) + slideOutOfContainer(
+                    animationSpec = tween(300, easing = EaseOut),
+                    towards = AnimatedContentTransitionScope.SlideDirection.End
+                )
+            }) {
             ChainWalletsScreen(navController = navController)
         }
 
-        composable("security") {
+        composable("security",
+            enterTransition = {
+                fadeIn(
+                    animationSpec = tween(
+                        300, easing = LinearEasing
+                    )
+                ) + slideIntoContainer(
+                    animationSpec = tween(300, easing = EaseIn),
+                    towards = AnimatedContentTransitionScope.SlideDirection.Start
+                )
+            } ,
+            exitTransition = {
+                fadeOut(animationSpec = tween(
+                    300, easing = LinearEasing
+                )
+                ) + slideOutOfContainer(
+                    animationSpec = tween(300, easing = EaseOut),
+                    towards = AnimatedContentTransitionScope.SlideDirection.End
+                )
+            }
+            ) {
             SecurityScreen(navController)
         }
 

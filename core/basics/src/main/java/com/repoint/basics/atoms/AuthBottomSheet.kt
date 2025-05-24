@@ -7,6 +7,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Download
 import androidx.compose.material3.Icon
@@ -54,9 +56,9 @@ fun AuthButtonsSheet(onCreateWallet: () -> Unit, onImportWallet: () -> Unit) {
             backgroundColor = repointOrange,
             icon = {
                 Icon(
-                   imageVector = Icons.Rounded.Add,
+                   imageVector = Icons.Filled.Add,
                     contentDescription = "Add Icon",
-                    tint = Color.White
+                    tint = Color(0xFFFFA726)
                 )
             }, onClick = onCreateWallet)
 
@@ -64,7 +66,7 @@ fun AuthButtonsSheet(onCreateWallet: () -> Unit, onImportWallet: () -> Unit) {
 
         WalletButton("Add existing Wallet", subText = "Import, restore or view-only", backgroundColor = repointBlue,
             icon = {
-                Icon(imageVector = Icons.Rounded.Download, contentDescription = "Download Icon", tint = Color.White)
+                Icon(imageVector = Icons.Filled.Download, contentDescription = "Download Icon", tint = Color(0xFF1565C0))
             }, onClick = onImportWallet)
 
     }

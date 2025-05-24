@@ -64,12 +64,13 @@ fun LoginScreen(
 
     val coroutineScope = rememberCoroutineScope()
 
-    RepointAppBar("Multi-CoinWallet", exp = { _,_,_ ->
+    RepointAppBar("Multi-CoinWallet", exp = { _, _, _ ->
         Box(Modifier.fillMaxSize()) {
             Column(
                 Modifier
                     .fillMaxSize()
-                    .padding(16.dp)) {
+                    .padding(16.dp)
+            ) {
 
                 SimpleEditText(
                     "Wallet name :",
@@ -115,7 +116,9 @@ fun LoginScreen(
             }
 
             RepointCommonButton(
-                "Restore Wallet", onClick = {
+                "Restore Wallet", modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .padding(8.dp), onClick = {
 
                     coroutineScope.launch {
 
@@ -123,8 +126,11 @@ fun LoginScreen(
 
                         if (walletViewModel.tempMasterWallet != null) {
                             val nextIndex = walletViewModel.generateNextWalletIndex(user?.userId)
-                            Log.d("confirm","next index is : ${walletViewModel.generateNextWalletIndex(user?.userId)}")
-                            Log.d("confirm","user id is : ${user?.userId}")
+                            Log.d(
+                                "confirm",
+                                "next index is : ${walletViewModel.generateNextWalletIndex(user?.userId)}"
+                            )
+                            Log.d("confirm", "user id is : ${user?.userId}")
                             val finalName = if (walletNameInput.trim().isNotBlank()) {
                                 walletNameInput.trim()
                             } else {
@@ -132,11 +138,12 @@ fun LoginScreen(
                             }
 
 
-                            walletViewModel.tempMasterWallet = walletViewModel.tempMasterWallet!!.copy(
-                                name = finalName,
-                                walletIndex = nextIndex,
-                                userId = user?.userId
-                            )
+                            walletViewModel.tempMasterWallet =
+                                walletViewModel.tempMasterWallet!!.copy(
+                                    name = finalName,
+                                    walletIndex = nextIndex,
+                                    userId = user?.userId
+                                )
                         }
 
                         val phrase = walletViewModel.generatedImportedWalletInMemory(
@@ -152,7 +159,10 @@ fun LoginScreen(
                         if (user != null && walletViewModel.tempMasterWallet?.masterWalletId != null) {
                             Log.d("walletcreate", "phraseString with user is : $phraseString")
                             Log.d("walletcreate", "wallet name with user is : $walletNameInput")
-                            Log.d("walletcreate", "wallet with user is  : ${walletViewModel.tempMasterWallet}")
+                            Log.d(
+                                "walletcreate",
+                                "wallet with user is  : ${walletViewModel.tempMasterWallet}"
+                            )
 
 
                             walletViewModel.linkUserToMasterWallet(
@@ -178,9 +188,6 @@ fun LoginScreen(
                         ///val walletId = viewModel.importWallet(secretInput, walletNameInput)
                         // Log.d("import", "wallet is set and its id is = $wallet")
                     }
-                    Modifier
-                        .align(Alignment.BottomCenter)
-                        .padding(8.dp)
                 }
             )
         }

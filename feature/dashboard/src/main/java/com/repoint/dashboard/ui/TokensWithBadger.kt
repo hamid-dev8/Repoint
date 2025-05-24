@@ -44,7 +44,7 @@ fun TokenWithNetworkBadge(
     val backgroundColor = if (isDark) ghostWhite else richBlack
     val networkBackgroundColor = if (isDark)  richBlack else ghostWhite
 
-    Box(Modifier.size(48.dp).background(networkBackgroundColor, shape = CircleShape)) {
+    Box(Modifier.size(32.dp).background(networkBackgroundColor, shape = CircleShape)) {
 
     AsyncImage(
         model = ImageRequest.Builder(LocalContext.current)
@@ -72,15 +72,15 @@ fun TokenWithNetworkBadge(
     )
 
 
-    Box(modifier = modifier.size(16.dp).align(Alignment.BottomEnd).clip(CircleShape).background(backgroundColor), contentAlignment = Alignment.Center) {
+    Box(modifier = modifier.size(14.dp).align(Alignment.BottomEnd).clip(CircleShape).background(backgroundColor), contentAlignment = Alignment.Center) {
 
     AsyncImage(
         model = networkIcon.trim(),
         contentDescription = "Network Logo",
         modifier = Modifier
-            .size(14.dp)
+            .size(8.dp)
             .clip(RoundedCornerShape(8.dp)),
-        contentScale = ContentScale.Inside
+        contentScale = ContentScale.FillBounds
     )
 
     }

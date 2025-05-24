@@ -5,6 +5,7 @@ import android.content.ClipboardManager
 import android.content.Context
 import android.util.Log
 import android.widget.Toast
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -17,11 +18,13 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CopyAll
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -35,13 +38,17 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
+import com.repoint.account.UserViewModel
 import com.repoint.account.WalletViewModel
 import com.repoint.basics.atoms.RepointAppBar
 import com.repoint.basics.atoms.RepointCommonButton
 import com.repoint.basics.atoms.VectorWithText
+import com.repoint.basics.atoms.WalletCreationStepProgress
 import com.repoint.basics.atoms.WarningBanner
+import com.repoint.dependencies.accountmanager.SpManager
 import com.repoint.dependencies.theme.Purple40
 import com.repoint.dependencies.theme.RepointTypography
+import com.repoint.dependencies.theme.pureWhite
 import com.repoint.models.sharedmodels.local.MasterWallet
 import com.repoint.models.sharedmodels.local.RepointWallet
 import kotlinx.coroutines.launch
@@ -51,14 +58,26 @@ import kotlinx.coroutines.launch
 fun ShowPhrase(
     phrases  : String,
     navController: NavController,
-    onConfirm: (String?) -> Unit
+    onConfirm: (String?) -> Unit,
+    userViewModel: UserViewModel = hiltViewModel()
 ) {
     val context = LocalContext.current
     val clipboardManager = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
 
+    val spManager = SpManager(context)
+
 //val phraseList = viewModel.showPhrase(id)
-    RepointAppBar("Secret phrase", navController, exp = {_,_,_ ->
-        Box(Modifier.fillMaxSize().padding(16.dp)) {
+    RepointAppBar("Secret phrase", navController = navController, exp = {_,_,_ ->
+        val userId = spManager.getUserIdFlow().collectAsState(initial = null).value
+        val userExists : Boolean = userId != null
+
+
+        Box(
+            Modifier
+                .fillMaxSize()
+                .padding(16.dp)) {
+
+
             LaunchedEffect(phrases) {
 
                 //masterWallet = viewModel.getMasterWallet(masterWalletId)
@@ -74,6 +93,12 @@ fun ShowPhrase(
                 verticalArrangement = Arrangement.spacedBy(12.dp, Alignment.Top),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
+
+                WalletCreationStepProgress(currentStep = 1, modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 8.dp)
+                    .padding(bottom = 12.dp), userExists = false)
+
                 // Display phrases in two columns
                 BoxWithConstraints {
                     val isWide = maxWidth > 500.dp
@@ -95,7 +120,7 @@ fun ShowPhrase(
             }
             Column(Modifier.align(Alignment.BottomCenter)) {
 
-                WarningBanner("Never share your secret phrase with anyone,and store it securely!",Modifier)
+                WarningBanner("Never share your secret phrase with anyone,and store it securely!",Modifier.align(Alignment.Start))
                 RepointCommonButton(
                     "I saved And Confirmed",
                     onClick = {
@@ -103,7 +128,7 @@ fun ShowPhrase(
                         onConfirm(phrases)
                         Log.d("saved", "halaloua")
 
-                    }, modifier = Modifier.padding(top = 32.dp))
+                    }, modifier = Modifier.padding(top = 32.dp), enabled = true)
             }
         }
     })
@@ -175,7 +200,9 @@ fun TwoColumnGrid(phrases: List<String>) {
 fun PhraseItem(index: Int, phrase: String) {
     Row(
         modifier = Modifier
-            .fillMaxWidth(),
+            .fillMaxWidth()
+            .background(pureWhite, RoundedCornerShape(22.dp))
+            .padding(horizontal = 6.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.Center
     ) {

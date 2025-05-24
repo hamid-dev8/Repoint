@@ -28,6 +28,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
@@ -62,6 +63,7 @@ fun RepointCommonButton(
             },
             modifier
                 .fillMaxWidth()
+                .clip(RoundedCornerShape(50.dp))
                 .padding(horizontal = 14.dp, vertical = margin)
                 .height(52.dp),
             enabled = enabled,
@@ -85,6 +87,7 @@ fun WalletButton(
         modifier = Modifier
             .fillMaxWidth()
             .height(65.dp)
+            .clip(RoundedCornerShape(50.dp))
             .background(backgroundColor, shape = RoundedCornerShape(50.dp))
             .padding(horizontal = 14.dp)
             .clickable { onClick() },
@@ -167,3 +170,5 @@ fun PreviewWalletButtons() {
         )
     }
 }
+
+

@@ -128,10 +128,14 @@ dependencies {
     //carousel & material3
     api(libs.material3)
     api(libs.androidx.material3.adaptive)
+    api(libs.androidx.material3.v140alpha13)
+    api(libs.androidx.material.ripple)
 
 
     // Jetpack Compose integration
     api(libs.navigation.compose)
+    api(libs.androidx.animation)
+
     //api(libs.hilt.compiler)
 
     api(libs.androidx.appcompat.v170)
@@ -155,6 +159,9 @@ dependencies {
     api(libs.androidx.camera.camera2)
     api(libs.androidx.camera.lifecycle)
     api(libs.androidx.camera.view)
+
+    //leak cannery
+    debugApi(libs.leakcanary.android)
 }
 
 

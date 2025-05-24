@@ -70,6 +70,7 @@ fun SendTokenScreen(
     coinType: Int,
     contractAddress: String,
     chainId: Int,
+    tokenName : String,
     navController: NavController,
     web3ViewModel: Web3ViewModel = hiltViewModel<Web3ViewModel>(),
     walletViewModel: WalletViewModel = hiltViewModel<WalletViewModel>(),
@@ -198,7 +199,7 @@ fun SendTokenScreen(
                         verticalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
 
-                        Text(text = "Send Pol", style = RepointTypography.titleMedium)
+                        Text(text = "Send $tokenName", style = RepointTypography.titleMedium)
 
                         OutlinedTextField(
                             value = recipientAddress,
@@ -276,7 +277,7 @@ fun SendTokenScreen(
                         )
 
                         Text(
-                            text = "Available POL : $tokenBalance",
+                            text = "Available $tokenName : $tokenBalance",
                             style = RepointTypography.bodySmall,
                             color = PurpleGrey80
                         )

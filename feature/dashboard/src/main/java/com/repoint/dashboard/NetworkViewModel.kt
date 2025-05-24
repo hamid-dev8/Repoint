@@ -10,6 +10,7 @@ import com.repoint.models.sharedmodels.local.TokenEntity
 import com.repoint.models.sharedmodels.local.TokenWithNetwork
 import com.repoint.models.sharedmodels.remote.BlockchainNetwork
 import com.repoint.models.sharedmodels.remote.NetworkSummary
+import com.repoint.models.sharedmodels.remote.Token
 import com.repoint.network.util.NetworkApiService
 import com.repoint.sources.datarepo.datasource.NetworkDataSource
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -194,11 +195,19 @@ class NetworkViewModel @Inject constructor(
                 }
         }
     }
+    fun updateTokenInNetwork(updatedToken: Token, networkId: Int) {
+        val currentNetworks = _networks.value
+        val updatedNetworks = currentNetworks.map { blockchain ->
+            if (blockchain.id == networkId) {
+                blockchain.copy(tokens = blockchain.tokens.map {
+                    if (it.contractAddress == updatedToken.contractAddress) updatedToken else it
+                })
+            } else blockchain
+        }
+        _networks.value = updatedNetworks
+    }
 
-
-
-
-    fun toggleActiveNetwork(tokenId : Int,isActive : Boolean,masterWalletId: String){
+    fun toggleActiveNetwork(tokenId : Int,isActive : Boolean,masterWalletId: String,updatedToken: Token,networkId: Int){
         viewModelScope.launch {
             if (isActive){
                 Log.d("DEBUG", "Inserting token $tokenId for wallet $masterWalletId")
@@ -210,8 +219,9 @@ class NetworkViewModel @Inject constructor(
                 repository.deleteActiveNetwork(tokenId,masterWalletId)
             }
             //fetchActiveNetworks()
-            fetchActiveTokens(masterWalletId)
+            //fetchActiveTokens(masterWalletId)
            // _activeTokens.value = repository.getActiveTokens()
+            updateTokenInNetwork(updatedToken,networkId)
             Log.d("toggle", "${if (isActive) "Added" else "Removed"} token $tokenId for wallet $masterWalletId")
         }
     }

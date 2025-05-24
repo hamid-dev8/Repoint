@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -27,8 +28,12 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.repoint.basics.logic.clickableWithRipple
 import com.repoint.dependencies.theme.RepointTypography
 import com.repoint.dependencies.theme.ghostWhite
+import com.repoint.dependencies.theme.grayHound
+import com.repoint.dependencies.theme.lightGray
+import com.repoint.dependencies.theme.pureWhite
 import com.repoint.dependencies.theme.repointOrange
 import com.repoint.dependencies.theme.richBlack
 
@@ -52,9 +57,8 @@ fun RepointThreeTextSelectable(
     // Chunk the phrases into rows
     val rows = remember { shuffled.chunked(3) }
     // State for selected indices and answers
-    val selectedIndices = remember { mutableStateListOf(*Array(rows.size) {-1}) }
-    val selectedAnswers = remember { mutableStateListOf(*Array(rows.size) {-1}) }
-
+    val selectedIndices = remember { mutableStateListOf(*Array(rows.size) { -1 }) }
+    val selectedAnswers = remember { mutableStateListOf(*Array(rows.size) { -1 }) }
 
 
     // Calculate correctness only when selections are updated
@@ -133,22 +137,27 @@ fun SelectableRow(
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
         row.forEachIndexed { columnIndex, phrase ->
+            Spacer(Modifier.padding(horizontal = 2.dp))
             Box(
                 modifier = Modifier
                     .weight(1f)
                     .height(40.dp)
-                    .clip(RoundedCornerShape(8.dp))
-                    .background(
-                        if (selectedIndex == columnIndex) repointOrange else ghostWhite
+                    .clip(RoundedCornerShape(22.dp))
+                    .background(pureWhite, RoundedCornerShape(22.dp))
+                    .border(
+                        0.4.dp,
+                        if (selectedIndex == columnIndex) repointOrange else lightGray,
+                        shape = RoundedCornerShape(22.dp)
                     )
-                    .clickable { onItemSelected(columnIndex) },
+                    .clickableWithRipple { onItemSelected(columnIndex)  }
+                ,
                 contentAlignment = Alignment.Center
             ) {
                 Text(
                     text = phrase,
                     style = RepointTypography.bodyMedium,
                     textAlign = TextAlign.Center,
-                    color = if (selectedIndex == columnIndex) ghostWhite else richBlack,
+                    color = if (selectedIndex == columnIndex) repointOrange else richBlack,
                     modifier = Modifier.padding(4.dp)
                 )
             }

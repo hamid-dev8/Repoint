@@ -7,17 +7,16 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.rounded.Search
-import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -32,15 +31,17 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.repoint.basics.R
-import com.repoint.dependencies.theme.PurpleGrey80
 import com.repoint.dependencies.theme.RepointTypography
 import com.repoint.dependencies.theme.grayHound
 import com.repoint.dependencies.theme.pureWhite
@@ -80,7 +81,10 @@ fun NavigationButton(
 fun EndIconButton(showEndIcon: Boolean, onEndIconClick: () -> Unit) {
     if (showEndIcon) {
         IconButton(onClick = onEndIconClick) {
-            Icon(painter = painterResource(com.repoint.dependencies.R.drawable.search), contentDescription = "Search")
+            Icon(
+                painter = painterResource(com.repoint.dependencies.R.drawable.search),
+                contentDescription = "Search"
+            )
         }
     }
 }
@@ -90,6 +94,7 @@ fun EndIconButton(showEndIcon: Boolean, onEndIconClick: () -> Unit) {
 fun TopAppBarWithButton(
     navController: NavController,
     title: String,
+    titleVector: Int? = null,
     isSettings: Boolean = false,
     showEndIcon: Boolean = false,
     isHomeScreen: Boolean = false,
@@ -110,33 +115,45 @@ fun TopAppBarWithButton(
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(8.dp)
-                            .clip(RoundedCornerShape(28.dp))
+                            .height(56.dp)
+                            .clip(RoundedCornerShape(16.dp))
                             .background(Color.White.copy(alpha = 0.95f))
                             .animateContentSize()
                     ) {
-                        TextField(
-                            value = searchQuery,
-                            onValueChange = onSearchQueryChange,
-                            placeholder = { Text("Search tokens...") },
-                            singleLine = true,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .background(pureWhite)
-                                .defaultMinSize(22.dp)
-                                .padding(8.dp),
-                            textStyle = RepointTypography.bodySmall,
-                            colors = TextFieldDefaults.colors(
-                                unfocusedContainerColor = grayHound,
-                                focusedContainerColor = grayHound,
-                                unfocusedIndicatorColor = Color.Transparent,
-                                focusedIndicatorColor = Color.Transparent
-                            ),
-                            shape = RoundedCornerShape(16.dp)
-                        )
-                    }
+                            TextField(
+                                value = searchQuery,
+                                onValueChange = onSearchQueryChange,
+                                placeholder = { Text("Search tokens...") },
+                                singleLine = true,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .wrapContentHeight()
+                                    .align(Alignment.Center),
+                                textStyle = TextStyle(
+                                    fontSize = 16.sp,
+                                    lineHeight = 20.sp,
+                                ),
+                                colors = TextFieldDefaults.colors(
+                                    unfocusedContainerColor = grayHound,
+                                    focusedContainerColor = grayHound,
+                                    unfocusedIndicatorColor = Color.Transparent,
+                                    focusedIndicatorColor = Color.Transparent
+                                ),
+                                shape = RoundedCornerShape(12.dp)
+                                )
+                        }
                 } else {
-                    Text(text = title, style = RepointTypography.bodyMedium)
+                    titleVector?.let {
+                        Icon(
+                            painter = painterResource(titleVector),
+                            contentDescription = "repoint svg",
+                            modifier = Modifier
+                                .height(28.dp) // Ensures clean baseline alignment
+                                .padding(end = 4.dp),
+                            tint = Color.Unspecified // Prevent Compose from recoloring your icon
+                        )
+                    } ?: Text(text = title, style = RepointTypography.bodySmall)
+
                 }
             }
         },
@@ -153,7 +170,10 @@ fun TopAppBarWithButton(
                 if (!active) {
                     if (isHomeScreen) {
                         IconButton(onClick = onToggleSearch) {
-                            Icon(painter = painterResource(com.repoint.dependencies.R.drawable.search), contentDescription = "Search")
+                            Icon(
+                                painter = painterResource(com.repoint.dependencies.R.drawable.search),
+                                contentDescription = "Search"
+                            )
                         }
                     } else {
                         EndIconButton(showEndIcon, onEndIconClick)
@@ -167,7 +187,8 @@ fun TopAppBarWithButton(
 
 @Composable
 fun RepointAppBar(
-    title: String,
+    title: String? = null,
+    titleVector: Int? = null, // 🔥 Optional Vector Drawable
     navController: NavController,
     isSearchActive: Boolean = false,
     setSearchActive: (Boolean) -> Unit = {},
@@ -185,7 +206,8 @@ fun RepointAppBar(
         topBar = {
             TopAppBarWithButton(
                 navController = navController,
-                title = title,
+                title = title ?: "",
+                titleVector = titleVector, // 🔥 forward to top bar
                 isSettings = isSettings,
                 showEndIcon = showEndIcon,
                 isHomeScreen = isHomeScreen,
@@ -235,3 +257,4 @@ fun RepointAppBar(
         }
     }
 }
+

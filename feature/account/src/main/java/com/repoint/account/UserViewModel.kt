@@ -13,6 +13,8 @@ import com.repoint.dependencies.accountmanager.SpManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
@@ -28,6 +30,9 @@ class UserViewModel @Inject constructor(
     private val _result = MutableLiveData<User>()
     val result: LiveData<User> get() = _result
 
+    private val _userExists = MutableStateFlow(false)
+    val userExists: StateFlow<Boolean> = _userExists
+
     fun createUser(passcode: String) {
 
         viewModelScope.launch {
@@ -40,16 +45,17 @@ class UserViewModel @Inject constructor(
                 User(salt = salt, passwordHash = hashed, createdAt = createdAt)
 
             spManager.setUserId(user.userId)
-           repository.authUser(user)
-            Log.d("focus" , " user have been created  : $user")
+            repository.authUser(user)
+            Log.d("focus", " user have been created  : $user")
         }
     }
 
     suspend fun fetchUser(): User? {
 
-            delay(1000)
-            val user = repository.getUser()
-            Log.d("focus" , "fetch user is : $user")
+        delay(1000)
+        val user = repository.getUser()
+        _userExists.value = (user != null)
+        Log.d("focus", "fetch user is : $user")
 
 
         return user

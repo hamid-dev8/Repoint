@@ -5,6 +5,7 @@ import androidx.compose.material3.Typography
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -43,6 +44,7 @@ val RepointTypography =
         ),
         headlineLarge = TextStyle(
             fontFamily = CustomFontFamily,
+            fontStyle = FontStyle.Italic,
             fontWeight = FontWeight.W400,
             fontSize = 30.sp,
             lineHeight = 40.sp,
@@ -50,6 +52,7 @@ val RepointTypography =
         ),
         headlineMedium = TextStyle(
             fontFamily = CustomFontFamily,
+            fontStyle = FontStyle.Italic,
             fontWeight = FontWeight.W400,
             fontSize = 26.sp,
             lineHeight = 36.sp,
@@ -58,6 +61,7 @@ val RepointTypography =
         headlineSmall = TextStyle(
             fontFamily = CustomFontFamily,
             fontWeight = FontWeight.W600,
+            fontStyle = FontStyle.Italic,
             fontSize = 22.sp,
             lineHeight = 32.sp,
             letterSpacing = 0.sp

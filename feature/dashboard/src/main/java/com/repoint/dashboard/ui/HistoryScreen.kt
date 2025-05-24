@@ -72,7 +72,6 @@ fun TransactionHistoryScreen(
             //wallets = user.let { it?.userId?.let { it1 -> walletViewModel.getChainWallet(userit1) }!! }
             // transactions  = historyViewModel.getNativeHistory(address = wallets[0].address, chain = "eth", order = "DESC")
             historyViewModel.getNativeHistory(walletAddress, chain = "polygon", "DESC")
-
         }
 
         LazyColumn(modifier = Modifier.fillMaxSize()) {

@@ -13,6 +13,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -31,6 +32,7 @@ import com.repoint.account.WalletViewModel
 import com.repoint.basics.atoms.RepointAppBar
 import com.repoint.basics.atoms.RepointCommonButton
 import com.repoint.basics.atoms.RepointThreeTextSelectable
+import com.repoint.basics.atoms.WalletCreationStepProgress
 import com.repoint.dependencies.theme.RepointTypography
 import com.repoint.dependencies.accountmanager.SpManager
 import kotlinx.coroutines.launch
@@ -50,6 +52,12 @@ fun ConfirmPhrases(
         navController.getBackStackEntry("walletConfirm")
     }
     val walletViewModel: WalletViewModel = hiltViewModel(parentEntry)
+    val context = LocalContext.current
+    val spManager = remember { SpManager(context) }
+
+    val userId = spManager.getUserIdFlow().collectAsState(initial = null)
+    val userExists = userId.value != null
+
 
     val decodedPhrases = Uri.decode(phrases)
     val phraseList = decodedPhrases.split(" ")
@@ -57,8 +65,6 @@ fun ConfirmPhrases(
     val resultPair = calculateRandomStrings(phraseList)
     var isUserCorrect by remember { mutableStateOf(false) }
 
-    val context = LocalContext.current
-    val spManager = remember { SpManager(context) }
     val coroutineScope = rememberCoroutineScope()
 
     val walletCreated = walletViewModel.walletCreated.value
@@ -73,19 +79,21 @@ fun ConfirmPhrases(
     Log.d("confirmsss", "orginal list : $phraseList")
     Log.d("confirmsss", "shuffled by 3 : $shuffledList")
 
-
     RepointAppBar("Confirm Secret Phrase", navController = navController, exp = { _,_,_ ->
 
         Box(
             Modifier
                 .fillMaxSize()
-                .padding(12.dp)
+                .padding(16.dp)
         ) {
             resultPair.fastForEachIndexed { index, answer ->
                 Log.d("confirmsss", " result pair is : ${resultPair.toString()}")
 
 
-                Column {
+                Column(Modifier.padding(16.dp)) {
+
+                    WalletCreationStepProgress(currentStep = 2, modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp).padding(bottom = 12.dp), userExists = false)
+
 
                     Text(
                         "please tap on correct answer of the below seed phrases",

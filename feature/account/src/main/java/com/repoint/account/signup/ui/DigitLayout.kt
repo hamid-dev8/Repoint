@@ -161,7 +161,7 @@ fun RepointNumPad(
 
 
 
-    RepointAppBar("", navController, exp = { _,_,_ ->
+    RepointAppBar("", navController = navController, exp = { _,_,_ ->
 
 
         ConstraintLayout(

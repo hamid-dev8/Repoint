@@ -1,13 +1,18 @@
 package com.repoint.account.signup.ui
 
 import android.util.Log
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.ripple.rememberRipple
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -20,6 +25,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
@@ -36,6 +42,7 @@ import com.repoint.basics.atoms.RepointCommonButton
 import com.repoint.dependencies.theme.RepointTypography
 import com.repoint.dependencies.theme.repointBlue
 import com.repoint.dependencies.accountmanager.SpManager
+import com.repoint.dependencies.theme.pureWhite
 import kotlinx.coroutines.launch
 
 
@@ -109,7 +116,7 @@ fun WalletConfirmSurface(
 
 
 
-    RepointAppBar("", navController, exp = {_,_,_ ->
+    RepointAppBar("", navController = navController, exp = { _, _, _ ->
         Box(
             Modifier
                 .fillMaxSize()
@@ -118,7 +125,8 @@ fun WalletConfirmSurface(
             Column(
                 Modifier
                     .padding(16.dp)
-                    .padding(bottom = 16.dp))
+                    .padding(bottom = 16.dp)
+            )
             {
 
                 BigPng(
@@ -132,14 +140,24 @@ fun WalletConfirmSurface(
                 Spacer(Modifier.padding(bottom = 16.dp))
 
                 CreateWalletTitle()
+                val interactionSource = remember { MutableInteractionSource() }
 
                 Column() {
                     checkboxesState.forEach { (label, state) ->
 
                         Row(
                             Modifier
-                                .padding(16.dp, top = 28.dp)
-                                .clickable { checkboxesState[label] = !state },
+                                .fillMaxWidth()
+                                .padding(horizontal = 4.dp, vertical = 8.dp)
+                                .clip(RoundedCornerShape(22.dp))
+                                .background(
+                                    pureWhite,
+                                    RoundedCornerShape(22.dp)
+                                ) // white rounded bg
+                                .clickable(
+                                    onClick = {checkboxesState[label] = !state}
+                                )
+                                .padding(12.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
 

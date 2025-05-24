@@ -27,7 +27,7 @@ fun SecurityScreen(
 
     val context = LocalContext.current
 
-    RepointAppBar(title = "Security", navController, exp = {_,_,_ ->
+    RepointAppBar(title = "Security", navController = navController, exp = {_,_,_ ->
 
         Column(Modifier.fillMaxSize().padding(horizontal = 16.dp)) {
 

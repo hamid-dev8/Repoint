@@ -51,7 +51,7 @@ fun WarningBanner(message: String,modifier: Modifier) {
             color = repointOrange, // Darker orange text color
             textAlign = TextAlign.Center,
             style = RepointTypography.labelSmall,
-            modifier = Modifier.align(Alignment.CenterVertically)
+            modifier = modifier.align(Alignment.CenterVertically)
             //modifier = Modifier.weight(1f) // Text takes available space
         )
         //Optional > Icon

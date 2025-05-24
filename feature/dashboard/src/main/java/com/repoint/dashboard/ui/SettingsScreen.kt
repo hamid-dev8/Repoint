@@ -40,7 +40,7 @@ fun SettingsScreen(
 
     val isDarkTheme by viewModel.isDarkTheme.collectAsState()
 
-    RepointAppBar("Settings", navController, exp = {_,_,_ ->
+    RepointAppBar("Settings", navController = navController, exp = {_,_,_ ->
 
         LazyColumn(modifier = Modifier.fillMaxSize().padding(16.dp)) {
 
