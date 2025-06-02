@@ -23,6 +23,7 @@
             <option value="$PROJECT_DIR$/feature/account" />
             <option value="$PROJECT_DIR$/feature/dashboard" />
             <option value="$PROJECT_DIR$/feature/splash" />
+            <option value="$PROJECT_DIR$/web3" />
           </set>
         </option>
         <option name="resolveExternalAnnotations" value="false" />

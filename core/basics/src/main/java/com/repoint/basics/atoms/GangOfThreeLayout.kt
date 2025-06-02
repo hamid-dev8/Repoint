@@ -44,52 +44,21 @@ fun PreviewGangOfThree() {
     val sampleList = listOf("salam", " noch ", " hey cash")
     //RepointThreeTextSelectable(sampleList)
 }
-
-//choose one from three words!
 @Composable
 fun RepointThreeTextSelectable(
-    shuffled: List<String>,
-    correctAnswers: List<Pair<Int, String>>,
+    rows: List<PhraseChallengeRow>,
     isSelectedCorrectly: (Boolean) -> Unit
 ) {
-
-
-    // Chunk the phrases into rows
-    val rows = remember { shuffled.chunked(3) }
-    // State for selected indices and answers
-    val selectedIndices = remember { mutableStateListOf(*Array(rows.size) { -1 }) }
-    val selectedAnswers = remember { mutableStateListOf(*Array(rows.size) { -1 }) }
-
-
-    // Calculate correctness only when selections are updated
-    val results = remember(selectedAnswers) {
-        correctAnswers.mapIndexed { rowIndex, (correctIndex, correctPhrase) ->
-            val userSelectedPhrase = selectedAnswers.getOrNull(rowIndex)?.let { index ->
-                shuffled.getOrNull(index)
-            }
-            Triple(
-                correctIndex,
-                correctPhrase,
-                userSelectedPhrase == correctPhrase
-            )
-        }
-    }
+    val selectedAnswers = remember { mutableStateListOf(*Array(rows.size) { "" }) }
 
     // Notify correctness
-    LaunchedEffect(results) {
+    LaunchedEffect(selectedAnswers) {
         snapshotFlow { selectedAnswers.toList() }
             .collect { answers ->
-                val answer = correctAnswers.mapIndexed { rowIndex, (correctIndex, correctPhrase) ->
-                    val userSelectedPhrase = answers.getOrNull(rowIndex)?.let { index ->
-                        shuffled.getOrNull(index)
-                    }
-                    userSelectedPhrase == correctPhrase
+                val isAllCorrect = answers.zip(rows).all { (selected, row) ->
+                    selected == row.correctWord
                 }
-                val isAllCorrect = answer.all { it }
                 isSelectedCorrectly(isAllCorrect)
-                Log.d("isCoorect", "is correcttt =>>>> $isAllCorrect")
-                /* val isAllCorrect = results.all { it.third } // Check if all are correct
-                 isSelectedCorrectly(isAllCorrect)*/
             }
     }
 
@@ -98,27 +67,21 @@ fun RepointThreeTextSelectable(
             .fillMaxWidth()
             .padding(4.dp)
     ) {
-        rows.forEachIndexed { rowIndex, row ->
-
-            // Correct answer information
+        rows.forEachIndexed { rowIndex, rowData ->
             Text(
-                text = "Correct Word of ${correctAnswers[rowIndex].first} : ",
+                text = "Correct Word of ${rowData.wordPosition} : ",
                 style = RepointTypography.bodyLarge,
                 modifier = Modifier.padding(top = 4.dp, bottom = 4.dp)
             )
 
-            // Render each row
             SelectableRow(
                 rowIndex = rowIndex,
-                row = row,
-                selectedIndex = selectedIndices[rowIndex],
-                onItemSelected = { columnIndex ->
-                    selectedIndices[rowIndex] = columnIndex
-                    selectedAnswers[rowIndex] = rowIndex * 3 + columnIndex
+                row = rowData.options,
+                selectedValue = selectedAnswers[rowIndex],
+                onItemSelected = { selected ->
+                    selectedAnswers[rowIndex] = selected
                 }
             )
-
-
         }
     }
 }
@@ -127,8 +90,8 @@ fun RepointThreeTextSelectable(
 fun SelectableRow(
     rowIndex: Int,
     row: List<String>,
-    selectedIndex: Int,
-    onItemSelected: (Int) -> Unit
+    selectedValue: String,
+    onItemSelected: (String) -> Unit
 ) {
     Row(
         modifier = Modifier
@@ -136,8 +99,9 @@ fun SelectableRow(
             .padding(8.dp),
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
-        row.forEachIndexed { columnIndex, phrase ->
+        row.forEach { phrase ->
             Spacer(Modifier.padding(horizontal = 2.dp))
+
             Box(
                 modifier = Modifier
                     .weight(1f)
@@ -146,21 +110,49 @@ fun SelectableRow(
                     .background(pureWhite, RoundedCornerShape(22.dp))
                     .border(
                         0.4.dp,
-                        if (selectedIndex == columnIndex) repointOrange else lightGray,
+                        if (selectedValue == phrase) repointOrange else lightGray,
                         shape = RoundedCornerShape(22.dp)
                     )
-                    .clickableWithRipple { onItemSelected(columnIndex)  }
-                ,
+                    .clickableWithRipple {
+                        onItemSelected(phrase)
+                    },
                 contentAlignment = Alignment.Center
             ) {
                 Text(
                     text = phrase,
                     style = RepointTypography.bodyMedium,
                     textAlign = TextAlign.Center,
-                    color = if (selectedIndex == columnIndex) repointOrange else richBlack,
+                    color = if (selectedValue == phrase) repointOrange else richBlack,
                     modifier = Modifier.padding(4.dp)
                 )
             }
         }
     }
 }
+
+
+
+@Composable
+fun SelectableRowStrings(
+    options: List<String>,
+    selectedValue: String,
+    onSelected: (String) -> Unit
+) {
+    Row(Modifier.fillMaxWidth()) {
+        options.forEach { option ->
+            Box(Modifier
+                .padding(4.dp)
+                .background(if (option == selectedValue) repointOrange else lightGray)
+                .clickable { onSelected(option) }
+            ) {
+                Text(option, modifier = Modifier.padding(8.dp))
+            }
+        }
+    }
+}
+
+data class PhraseChallengeRow(
+    val wordPosition: Int,
+    val correctWord: String,
+    val options: List<String>
+)

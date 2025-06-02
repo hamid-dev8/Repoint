@@ -107,7 +107,7 @@ fun SendTokenScreen(
         Log.d("transaction", "coinType is : $coinType")
 
         web3ViewModel.fetchGasPrice(chainId.toLong())
-        tokenViewModel.getNativeTokenPrice(chainId.toLong())
+        tokenViewModel.getNativeTokenPrice(chainId)
 
         val chainWallet =
             masterWalletId?.let { walletViewModel.getChainWallet(masterWalletId = it, coinType) }

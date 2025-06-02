@@ -19,3 +19,23 @@
 # If you keep the line number information, uncomment this to
 # hide the original source file name.
 #-renamesourcefileattribute SourceFile
+
+# Retrofit + Gson
+-keep class com.repoint.** { *; }
+-keepclassmembers class * {
+    @com.google.gson.annotations.SerializedName <fields>;
+}
+
+# Keep Models for Moralis/Retrofit
+-keepclassmembers class * {
+    @retrofit2.http.* <methods>;
+}
+-keepattributes Signature
+
+# Keep Web3j stuff
+-keep class org.web3j.** { *; }
+
+# Hilt
+-keep class dagger.hilt.** { *; }
+-keep class * extends dagger.hilt.EntryPoint { *; }
+-keep @dagger.hilt.android.lifecycle.HiltViewModel class * { *; }

@@ -1,10 +1,12 @@
 package com.repoint.basics.logic
 
+import android.util.Log
 import com.repoint.models.sharedmodels.local.ChainWallet
 import com.repoint.models.sharedmodels.local.MasterWallet
 import org.web3j.crypto.Bip32ECKeyPair
 import org.web3j.crypto.Credentials
 import org.web3j.crypto.MnemonicUtils
+import org.web3j.utils.Numeric
 import java.security.MessageDigest
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
@@ -38,12 +40,16 @@ object EcGenerator {
             val childKeypair = Bip32ECKeyPair.deriveKeyPair(masterKeyPair, path)
             val credentials = Credentials.create(childKeypair)
 
+            val ecPublicKeyHex = Numeric.toHexStringNoPrefixZeroPadded(childKeypair.publicKey, 128)
+            val privateKey = childKeypair.privateKey.toString(16).padStart(64, '0')
+
+
             ChainWallet(
                 masterWalletId = masterWallet.masterWalletId,
                 coinType = coinType,
                 networkName = getNetworkNameByCoinType(coinType),
-                publicKey = childKeypair.publicKey.toString(),
-                privateKey = childKeypair.privateKey.toString(),
+                publicKey = ecPublicKeyHex,
+                privateKey = privateKey,
                 address = credentials.address
             )
 
@@ -80,15 +86,23 @@ object EcGenerator {
             val childKeyPair = Bip32ECKeyPair.deriveKeyPair(masterKeyPair,path)
             val credentials = Credentials.create(childKeyPair)
 
+            val ecPublicKeyHex = Numeric.toHexStringNoPrefixZeroPadded(childKeyPair.publicKey, 128)
+            val privateKey = childKeyPair.privateKey.toString(16).padStart(64, '0')
+
+
+            Log.d("ecGen","the private key is : ${childKeyPair.privateKey}")
+
+
             ChainWallet(
                 masterWalletId = masterWallet.masterWalletId,
                 coinType = coinType,
                 networkName = getNetworkNameByCoinType(coinType),
-                publicKey = childKeyPair.publicKey.toString(),
-                privateKey = childKeyPair.privateKey.toString(),
+                publicKey = ecPublicKeyHex,
+                privateKey = privateKey,
                 address = credentials.address
             )
         }
+
 
         return Pair(masterWallet,chainWallets)
     }

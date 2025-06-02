@@ -22,16 +22,37 @@ android {
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+    }
 
+    signingConfigs {
+        create("release") {
+            storeFile = file("repoint_key.jks")
+            storePassword = "artaan"
+            keyAlias = "repoint"
+            keyPassword = "artaan"
+        }
     }
 
     buildTypes {
         release {
-            isMinifyEnabled = false
+            isMinifyEnabled = true
+            isShrinkResources = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
-                "proguard-rules.pro"
+                "proguard-rules.pro",
+               file("'../core/Dependencies/proguard-rules.pro"),
+                file("../core/basics/proguard-rules.pro"),
+                file("../core/database/proguard-rules.pro"),
+                file("../core/models/proguard-rules.pro"),
+                file("../core/models/proguard-rules.pro"),
+                file("../core/network/proguard-rules.pro"),
+                file("../data/sources/proguard-rules.pro"),
+                file("../feature/proguard-rules.pro"),
+                file("../feature/account/proguard-rules.pro"),
+                file("../feature/dashboard/proguard-rules.pro"),
+                file("../feature/splash/proguard-rules.pro")
             )
+            signingConfig = signingConfigs.getByName("release")
         }
     }
     compileOptions {

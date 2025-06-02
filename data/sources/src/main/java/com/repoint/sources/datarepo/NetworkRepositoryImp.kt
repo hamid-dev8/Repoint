@@ -34,6 +34,10 @@ class NetworkRepositoryImp @Inject constructor(private val networkDao : NetworkD
         return networkDao.getTokenWithNetwork(tokenId)
     }
 
+    override suspend fun getActiveTokensWithNetworks(masterWalletId: String): List<TokenWithNetwork> {
+        return networkDao.getActiveTokensWithNetworks(masterWalletId)
+    }
+
     override suspend fun getNetworkByTokenId(tokenId: Int): BlockchainNetworkEntity? {
         return networkDao.getNetworkByTokenId(tokenId)
     }

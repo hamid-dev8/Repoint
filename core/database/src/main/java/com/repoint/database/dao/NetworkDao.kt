@@ -33,6 +33,17 @@ interface NetworkDao
     suspend fun getTokenWithNetwork(tokenId : Int) : TokenWithNetwork
 
     @Transaction
+    @Query("""
+    SELECT * FROM tokens 
+    INNER JOIN networks ON tokens.networkId = networks.id
+    WHERE tokens.tokenId IN (
+        SELECT tokenId FROM actives WHERE masterWalletId = :masterWalletId
+    )
+""")
+    suspend fun getActiveTokensWithNetworks(masterWalletId: String): List<TokenWithNetwork>
+
+
+    @Transaction
     @Query("SELECT * FROM networks")
     suspend fun getNetworksWithTokens(): List<BlockchainNetworkWithTokens>
 

@@ -170,6 +170,8 @@ fun LoginScreen(
                                 user.userId
                             )
 
+                            spManager.setUserId(user.userId)
+
                             navController.navigate("home") {
                                 popUpTo("auth") { inclusive = true }
                             }

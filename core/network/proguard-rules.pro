@@ -19,3 +19,6 @@
 # If you keep the line number information, uncomment this to
 # hide the original source file name.
 #-renamesourcefileattribute SourceFile
+
+# Keep Retrofit interfaces (used via reflection)
+-keep interface retrofit2.** { *; }

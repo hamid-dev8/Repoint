@@ -13,7 +13,10 @@ interface NetworkDataSource
     suspend fun insertToken(tokens : List<TokenEntity>)
     suspend fun getTokensForNetwork(networkId: Int): List<TokenEntity>
     suspend fun getAllTokens(masterWalletId: String?) : List<TokenEntity>
+
+
     suspend fun getTokensWithNetwork(tokenId : Int) : TokenWithNetwork
+    suspend fun getActiveTokensWithNetworks(masterWalletId: String) : List<TokenWithNetwork>
 
     suspend fun getNetworkByTokenId(tokenId: Int) : BlockchainNetworkEntity?
 

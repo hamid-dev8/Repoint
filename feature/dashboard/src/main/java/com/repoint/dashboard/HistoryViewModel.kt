@@ -7,6 +7,8 @@ import androidx.lifecycle.viewModelScope
 import com.repoint.models.sharedmodels.remote.RepointTransactions
 import com.repoint.sources.datarepo.datasource.HistoryDataSource
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -18,6 +20,24 @@ class HistoryViewModel @Inject constructor(private val repository: HistoryDataSo
 
     private val _transactions = MutableLiveData<List<RepointTransactions>>()
     val transactions: LiveData<List<RepointTransactions>> = _transactions
+
+    fun getAllChainHistory(address: String , chains : List<String> , order: String = "DESC") {
+        viewModelScope.launch {
+            try {
+                val allTransactions = chains.map { chain ->
+
+                    async {
+                        fetchTransactionHistory(address,chain,order)
+                    }
+                }.awaitAll().flatten()
+
+                _transactions.value = allTransactions.sortedByDescending { it.blockTimeStamp }
+            }
+            catch (e : Exception){
+                _transactions.value = emptyList()
+            }
+        }
+    }
 
      fun getNativeHistory(address: String, chain: String, order: String) {
 

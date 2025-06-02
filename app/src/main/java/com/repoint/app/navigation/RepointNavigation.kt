@@ -91,11 +91,12 @@ fun RepointNavigation(activity: FragmentActivity) {
                     animationSpec = tween(300, easing = EaseIn),
                     towards = AnimatedContentTransitionScope.SlideDirection.Start
                 )
-            } ,
+            },
             exitTransition = {
-                fadeOut(animationSpec = tween(
-                    300, easing = LinearEasing
-                )
+                fadeOut(
+                    animationSpec = tween(
+                        300, easing = LinearEasing
+                    )
                 ) + slideOutOfContainer(
                     animationSpec = tween(300, easing = EaseOut),
                     towards = AnimatedContentTransitionScope.SlideDirection.End
@@ -115,11 +116,12 @@ fun RepointNavigation(activity: FragmentActivity) {
                     animationSpec = tween(300, easing = EaseIn),
                     towards = AnimatedContentTransitionScope.SlideDirection.Start
                 )
-            } ,
+            },
             exitTransition = {
-                fadeOut(animationSpec = tween(
-                    300, easing = LinearEasing
-                )
+                fadeOut(
+                    animationSpec = tween(
+                        300, easing = LinearEasing
+                    )
                 ) + slideOutOfContainer(
                     animationSpec = tween(300, easing = EaseOut),
                     towards = AnimatedContentTransitionScope.SlideDirection.End
@@ -141,11 +143,12 @@ fun RepointNavigation(activity: FragmentActivity) {
                     animationSpec = tween(300, easing = EaseIn),
                     towards = AnimatedContentTransitionScope.SlideDirection.Start
                 )
-            } ,
+            },
             exitTransition = {
-                fadeOut(animationSpec = tween(
-                    300, easing = LinearEasing
-                )
+                fadeOut(
+                    animationSpec = tween(
+                        300, easing = LinearEasing
+                    )
                 ) + slideOutOfContainer(
                     animationSpec = tween(300, easing = EaseOut),
                     towards = AnimatedContentTransitionScope.SlideDirection.End
@@ -170,11 +173,12 @@ fun RepointNavigation(activity: FragmentActivity) {
                     animationSpec = tween(300, easing = EaseIn),
                     towards = AnimatedContentTransitionScope.SlideDirection.Start
                 )
-            } ,
+            },
             exitTransition = {
-                fadeOut(animationSpec = tween(
-                    300, easing = LinearEasing
-                )
+                fadeOut(
+                    animationSpec = tween(
+                        300, easing = LinearEasing
+                    )
                 ) + slideOutOfContainer(
                     animationSpec = tween(300, easing = EaseOut),
                     towards = AnimatedContentTransitionScope.SlideDirection.End
@@ -195,11 +199,12 @@ fun RepointNavigation(activity: FragmentActivity) {
                     animationSpec = tween(300, easing = EaseIn),
                     towards = AnimatedContentTransitionScope.SlideDirection.Start
                 )
-            } ,
+            },
             exitTransition = {
-                fadeOut(animationSpec = tween(
-                    300, easing = LinearEasing
-                )
+                fadeOut(
+                    animationSpec = tween(
+                        300, easing = LinearEasing
+                    )
                 ) + slideOutOfContainer(
                     animationSpec = tween(300, easing = EaseOut),
                     towards = AnimatedContentTransitionScope.SlideDirection.End
@@ -222,11 +227,12 @@ fun RepointNavigation(activity: FragmentActivity) {
                     animationSpec = tween(300, easing = EaseIn),
                     towards = AnimatedContentTransitionScope.SlideDirection.Start
                 )
-            } ,
+            },
             exitTransition = {
-                fadeOut(animationSpec = tween(
-                    300, easing = LinearEasing
-                )
+                fadeOut(
+                    animationSpec = tween(
+                        300, easing = LinearEasing
+                    )
                 ) + slideOutOfContainer(
                     animationSpec = tween(300, easing = EaseOut),
                     towards = AnimatedContentTransitionScope.SlideDirection.End
@@ -248,11 +254,12 @@ fun RepointNavigation(activity: FragmentActivity) {
                     animationSpec = tween(300, easing = EaseIn),
                     towards = AnimatedContentTransitionScope.SlideDirection.Start
                 )
-            } ,
+            },
             exitTransition = {
-                fadeOut(animationSpec = tween(
-                    300, easing = LinearEasing
-                )
+                fadeOut(
+                    animationSpec = tween(
+                        300, easing = LinearEasing
+                    )
                 ) + slideOutOfContainer(
                     animationSpec = tween(300, easing = EaseOut),
                     towards = AnimatedContentTransitionScope.SlideDirection.End
@@ -282,11 +289,12 @@ fun RepointNavigation(activity: FragmentActivity) {
                     animationSpec = tween(300, easing = EaseIn),
                     towards = AnimatedContentTransitionScope.SlideDirection.Start
                 )
-            } ,
+            },
             exitTransition = {
-                fadeOut(animationSpec = tween(
-                    300, easing = LinearEasing
-                )
+                fadeOut(
+                    animationSpec = tween(
+                        300, easing = LinearEasing
+                    )
                 ) + slideOutOfContainer(
                     animationSpec = tween(300, easing = EaseOut),
                     towards = AnimatedContentTransitionScope.SlideDirection.End
@@ -310,11 +318,12 @@ fun RepointNavigation(activity: FragmentActivity) {
                     animationSpec = tween(300, easing = EaseIn),
                     towards = AnimatedContentTransitionScope.SlideDirection.End
                 )
-            } ,
+            },
             exitTransition = {
-                fadeOut(animationSpec = tween(
-                    300, easing = LinearEasing
-                )
+                fadeOut(
+                    animationSpec = tween(
+                        300, easing = LinearEasing
+                    )
                 ) + slideOutOfContainer(
                     animationSpec = tween(300, easing = EaseOut),
                     towards = AnimatedContentTransitionScope.SlideDirection.Start
@@ -327,8 +336,12 @@ fun RepointNavigation(activity: FragmentActivity) {
 
         //afterhome
         composable(
-            "qrCode/{walletAddress}/{masterWalletId}/{tokenId}",
-            arguments = listOf(navArgument("walletAddress") { type = NavType.StringType }),
+            "qrCode/{walletAddress}/{masterWalletId}/{tokenId}/{networkName}",
+            arguments = listOf(navArgument("walletAddress") { type = NavType.StringType },
+                navArgument("masterWalletId") { type = NavType.StringType },
+                navArgument("tokenId") { type = NavType.IntType },
+                navArgument("networkName") { type = NavType.StringType }
+            ),
             enterTransition = {
                 fadeIn(
                     animationSpec = tween(
@@ -338,11 +351,12 @@ fun RepointNavigation(activity: FragmentActivity) {
                     animationSpec = tween(300, easing = EaseIn),
                     towards = AnimatedContentTransitionScope.SlideDirection.End
                 )
-            } ,
+            },
             exitTransition = {
-                fadeOut(animationSpec = tween(
-                    300, easing = LinearEasing
-                )
+                fadeOut(
+                    animationSpec = tween(
+                        300, easing = LinearEasing
+                    )
                 ) + slideOutOfContainer(
                     animationSpec = tween(300, easing = EaseOut),
                     towards = AnimatedContentTransitionScope.SlideDirection.Start
@@ -351,12 +365,14 @@ fun RepointNavigation(activity: FragmentActivity) {
         ) { backStackEntry ->
             val walletAddress = backStackEntry.arguments?.getString("walletAddress") ?: ""
             val masterWalletId = backStackEntry.arguments?.getString("masterWalletId") ?: ""
-            val tokenId = backStackEntry.arguments?.getString("tokenId")?.toIntOrNull()
+            val tokenId = backStackEntry.arguments?.getInt("tokenId")
+            val networkName = backStackEntry.arguments?.getString("networkName") ?: ""
             WalletQrCodeScreen(
                 navController,
                 walletAddress = walletAddress,
                 masterWalletId = masterWalletId,
-                tokenId = tokenId
+                tokenId = tokenId,
+                networkName = networkName
             )
         }
 
@@ -367,9 +383,8 @@ fun RepointNavigation(activity: FragmentActivity) {
                 navArgument("coinType") { type = NavType.IntType },
                 navArgument("contractAddress") { type = NavType.StringType },
                 navArgument("chainId") { type = NavType.IntType },
-                navArgument("tokenName"){type = NavType.StringType}
-            )
-            ,    enterTransition = {
+                navArgument("tokenName") { type = NavType.StringType }
+            ), enterTransition = {
                 fadeIn(
                     animationSpec = tween(
                         300, easing = LinearEasing
@@ -378,11 +393,12 @@ fun RepointNavigation(activity: FragmentActivity) {
                     animationSpec = tween(300, easing = EaseIn),
                     towards = AnimatedContentTransitionScope.SlideDirection.End
                 )
-            } ,
+            },
             exitTransition = {
-                fadeOut(animationSpec = tween(
-                    300, easing = LinearEasing
-                )
+                fadeOut(
+                    animationSpec = tween(
+                        300, easing = LinearEasing
+                    )
                 ) + slideOutOfContainer(
                     animationSpec = tween(300, easing = EaseOut),
                     towards = AnimatedContentTransitionScope.SlideDirection.Start
@@ -441,11 +457,12 @@ fun RepointNavigation(activity: FragmentActivity) {
                     animationSpec = tween(300, easing = EaseIn),
                     towards = AnimatedContentTransitionScope.SlideDirection.Start
                 )
-            } ,
+            },
             exitTransition = {
-                fadeOut(animationSpec = tween(
-                    300, easing = LinearEasing
-                )
+                fadeOut(
+                    animationSpec = tween(
+                        300, easing = LinearEasing
+                    )
                 ) + slideOutOfContainer(
                     animationSpec = tween(300, easing = EaseOut),
                     towards = AnimatedContentTransitionScope.SlideDirection.End
@@ -473,15 +490,16 @@ fun RepointNavigation(activity: FragmentActivity) {
                     animationSpec = tween(300, easing = EaseIn),
                     towards = AnimatedContentTransitionScope.SlideDirection.Up
                 )
-            } ,
+            },
             exitTransition = {
-                fadeOut(animationSpec = tween(
-                    300, easing = LinearEasing
-                )
+                fadeOut(
+                    animationSpec = tween(
+                        300, easing = LinearEasing
+                    )
                 ) + slideOutOfContainer(
-                            animationSpec = tween(300, easing = EaseOut),
-                            towards = AnimatedContentTransitionScope.SlideDirection.Down
-                        )
+                    animationSpec = tween(300, easing = EaseOut),
+                    towards = AnimatedContentTransitionScope.SlideDirection.Down
+                )
             }
         )
         { navBackStackEntry ->
@@ -498,11 +516,12 @@ fun RepointNavigation(activity: FragmentActivity) {
                     animationSpec = tween(300, easing = EaseIn),
                     towards = AnimatedContentTransitionScope.SlideDirection.End
                 )
-            } ,
+            },
             exitTransition = {
-                fadeOut(animationSpec = tween(
-                    300, easing = LinearEasing
-                )
+                fadeOut(
+                    animationSpec = tween(
+                        300, easing = LinearEasing
+                    )
                 ) + slideOutOfContainer(
                     animationSpec = tween(300, easing = EaseOut),
                     towards = AnimatedContentTransitionScope.SlideDirection.Start
@@ -521,11 +540,12 @@ fun RepointNavigation(activity: FragmentActivity) {
                     animationSpec = tween(300, easing = EaseIn),
                     towards = AnimatedContentTransitionScope.SlideDirection.Start
                 )
-            } ,
+            },
             exitTransition = {
-                fadeOut(animationSpec = tween(
-                    300, easing = LinearEasing
-                )
+                fadeOut(
+                    animationSpec = tween(
+                        300, easing = LinearEasing
+                    )
                 ) + slideOutOfContainer(
                     animationSpec = tween(300, easing = EaseOut),
                     towards = AnimatedContentTransitionScope.SlideDirection.End
@@ -544,17 +564,18 @@ fun RepointNavigation(activity: FragmentActivity) {
                     animationSpec = tween(300, easing = EaseIn),
                     towards = AnimatedContentTransitionScope.SlideDirection.Start
                 )
-            } ,
+            },
             exitTransition = {
-                fadeOut(animationSpec = tween(
-                    300, easing = LinearEasing
-                )
+                fadeOut(
+                    animationSpec = tween(
+                        300, easing = LinearEasing
+                    )
                 ) + slideOutOfContainer(
                     animationSpec = tween(300, easing = EaseOut),
                     towards = AnimatedContentTransitionScope.SlideDirection.End
                 )
             }
-            ) {
+        ) {
             SecurityScreen(navController)
         }
 

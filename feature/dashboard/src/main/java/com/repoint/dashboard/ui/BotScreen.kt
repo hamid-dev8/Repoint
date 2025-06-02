@@ -12,7 +12,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.viewinterop.AndroidView
-import androidx.navigation.NavController
 
 @Composable
 fun BotScreen(url: String) {
@@ -28,6 +27,7 @@ fun BotScreen(url: String) {
             settings.loadWithOverviewMode = true
             settings.mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
             settings.cacheMode = WebSettings.LOAD_DEFAULT
+            webChromeClient = WebChromeClient()
 
             // Spoof user agent to match Trust Wallet
             settings.userAgentString =
@@ -35,6 +35,9 @@ fun BotScreen(url: String) {
 
             webViewClient = object : WebViewClient() {
                 override fun onPageFinished(view: WebView?, url: String?) {
+                    Log.d("WebView", "UserAgent: ${settings.userAgentString}")
+                    Log.d("WebView", "Trying to load: $url")
+
                     Log.d("WebView", "✅ Finished loading: $url")
                 }
 
@@ -43,10 +46,13 @@ fun BotScreen(url: String) {
                     request: WebResourceRequest,
                     error: WebResourceError
                 ) {
+                    Log.d("WebView", "failed UserAgent: ${settings.userAgentString}")
+                    Log.d("WebView", "failed Trying to load: $url")
+
                     Log.e("WebView", "❌ Error: ${error.description}")
                 }
             }
-
+            Log.d("WebView", "Loading URL: $url")
             loadUrl(url)
         }
     }, modifier = Modifier.fillMaxSize())

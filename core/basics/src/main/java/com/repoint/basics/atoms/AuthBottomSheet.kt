@@ -12,11 +12,14 @@ import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Download
 import androidx.compose.material3.Icon
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.repoint.basics.R
+import com.repoint.dependencies.theme.RepointTypography
 import com.repoint.dependencies.theme.repointBlue
 import com.repoint.dependencies.theme.repointOrange
 
@@ -47,8 +50,13 @@ fun AuthButtonsSheet(onCreateWallet: () -> Unit, onImportWallet: () -> Unit) {
     Column(verticalArrangement = Arrangement.SpaceEvenly) {
 
 
-        BigPng(com.repoint.dependencies.R.drawable.orglogo,Modifier.padding(2.dp),18f,10f)
+        BigPng(com.repoint.dependencies.R.drawable.add_wallet,Modifier.padding(2.dp),16f,10f)
 
+        Spacer(modifier = Modifier.padding(bottom = 8.dp))
+
+        Text("Repoint wallet is Safe And Secure.Your Data will not Store anywhere", style = RepointTypography.bodyMedium, textAlign = TextAlign.Center, modifier = Modifier.padding(4.dp))
+
+        Spacer(modifier = Modifier.padding(bottom = 8.dp))
 
         WalletButton(
             "Create new wallet",

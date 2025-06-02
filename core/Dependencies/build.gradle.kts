@@ -100,7 +100,6 @@ dependencies {
     //web3 android
     //noinspection GradleDependency
     api(libs.core.v489android)
-    api(libs.codegen.v487)
     api( libs.utils)
     api(libs.crypto)
     api(libs.rlp)
@@ -143,6 +142,7 @@ dependencies {
     api(libs.androidx.appcompat.resources)
 
     api(libs.androidx.foundation)
+    api(libs.androidx.foundation.layout)
 
     //extended icons material
     api(libs.androidx.material.icons.extended)
@@ -159,6 +159,8 @@ dependencies {
     api(libs.androidx.camera.camera2)
     api(libs.androidx.camera.lifecycle)
     api(libs.androidx.camera.view)
+
+    api(libs.slf4j.simple)
 
     //leak cannery
     debugApi(libs.leakcanary.android)

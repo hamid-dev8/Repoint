@@ -104,7 +104,7 @@ fun TokenWithNetworkDb(
     var tokenLoaded by remember { mutableStateOf(false) }
     var networkLoaded by remember { mutableStateOf(false) }
 
-    Box(Modifier.size(48.dp).background(networkBackgroundColor, shape = CircleShape)) {
+    Box(modifier.size(32.dp).background(networkBackgroundColor, shape = CircleShape)) {
 
         if (!tokenLoaded) {
             // Shimmer placeholder for Token
@@ -131,6 +131,7 @@ fun TokenWithNetworkDb(
                         tokenLoaded = false
                     },
                     onSuccess = { _, _ ->
+                        onTokenImageLoaded()
                         tokenLoaded = true
                         Log.d("COIL_IMAGE", "Image Loaded Successfully ${token.logoUrl}")
                     }
@@ -144,7 +145,7 @@ fun TokenWithNetworkDb(
         )
 
 
-        Box(modifier = modifier.size(16.dp).align(Alignment.BottomEnd).clip(CircleShape).background(backgroundColor), contentAlignment = Alignment.Center) {
+        Box(modifier = modifier.size(14.dp).align(Alignment.BottomEnd).clip(CircleShape).background(backgroundColor), contentAlignment = Alignment.Center) {
             if (!networkLoaded) {
                 // Shimmer placeholder for Token
                 Box(
@@ -166,6 +167,7 @@ fun TokenWithNetworkDb(
                         networkLoaded = false
                     },
                     onSuccess = { _, _ ->
+                        onNetworkImageLoaded()
                         networkLoaded = true
                         Log.d("COIL_IMAGE", "Image Loaded Successfully ${token.logoUrl}")
                     }
@@ -173,7 +175,7 @@ fun TokenWithNetworkDb(
                 ).build(),
                 contentDescription = "Network Logo",
                 modifier = Modifier
-                    .size(14.dp)
+                    .size(8.dp)
                     .clip(RoundedCornerShape(8.dp)),
                 contentScale = ContentScale.Inside,
                 placeholder = painterResource(com.repoint.dependencies.R.drawable.ic_placeholder),
@@ -201,7 +203,7 @@ fun TokenWithNetworkIcon(
     var tokenLoaded by remember { mutableStateOf(false) }
     var networkLoaded by remember { mutableStateOf(false) }
 
-    Box(Modifier.size(48.dp).background(networkBackgroundColor, shape = CircleShape)) {
+    Box(Modifier.size(32.dp).background(networkBackgroundColor, shape = CircleShape)) {
 
         if (!tokenLoaded) {
             // Shimmer placeholder for Token
@@ -241,7 +243,7 @@ fun TokenWithNetworkIcon(
         )
 
 
-        Box(modifier = modifier.size(16.dp).align(Alignment.BottomEnd).clip(CircleShape).background(backgroundColor), contentAlignment = Alignment.Center) {
+        Box(modifier = modifier.size(14.dp).align(Alignment.BottomEnd).clip(CircleShape).background(backgroundColor), contentAlignment = Alignment.Center) {
             if (!networkLoaded) {
                 // Shimmer placeholder for Token
                 Box(
@@ -270,7 +272,7 @@ fun TokenWithNetworkIcon(
                 ).build(),
                 contentDescription = "Network Logo",
                 modifier = Modifier
-                    .size(14.dp)
+                    .size(8.dp)
                     .clip(RoundedCornerShape(8.dp)),
                 contentScale = ContentScale.Inside,
                 placeholder = painterResource(com.repoint.dependencies.R.drawable.ic_placeholder),

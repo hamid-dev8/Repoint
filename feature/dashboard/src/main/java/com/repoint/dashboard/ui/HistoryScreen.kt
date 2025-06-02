@@ -3,6 +3,7 @@ package com.repoint.dashboard.ui
 import android.util.Log
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.border
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -42,9 +43,11 @@ import com.repoint.basics.atoms.RepointAppBar
 import com.repoint.basics.logic.formatDate
 import com.repoint.dashboard.HistoryViewModel
 import com.repoint.dependencies.theme.RepointTypography
+import com.repoint.dependencies.theme.lightGray
 import com.repoint.dependencies.theme.richBlack
 import com.repoint.models.sharedmodels.local.RepointWallet
 import com.repoint.models.sharedmodels.remote.RepointTransactions
+import com.repoint.models.sharedmodels.remote.moralisChainMap
 import kotlin.math.exp
 
 @Composable
@@ -58,6 +61,7 @@ fun TransactionHistoryScreen(
 ) {
 
     var wallets by remember { mutableStateOf<List<RepointWallet>>(emptyList()) }
+    val allChains = moralisChainMap.values.toList()
 
     RepointAppBar("Transactions history", exp = {_,_,_ ->
 
@@ -71,14 +75,14 @@ fun TransactionHistoryScreen(
             val user = userViewmodel.fetchUser()
             //wallets = user.let { it?.userId?.let { it1 -> walletViewModel.getChainWallet(userit1) }!! }
             // transactions  = historyViewModel.getNativeHistory(address = wallets[0].address, chain = "eth", order = "DESC")
-            historyViewModel.getNativeHistory(walletAddress, chain = "polygon", "DESC")
+            //historyViewModel.getNativeHistory(walletAddress, chain = "eth", "DESC")
+            historyViewModel.getAllChainHistory(address = walletAddress, chains = allChains,"DESC")
         }
 
         LazyColumn(modifier = Modifier.fillMaxSize()) {
 
             items(transactions ?: emptyList()) { transaction ->
                 TransactionItem(transaction, balance)
-                Spacer(Modifier.height(12.dp))
             }
 
         }
@@ -117,9 +121,9 @@ fun TransactionItem(transaction: RepointTransactions, balance: Float) {
         Card(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 8.dp), // More balanced padding
+                .padding(horizontal = 16.dp, vertical = 8.dp)
+                .border(0.5.dp, lightGray, RoundedCornerShape(12.dp)), // More balanced padding
             colors = CardDefaults.cardColors(Color.White),
-            elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
             shape = RoundedCornerShape(12.dp)
         ) {
             Row(

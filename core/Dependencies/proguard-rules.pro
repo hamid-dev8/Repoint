@@ -19,3 +19,61 @@
 # If you keep the line number information, uncomment this to
 # hide the original source file name.
 #-renamesourcefileattribute SourceFile
+
+# Keep all Hilt/Dagger generated classes
+-keep class dagger.** { *; }
+-keep interface dagger.** { *; }
+
+# Keep Hilt entry points and components
+-keep class * extends dagger.hilt.android.HiltAndroidApp
+-keep class * extends dagger.hilt.android.lifecycle.HiltViewModel
+
+
+
+
+-keepattributes Signature
+-keepattributes *Annotation*
+
+# Keep Compose runtime annotations (used by Compose compiler)
+-keep class androidx.compose.runtime.** { *; }
+
+# Keep composable functions used via reflection
+-keepclassmembers class * {
+    @androidx.compose.runtime.Composable <methods>;
+}
+
+# Keep Android Parcelable implementations
+-keep class * implements android.os.Parcelable {
+    public static final android.os.Parcelable$Creator *;
+}
+
+# Keep enum classes used in your app
+-keepclassmembers enum * {
+    public static **[] values();
+    public static ** valueOf(java.lang.String);
+}
+
+# Remove Log calls in release builds to reduce size
+-assumenosideeffects class android.util.Log {
+    public static *** d(...);
+    public static *** v(...);
+    public static *** i(...);
+}
+
+-keepclassmembers class kotlin.Metadata { *; }
+-keepclassmembers class * {
+    kotlin.Metadata *;
+}
+
+# Keep annotations (if used)
+-keepattributes *Annotation*
+
+# Optionally keep some resources (if required)
+
+-keep class ** { *; }
+
+
+# Optimize everything else
+-optimizations !code/simplification/arithmetic,!field/*,!class/merging/*
+
+-dontwarn kotlin.**

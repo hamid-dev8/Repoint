@@ -8,11 +8,9 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -29,12 +27,13 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import com.repoint.account.UserViewModel
 import com.repoint.account.WalletViewModel
+import com.repoint.basics.atoms.PhraseChallengeRow
 import com.repoint.basics.atoms.RepointAppBar
 import com.repoint.basics.atoms.RepointCommonButton
 import com.repoint.basics.atoms.RepointThreeTextSelectable
 import com.repoint.basics.atoms.WalletCreationStepProgress
-import com.repoint.dependencies.theme.RepointTypography
 import com.repoint.dependencies.accountmanager.SpManager
+import com.repoint.dependencies.theme.RepointTypography
 import kotlinx.coroutines.launch
 import kotlin.random.Random
 
@@ -60,9 +59,12 @@ fun ConfirmPhrases(
 
 
     val decodedPhrases = Uri.decode(phrases)
-    val phraseList = decodedPhrases.split(" ")
+    val phraseList = Uri.decode(phrases).split(" ")
     val shuffledList = phraseList.chunked(3).flatMap { it.shuffled() }
-    val resultPair = calculateRandomStrings(phraseList)
+    val challengeRows = remember {
+        phraseList
+            .let { generateChallengeRows(it) } // see next step
+    }
     var isUserCorrect by remember { mutableStateOf(false) }
 
     val coroutineScope = rememberCoroutineScope()
@@ -73,9 +75,7 @@ fun ConfirmPhrases(
 
     val defaultName = remember { mutableStateOf(wallet?.name.orEmpty()) }
 
-    for (index in 0..3) {
-        Log.d("confirmsss", " the result pair is : ${resultPair.get(index).first}")
-    }
+
     Log.d("confirmsss", "orginal list : $phraseList")
     Log.d("confirmsss", "shuffled by 3 : $shuffledList")
 
@@ -86,9 +86,6 @@ fun ConfirmPhrases(
                 .fillMaxSize()
                 .padding(16.dp)
         ) {
-            resultPair.fastForEachIndexed { index, answer ->
-                Log.d("confirmsss", " result pair is : ${resultPair.toString()}")
-
 
                 Column(Modifier.padding(16.dp)) {
 
@@ -113,12 +110,14 @@ fun ConfirmPhrases(
                             .padding(bottom = 16.dp),
                         singleLine = true
                     )
-                    RepointThreeTextSelectable(shuffledList, resultPair, isSelectedCorrectly = {
-                        isUserCorrect = it
-                        Log.d("isSelected", "is it ok? : $isUserCorrect")
-                    })
+                    RepointThreeTextSelectable(
+                        rows = challengeRows,
+                        isSelectedCorrectly = { isCorrect ->
+                            isUserCorrect = isCorrect
+                        }
+                    )
                 }
-            }
+
 
             Log.d("confirmsss", "wallet is   sss : $wallet")
 
@@ -178,16 +177,19 @@ fun ConfirmPhrases(
     })
 
 }
+fun generateChallengeRows(phrases: List<String>): List<PhraseChallengeRow> {
+    // Select 4 unique random indexes from the phrase list (0–11)
+    val indexes = (phrases.indices).shuffled().take(4)
 
+    return indexes.map { index ->
+        val correctWord = phrases[index]
+        val distractors = phrases.filterNot { it == correctWord }.shuffled().take(2)
+        val options = (distractors + correctWord).shuffled()
 
-fun calculateRandomStrings(phrases: List<String>): List<Pair<Int, String>> {
-    val result = mutableListOf<Pair<Int, String>>()
-
-    phrases.chunked(3).forEachIndexed { chunkedIndex, chunk ->
-
-        val randomIndexInChunk = Random.nextInt(chunk.size)
-        val actualIndex = chunkedIndex * 3 + randomIndexInChunk + 1
-        result.add(actualIndex to chunk[randomIndexInChunk])
+        PhraseChallengeRow(
+            wordPosition = index + 1, // display 1-based index
+            correctWord = correctWord,
+            options = options
+        )
     }
-    return result
 }

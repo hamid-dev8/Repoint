@@ -13,6 +13,8 @@ import android.util.Log
 import android.view.PixelCopy
 import android.view.View
 import android.widget.Toast
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
@@ -22,6 +24,8 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.twotone.ContentCopy
@@ -35,6 +39,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.platform.LocalContext
@@ -43,7 +48,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
+import coil3.compose.AsyncImage
 import com.repoint.basics.atoms.BigBitmap
+import com.repoint.basics.atoms.ErrorScreen
 import com.repoint.basics.atoms.IconWithText
 import com.repoint.basics.atoms.LoaderAnimation
 import com.repoint.basics.atoms.RepointAppBar
@@ -53,6 +60,12 @@ import com.repoint.basics.logic.shareImage
 import com.repoint.dashboard.NetworkViewModel
 import com.repoint.dependencies.theme.RepointTypography
 import com.repoint.dependencies.theme.ghostWhite
+import com.repoint.dependencies.theme.lightGray
+import com.repoint.dependencies.theme.pureWhite
+import com.repoint.models.sharedmodels.ui.UiState
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.firstOrNull
+import kotlinx.coroutines.launch
 
 @Composable
 fun WalletQrCodeScreen(
@@ -60,174 +73,190 @@ fun WalletQrCodeScreen(
     walletAddress: String,
     masterWalletId: String,
     tokenId: Int?,
+    networkName: String,
     networkViewModel: NetworkViewModel = hiltViewModel()
 ) {
 
-    RepointAppBar("Receive", exp = {_,_,_ ->
+    RepointAppBar("Receive", exp = { _, _, _ ->
 
         Log.d("ReceiveScreen", "wallet address is : $walletAddress")
         val context = LocalContext.current
         val clipboardManager =
             context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
 
+        Log.d("receiveScreen", "token id is $tokenId")
         val activeTokens by networkViewModel.activeTokens.collectAsState()
         val activeNetworks by networkViewModel.activeNetworks.collectAsState()
         val selectedToken = activeTokens.firstOrNull { it.tokenId == tokenId }
 
         var tokenImageLoaded by remember { mutableStateOf(false) }
         var networkImageLoaded by remember { mutableStateOf(false) }
-        var isLoading = !tokenImageLoaded && !networkImageLoaded
+
+        val uiState by networkViewModel.uiState.collectAsState()
 
         LaunchedEffect(masterWalletId) {
-
             networkViewModel.fetchActiveTokens(masterWalletId = masterWalletId)
-
-            tokenImageLoaded = true
-            networkImageLoaded = true
-            //isLoading = false
+            delay(1000)
+            /*    tokenImageLoaded = true
+                networkImageLoaded = true*/
         }
 
-
-        if (isLoading) {
-            // 🔥 Show Loading Animation Centered
-            Box(
-                Modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center
-            ) {
+        when (uiState) {
+            is UiState.Loading -> {
                 LoaderAnimation()
             }
-        } else {
 
+            is UiState.Success -> {
+                Box(
+                    modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.TopCenter,
+                ) {
 
-            Box(
-                modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.TopCenter,
-            ) {
+                    Log.d("receive", "$networkName")
+                    val viewRef = remember { mutableStateOf<View?>(null) }
 
-                val viewRef = remember { mutableStateOf<View?>(null) }
+                    var bitmap by remember { mutableStateOf<Bitmap?>(null) }
 
-                var bitmap by remember { mutableStateOf<Bitmap?>(null) }
-
-                CaptureScreen(
-                    content = {
-                        WarningBanner(
-                            "only Send Polygon(POL) assets to this address , other assets will be lost forever",
-                            modifier = Modifier.padding(2.dp)
-                        )
-
-                        Column(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .align(Alignment.Center),
-                            verticalArrangement = Arrangement.Center,
-                            horizontalAlignment = Alignment.CenterHorizontally
-                        ) {
-
-
-                            if (selectedToken != null) {
-
-
-                                if (masterWalletId.isBlank()) {
-                                    Toast.makeText(
-                                        context,
-                                        "Wallet ID missing!",
-                                        Toast.LENGTH_SHORT
-                                    )
-                                        .show()
-                                    return@Column
-                                }
-                                Log.d(
-                                    "receiveScreen",
-                                    "image Request : token : ${selectedToken.logoUrl.trim()} "
-                                )
-                                Log.d(
-                                    "receiveScreen",
-                                    "image Request : symbol : ${selectedToken.symbol.trim()} "
-                                )
-                                TokenWithNetworkDb(
-                                    token = selectedToken,
-                                    activeTokens[0].logoUrl,
-                                    onTokenImageLoaded = { tokenImageLoaded = true },
-                                    onNetworkImageLoaded = { networkImageLoaded = true })
-
-                                Text(
-                                    selectedToken.name,
-                                    style = RepointTypography.titleLarge,
-                                    fontWeight = FontWeight.Bold
-                                )
-
-                            }
-
-
-
-                            BigBitmap(
-                                aspectRatioWidth = 9.0f,
-                                aspectRatioHeight = 9.0f,
-                                walletAddress = walletAddress,
-                                modifier = Modifier.padding(top = 32.dp, bottom = 8.dp)
+                    CaptureScreen(
+                        content = {
+                            WarningBanner(
+                                "only Send $networkName assets to this address , other assets will be lost forever",
+                                modifier = Modifier.padding(2.dp)
                             )
 
-                            Text(
-                                text = walletAddress,
-                                style = RepointTypography.labelMedium,
-                                modifier = Modifier.padding(top = 24.dp)
-                            )
-
-                            Row(
-                                Modifier.fillMaxWidth(),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.Center
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .align(Alignment.Center).padding(8.dp),
+                                verticalArrangement = Arrangement.Center,
+                                horizontalAlignment = Alignment.CenterHorizontally
                             ) {
 
-                                IconWithText(
-                                    modifier = Modifier
-                                        .padding(32.dp)
-                                        .clickable(
-                                            interactionSource = remember { MutableInteractionSource() },
-                                            indication = null
-                                        ) {
-                                            val clip =
-                                                ClipData.newPlainText("phrases", walletAddress)
-                                            clipboardManager.setPrimaryClip(clip)
-                                            Toast
-                                                .makeText(
-                                                    context,
-                                                    "Copied To Clipboard!",
-                                                    Toast.LENGTH_SHORT
-                                                )
-                                                .show()
-                                        },
-                                    iconSize = 18.dp,
-                                    icon = Icons.TwoTone.ContentCopy,
-                                    text = "Copy"
+
+                                if (selectedToken != null) {
+
+                                    if (masterWalletId.isBlank()) {
+                                        Toast.makeText(
+                                            context,
+                                            "Wallet ID missing!",
+                                            Toast.LENGTH_SHORT
+                                        )
+                                            .show()
+                                        return@Column
+                                    }
+                                    Log.d(
+                                        "receiveScreen",
+                                        "image Request : token : ${selectedToken.logoUrl.trim()} "
+                                    )
+                                    Log.d(
+                                        "receiveScreen",
+                                        "image Request : symbol : ${selectedToken.symbol.trim()} "
+                                    )
+                                   AsyncImage(
+                                       model = selectedToken.logoUrl,
+                                       contentDescription = selectedToken.symbol,
+                                       modifier = Modifier.padding(8.dp)
+                                           .clip(RoundedCornerShape(22.dp))
+                                           .background(pureWhite)
+                                           .border(0.5.dp, lightGray, RoundedCornerShape(22.dp))
+                                           .padding(horizontal = 12.dp, vertical = 6.dp)
+                                   )
+
+                                    Text(
+                                        selectedToken.name,
+                                        style = RepointTypography.titleLarge,
+                                        modifier = Modifier.padding(8.dp)
+                                            .clip(RoundedCornerShape(22.dp))
+                                            .background(pureWhite)
+                                            .border(0.5.dp, lightGray, RoundedCornerShape(22.dp))
+                                            .padding(horizontal = 12.dp, vertical = 6.dp)
+
+                                    )
+
+                                }
+
+
+
+                                BigBitmap(
+                                    aspectRatioWidth = 9.0f,
+                                    aspectRatioHeight = 9.0f,
+                                    walletAddress = walletAddress,
+                                    modifier = Modifier.padding(top = 32.dp, bottom = 8.dp)
                                 )
 
-                                IconWithText(
-                                    modifier = Modifier
-                                        .padding(32.dp)
-                                        .clickable(
-                                            interactionSource = remember { MutableInteractionSource() },
-                                            indication = null
-                                        ) {
-                                            val uri = bitmap?.let { saveBitmapToFile(context, it) }
-                                            uri?.let {
-                                                shareImage(context, it, walletAddress)
-                                            }
-                                        },
-                                    iconSize = 18.dp,
-                                    icon = Icons.Default.Share,
-                                    text = "Share"
+                                Text(
+                                    text = walletAddress,
+                                    style = RepointTypography.labelMedium,
+                                    modifier = Modifier.padding(top = 24.dp)
                                 )
 
+                                Row(
+                                    Modifier.fillMaxWidth(),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.Center
+                                ) {
+
+                                    IconWithText(
+                                        modifier = Modifier
+                                            .padding(32.dp)
+                                            .clickable(
+                                                interactionSource = remember { MutableInteractionSource() },
+                                                indication = null
+                                            ) {
+                                                val clip =
+                                                    ClipData.newPlainText("phrases", walletAddress)
+                                                clipboardManager.setPrimaryClip(clip)
+                                                Toast
+                                                    .makeText(
+                                                        context,
+                                                        "Copied To Clipboard!",
+                                                        Toast.LENGTH_SHORT
+                                                    )
+                                                    .show()
+                                            },
+                                        iconSize = 18.dp,
+                                        icon = Icons.TwoTone.ContentCopy,
+                                        text = "Copy"
+                                    )
+
+                                    IconWithText(
+                                        modifier = Modifier
+                                            .padding(32.dp)
+                                            .clickable(
+                                                interactionSource = remember { MutableInteractionSource() },
+                                                indication = null
+                                            ) {
+                                                val uri =
+                                                    bitmap?.let { saveBitmapToFile(context, it) }
+                                                uri?.let {
+                                                    shareImage(context, it, walletAddress)
+                                                }
+                                            },
+                                        iconSize = 18.dp,
+                                        icon = Icons.Default.Share,
+                                        text = "Share"
+                                    )
+
+                                }
                             }
+                        }, onBitmapCaptured = { capturedBitmap ->
+                            bitmap = capturedBitmap
+
                         }
-                    }, onBitmapCaptured = { capturedBitmap ->
-                        bitmap = capturedBitmap
-
-                    }
-                )
+                    )
 
 
+                }
             }
+
+            is UiState.Error -> {
+                ErrorScreen(
+                    message = (uiState as UiState.Error).messages,
+                    modifier = Modifier,
+                    onRetry = {
+                    })
+            }
+
+
         }
     }, navController = navController)
 
@@ -278,4 +307,3 @@ fun CaptureScreen(
         }
     )
 }
-

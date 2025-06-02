@@ -1,7 +1,9 @@
 package com.repoint.dashboard.ui
 
+import android.content.Intent
 import android.net.Uri
 import android.util.Log
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -18,7 +20,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.pager.VerticalPager
@@ -30,11 +31,12 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.SecondaryTabRow
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Tab
 import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -49,6 +51,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
@@ -61,19 +64,20 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import coil3.compose.AsyncImage
 import com.google.gson.Gson
+import com.google.gson.reflect.TypeToken
 import com.repoint.account.UserViewModel
 import com.repoint.account.WalletViewModel
 import com.repoint.basics.atoms.AuthBottomSheetContent
 import com.repoint.basics.atoms.BalanceScreen
 import com.repoint.basics.atoms.CircularCardWithIcon
+import com.repoint.basics.atoms.ErrorScreen
 import com.repoint.basics.atoms.LoaderAnimation
 import com.repoint.basics.atoms.RepointAppBar
 import com.repoint.basics.atoms.ViewPagerRobot
 import com.repoint.basics.atoms.launchBotTab
-import com.repoint.basics.logic.toToken
 import com.repoint.dashboard.NetworkViewModel
 import com.repoint.dashboard.TokenViewModel
-import com.repoint.dashboard.Web3ViewModel
+import com.repoint.dashboard.activity.WebBotActivity
 import com.repoint.dependencies.R
 import com.repoint.dependencies.accountmanager.SpManager
 import com.repoint.dependencies.theme.RepointTypography
@@ -88,6 +92,9 @@ import com.repoint.models.sharedmodels.local.MasterWallet
 import com.repoint.models.sharedmodels.local.TokenEntity
 import com.repoint.models.sharedmodels.remote.NativesBalance
 import com.repoint.models.sharedmodels.remote.TokensBalance
+import com.repoint.models.sharedmodels.remote.moralisChainMap
+import com.repoint.models.sharedmodels.ui.UiState
+import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.launch
 import java.math.BigDecimal
 import java.text.DecimalFormat
@@ -130,6 +137,11 @@ fun HomeScreen(
 
     var isLoading by remember { mutableStateOf(true) }
 
+    //refresh
+    val refreshState = rememberPullToRefreshState()
+
+    val allChains = moralisChainMap.values.toList()
+
 
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val coroutineScope = rememberCoroutineScope()
@@ -152,7 +164,19 @@ fun HomeScreen(
 
     val sheetTokenState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     var showTokenBottomSheet by remember { mutableStateOf(false) }
+    val uiState by networkViewModel.uiState.collectAsState()
+    val uiStateBlockChain by networkViewModel.uiStateNetworkBlockChain.collectAsState()
 
+    var isRefreshing by remember { mutableStateOf(false) }
+
+    var isSortAscending by remember { mutableStateOf(true) }
+    val sortedTokens = remember(tokenList, isSortAscending) {
+        tokenList?.result?.sortedBy { it.symbol.lowercase() }?.let { list ->
+            if (isSortAscending) list else list.reversed()
+        } ?: emptyList()
+    }
+
+    val rotationAngle by animateFloatAsState(targetValue = if (isSortAscending) 0f else 180f)
 
     LaunchedEffect(selectedWallet?.masterWalletId, activeWalletId, masterWallets) {
 
@@ -203,10 +227,51 @@ fun HomeScreen(
                     )
                     // tokenList = tokenViewModel.getTokenBalance(address = address, chain = "polygon")
 
-                    tokenList = tokenViewModel.getMergedActivatedTokenBalances(
-                        activeAddress!!, "polygon",
-                        selectedWallet!!.masterWalletId
-                    )
+                    val enabledChains = networkViewModel.getEnabledMoralisChains(selectedWalletId)
+
+                    tokenViewModel.getAllAvailableTokensFromMoralisOnly(
+                        walletAddress = activeAddress!!,
+                        masterWalletId = selectedWalletId,
+                        enabledChains = enabledChains
+                    ){ tokens ->
+                        tokenList = NativesBalance(
+                            cursor = "",
+                            page = 1,
+                            pageSize = tokens.size,
+                            result = tokens
+                        )
+
+                    }
+
+                    //todo check this
+                   // tokenViewModel.getTokenBalancesByWallet(walletAddress = activeAddress!!, chain = "eth")
+
+                /*    tokenViewModel.getAllChainTokenBalances(
+                        walletAddress = activeAddress!!,
+                        masterWalletId = selectedWallet!!.masterWalletId,
+                        chains = allChains
+                    ) { allBalances ->
+                        // ✅ Deduplicate by lowercased address AND balance presence
+                        val distinctBalances = allBalances
+                            .groupBy { (chain, token) -> "${token.tokenAddress.lowercase()}-$chain" }
+                            .map { (_, tokenPairs) ->
+                                tokenPairs.maxByOrNull { (_, token) ->
+                                    val hasPrice = if (token.usdPrice > 0) 100 else 0
+                                    val hasBalance = if (token.balance != "0" && token.balance != "0.0") 10 else 0
+                                    hasPrice + hasBalance
+                                }!!.second // pick TokensBalance only
+                            }
+                        Log.d("token-filter", "Tokens after deduplication: ${distinctBalances.map { it.symbol to it.usdPrice }}")
+
+
+                        tokenList = NativesBalance(
+                            cursor = "",
+                            page = 1,
+                            pageSize = allBalances.size,
+                            result = distinctBalances
+                        )
+                    }*/
+
 
                     selectedWallet?.let { networkViewModel.initializeWithWallet(it.masterWalletId) }
 
@@ -232,188 +297,250 @@ fun HomeScreen(
         Log.d("token", "token list are : $tokenList")
         Log.d("token", "ether is : $ether")
 
-        isLoading = false
+        /*// isLoading = false
+        if (uiState !is UiState.Loading) {
+            delay(1500)
+            isRefreshing = false
+        }*/
     }
 
 
 
-    RepointAppBar("", titleVector = R.drawable.repoint_wallet,exp = { isSearchActive, searchQuery, onSearchQueryChange ->
+    RepointAppBar(
+        "",
+        titleVector = R.drawable.repoint_wallet,
+        exp = { isSearchActive, searchQuery, onSearchQueryChange ->
 
-        if (isLoading) {
-            // 🔥 Show Loading Animation Centered
-            Box(
-                Modifier.fillMaxSize(),
+
+            PullToRefreshBox(
+                state = refreshState,
+                isRefreshing = uiState is UiState.Loading,
+                onRefresh = {
+                    coroutineScope.launch {
+                        val walletId = spManager.getActiveWalletId().firstOrNull()
+                        if (!walletId.isNullOrEmpty()) {
+                            networkViewModel._uiState.value = UiState.Loading
+                            networkViewModel.initializeWithWallet(walletId) // your reload logic
+                        }
+
+                        /*     // Wait for loading to complete (success or error)
+                             networkViewModel.uiState.collect { state ->
+                                 if (state !is UiState.Loading) {
+                                     cancel() // Stop collecting flow
+                                 }
+                             }*/
+                    }
+                },
+                modifier = Modifier.fillMaxSize(),
                 contentAlignment = Alignment.Center
             ) {
-                LoaderAnimation()
-            }
-        } else {
-
-            Box(modifier = Modifier.fillMaxSize()) {
-                LazyColumn(
-                    Modifier
-                        .fillMaxSize()
-                        .padding(8.dp)
-                ) {
-
-                    val amount = netWorthSection(tokenList?.result)
-                    val formattedBalanceAmount = DecimalFormat("#0.00").format(amount)
-                    item {
-                        Card(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(7.dp),
-                            shape = RoundedCornerShape(22.dp),
-                            border = BorderStroke(1.dp, lightGray),
-                            colors = CardDefaults.cardColors(containerColor = pureWhite)
-                        ) {
-
-                           // Spacer(Modifier.padding(top = 4.dp))
-
-                            BalanceScreen(
-                                masterWallets,
-                                balance = "$$formattedBalanceAmount",
-                                onAddWallet = {
-                                    showBottomSheet = true
-                                },
-                                onWalletSelected = { selectedWallet ->
-                                    coroutineScope.launch {
-                                        spManager.setActiveWallet(selectedWallet.masterWalletId)
-                                        networkViewModel.initializeWithWallet(selectedWallet.masterWalletId)
-                                        Log.d(
-                                            "token",
-                                            "selected wallet changed : ${selectedWallet.masterWalletId}"
-                                        )
-                                        Log.d("token", "master wallet changed : $masterWallets")
-                                    }
-                                    //TODO ezafe kardane safe add wallet va sakht wallet jadid
-                                    //walletViewModel.createUserWallet()
-
-                                    selectedWalletId =
-                                        selectedWallet.masterWalletId
-                                },
-                                selectedWalletName = selectedWalletId
-                            )
-                            if (masterWallets.isNotEmpty() && !activeAddress.isNullOrEmpty()) {
-                                ActionsRow(
-                                    navController,
-                                    wallet = selectedWallet,
-                                    tokenList,
-                                    activeAddress!!
-                                )
-                            }
-                        }
-                        Spacer(Modifier.padding(bottom = 24.dp))
+                when (uiState) {
+                    is UiState.Loading -> {
+                        LoaderAnimation()
                     }
 
-                    item {
-                        ViewPagerRobot()
-                    }
-                    // ─── sticky TabRow ─────────────────────────────────────
-                    // ① sticky header for your tab
-                    // s
-                    stickyHeader {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .background(ghostWhite)
-                                .padding(horizontal = 10.dp, vertical = 16.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            // ✅ Manual tabs in a Row
-                            Row(
-                                horizontalArrangement = Arrangement.spacedBy(16.dp),
-                                verticalAlignment = Alignment.CenterVertically
+                    is UiState.Success -> {
+                        Box(modifier = Modifier.fillMaxSize()) {
+                            LazyColumn(
+                                Modifier
+                                    .fillMaxSize()
+                                    .padding(8.dp)
                             ) {
-                                listOf("Tokens", "NFTs").forEachIndexed { idx, title ->
-                                    Column(
-                                        horizontalAlignment = Alignment.CenterHorizontally,
-                                        modifier = Modifier.padding(vertical = 2.dp)
-                                            .clickable { selectedTab = idx }
-                                    ) {
-                                        Text(
-                                            text = title,
-                                            style = RepointTypography.titleSmall.copy(
-                                                color = if (selectedTab == idx) repointBlue else Color.Gray,
-                                                fontWeight = if (selectedTab == idx) FontWeight.Bold else FontWeight.Normal
-                                            ),
-                                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp).padding(bottom = 8.dp)
-                                        )
 
-                                        // 🔽 Indicator under the selected tab
-                                        if (selectedTab == idx) {
-                                            Box(
-                                                modifier = Modifier
-                                                    .height(2.dp)
-                                                    .width(24.dp)
-                                                    .clip(RoundedCornerShape(1.dp))
-                                                    .background(repointBlue)
+                                val amount = netWorthSection(tokenList?.result)
+                                val formattedBalanceAmount = DecimalFormat("#0.00").format(amount)
+                                item {
+                                    Card(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(7.dp),
+                                        shape = RoundedCornerShape(22.dp),
+                                        border = BorderStroke(1.dp, lightGray),
+                                        colors = CardDefaults.cardColors(containerColor = pureWhite)
+                                    ) {
+
+                                        // Spacer(Modifier.padding(top = 4.dp))
+
+                                        BalanceScreen(
+                                            masterWallets,
+                                            balance = "$$formattedBalanceAmount",
+                                            onAddWallet = {
+                                                showBottomSheet = true
+                                            },
+                                            onWalletSelected = { selectedWallet ->
+                                                coroutineScope.launch {
+                                                    spManager.setActiveWallet(selectedWallet.masterWalletId)
+                                                    networkViewModel.initializeWithWallet(
+                                                        selectedWallet.masterWalletId
+                                                    )
+                                                    Log.d(
+                                                        "token",
+                                                        "selected wallet changed : ${selectedWallet.masterWalletId}"
+                                                    )
+                                                    Log.d(
+                                                        "token",
+                                                        "master wallet changed : $masterWallets"
+                                                    )
+                                                }
+                                                //TODO ezafe kardane safe add wallet va sakht wallet jadid
+                                                //walletViewModel.createUserWallet()
+
+                                                selectedWalletId =
+                                                    selectedWallet.masterWalletId
+                                            },
+                                            selectedWalletName = selectedWalletId
+                                        )
+                                        if (masterWallets.isNotEmpty() && !activeAddress.isNullOrEmpty()) {
+                                            ActionsRow(
+                                                navController,
+                                                wallet = selectedWallet,
+                                                tokenList,
+                                                activeAddress!!
                                             )
-                                        } else {
-                                            Spacer(modifier = Modifier.height(4.dp))
+                                        }
+                                    }
+                                    Spacer(Modifier.padding(bottom = 24.dp))
+                                }
+
+                                item {
+                                    ViewPagerRobot()
+                                }
+                                // ─── sticky TabRow ─────────────────────────────────────
+                                // ① sticky header for your tab
+                                // s
+                                stickyHeader {
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .background(ghostWhite)
+                                            .padding(horizontal = 10.dp, vertical = 16.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        // ✅ Manual tabs in a Row
+                                        Row(
+                                            horizontalArrangement = Arrangement.spacedBy(16.dp),
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            listOf("Tokens", "NFTs").forEachIndexed { idx, title ->
+                                                Column(
+                                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                                    modifier = Modifier
+                                                        .padding(vertical = 2.dp)
+                                                        .clickable { selectedTab = idx }
+                                                ) {
+                                                    Text(
+                                                        text = title,
+                                                        style = RepointTypography.titleSmall.copy(
+                                                            color = if (selectedTab == idx) repointBlue else Color.Gray,
+                                                            fontWeight = if (selectedTab == idx) FontWeight.Bold else FontWeight.Normal
+                                                        ),
+                                                        modifier = Modifier
+                                                            .padding(
+                                                                horizontal = 8.dp,
+                                                                vertical = 4.dp
+                                                            )
+                                                            .padding(bottom = 8.dp)
+                                                    )
+
+                                                    // 🔽 Indicator under the selected tab
+                                                    if (selectedTab == idx) {
+                                                        Box(
+                                                            modifier = Modifier
+                                                                .height(2.dp)
+                                                                .width(24.dp)
+                                                                .clip(RoundedCornerShape(1.dp))
+                                                                .background(repointBlue)
+                                                        )
+                                                    } else {
+                                                        Spacer(modifier = Modifier.height(4.dp))
+                                                    }
+                                                }
+                                            }
+                                        }
+
+
+                                        Spacer(modifier = Modifier.weight(1f))
+
+                                        // ✅ Icons aligned to right
+                                        Row(
+                                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Icon(
+                                                painter = painterResource(R.drawable.add),
+                                                contentDescription = "Add",
+                                                modifier = Modifier
+                                                    .size(24.dp)
+                                                    .clickable { navController.navigate("networks") }
+                                            )
+                                            Icon(
+                                                painter = painterResource(R.drawable.sort_bottom),
+                                                contentDescription = "Sort",
+                                                modifier = Modifier
+                                                    .size(24.dp)
+                                                    .rotate(rotationAngle)
+                                                    .clickable {
+                                                        isSortAscending = !isSortAscending
+                                                    }
+                                            )
+                                        }
+                                    }
+                                }
+
+                                // ② under that header, show either your token rows or NFT placeholder
+                                if (selectedTab == 0) {
+                                    items(sortedTokens) { token ->
+                                        TokenRow(token)
+                                    }
+                                } else {
+                                    item {
+                                        Box(
+                                            Modifier
+                                                .fillMaxWidth()
+                                                .padding(24.dp),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            Text(
+                                                "Coming Soon",
+                                                style = RepointTypography.headlineSmall
+                                            )
                                         }
                                     }
                                 }
                             }
-
-
-                            Spacer(modifier = Modifier.weight(1f))
-
-                            // ✅ Icons aligned to right
-                            Row(
-                                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Icon(
-                                    painter = painterResource(R.drawable.add),
-                                    contentDescription = "Add",
-                                    modifier = Modifier
-                                        .size(24.dp)
-                                        .clickable { navController.navigate("networks") }
-                                )
-                                Icon(
-                                    painter = painterResource(R.drawable.sort_bottom),
-                                    contentDescription = "Sort",
-                                    modifier = Modifier
-                                        .size(24.dp)
-                                        .clickable { /* handle sort */ }
-                                )
-                            }
                         }
                     }
 
-
-                    // ② under that header, show either your token rows or NFT placeholder
-                    if (selectedTab == 0) {
-                        items(tokenList?.result.orEmpty()) { token ->
-                            TokenRow(token)
-                        }
-                    } else {
-                        item {
-                            Box(
-                                Modifier
-                                    .fillMaxWidth()
-                                    .padding(24.dp),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Text("Coming Soon", style = RepointTypography.headlineSmall)
-                            }
-                        }
+                    is UiState.Error -> {
+                        ErrorScreen(
+                            message = (uiState as UiState.Error).messages,
+                            modifier = Modifier,
+                            onRetry = {
+                                coroutineScope.launch {
+                                    tokenViewModel._uiState.value = UiState.Loading
+                                    val walletId = spManager.getActiveWalletId().firstOrNull()
+                                    if (!walletId.isNullOrEmpty()) {
+                                        networkViewModel.initializeWithWallet(walletId)
+                                    }
+                                }
+                            })
+                        //Text(text = (uiState as UiState.Error).messages, color = Color.Red)
                     }
                 }
-
-
             }
-            //BasicTabLayout(actions = )
-        }
-
-
-    }, navController = navController, isSettings = true, onSettingsClick = {
-        navController.navigate("settings")
-    }, showEndIcon = true, onEndIconClick = {
-        //
-        searchActive = true
-    }, isSearchActive = searchActive, setSearchActive = { searchActive = it })
+        },
+        navController = navController,
+        isSettings = true,
+        onSettingsClick = {
+            navController.navigate("settings")
+        },
+        showEndIcon = true,
+        onEndIconClick = {
+            //
+            searchActive = true
+        },
+        isSearchActive = searchActive,
+        setSearchActive = { searchActive = it })
 
     val filtered = remember(searchText, allTokens) {
         allTokens.filter {
@@ -488,11 +615,11 @@ fun HomeScreen(
                 allTokens = allTokens,
                 activeTokens = activeTokens,
                 onToggle = { token, isActive ->
-                 /*   networkViewModel.toggleActiveNetwork(
-                        tokenId = token.tokenId,
-                        isActive = isActive,
-                        masterWalletId = selectedWallet?.masterWalletId ?: "", updatedToken = token.toToken(), networkId = null
-                    )*/
+                    /*   networkViewModel.toggleActiveNetwork(
+                           tokenId = token.tokenId,
+                           isActive = isActive,
+                           masterWalletId = selectedWallet?.masterWalletId ?: "", updatedToken = token.toToken(), networkId = null
+                       )*/
                 }
             )
         }
@@ -543,18 +670,28 @@ fun TokenToggleSheet(
 fun TokenRow(item: TokensBalance) {
     Row(
         modifier = Modifier
-            .fillMaxWidth().padding(vertical = 10.dp, horizontal = 8.dp).clip(RoundedCornerShape(16.dp)).background(grayHound).border(0.5.dp, lightGray, shape = RoundedCornerShape(16.dp)).padding(8.dp),
+            .fillMaxWidth()
+            .padding(vertical = 10.dp, horizontal = 8.dp)
+            .clip(RoundedCornerShape(16.dp))
+            .background(grayHound)
+            .border(0.5.dp, lightGray, shape = RoundedCornerShape(16.dp))
+            .padding(8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         AsyncImage(
             model = item.logo,
             contentDescription = item.symbol,
             modifier = Modifier
-                .size(32.dp).padding(2.dp)
+                .size(32.dp)
+                .padding(2.dp)
                 .clip(RoundedCornerShape(8.dp))
         )
         Spacer(Modifier.width(8.dp))
-        Column(modifier = Modifier.weight(1f).padding(4.dp)) {
+        Column(
+            modifier = Modifier
+                .weight(1f)
+                .padding(4.dp)
+        ) {
             Text(item.symbol.uppercase(), style = RepointTypography.titleMedium)
             Text(item.name, style = RepointTypography.labelSmall, color = richBlack)
         }
@@ -625,13 +762,17 @@ fun ActionsRow(
                 //todo handle which is native token to do gas fees
                 //send choose token // Todo modify send
                 //navController.navigate("sendToken/${wallet?.address}/${tokenList?.result?.get(0)?.balanceFormatted}")
-                val gson = Gson()
-                val jsonString = gson.toJson(tokenList?.result)
+           /*     val gson = Gson()
+                val type = object : TypeToken<List<TokensBalance>>() {}.type
+                val jsonString = gson.toJson(tokenList?.result,type)*/
+                val tokenListSafe = ArrayList(tokenList?.result ?: emptyList())
+
                 navController.currentBackStackEntry?.savedStateHandle?.set(
                     "tokenBalances",
-                    jsonString
+                    tokenListSafe
                 )
                 navController.navigate("chooseToken/${true}")
+
             },
             modifier = Modifier.weight(1f)
         )
@@ -659,9 +800,12 @@ fun ActionsRow(
             text = "To Bot",
             iconSize = 26.dp,
             onClick = {
-                /* val encodedUrl = Uri.encode("https://app.re-point.net") // or your actual bot URL
+             /*    val encodedUrl = Uri.encode("https://repoint.app") // or your actual bot URL
                  navController.navigate("bot/$encodedUrl")*/
-                launchBotTab(context = context, "https://app.re-point.net")
+             //   launchBotTab(context = context, "https://repoint.app")
+                val intent = Intent(context, WebBotActivity::class.java)
+                intent.putExtra("bot_url", "https://repoint.app")
+                context.startActivity(intent)
             },
             modifier = Modifier.weight(1f)
         )
@@ -775,14 +919,21 @@ fun AssetsTabLayout(tokenList: List<TokensBalance>) {
 @Composable
 fun ListScreen(items: List<TokensBalance>?) {
 
+    var isSortAscending by remember { mutableStateOf(true) }
+
     // val items = List(10) { "item ${it + 1} in tab ${page + 1}" }
+    val sortedItems = remember(items, isSortAscending) {
+        items?.sortedBy { it.symbol.lowercase() }?.let { list ->
+            if (isSortAscending) list else list.reversed()
+        } ?: emptyList()
+    }
 
     LazyColumn(
         modifier = Modifier
             .padding(top = 8.dp, bottom = 8.dp)
             .fillMaxSize()
     ) {
-        items(items.orEmpty()) { item ->
+        items(sortedItems) { item ->
 
 
             Row(

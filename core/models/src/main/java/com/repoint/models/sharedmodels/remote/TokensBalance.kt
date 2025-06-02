@@ -1,7 +1,10 @@
 package com.repoint.models.sharedmodels.remote
 
+import android.os.Parcelable
 import com.google.gson.annotations.SerializedName
+import kotlinx.parcelize.Parcelize
 
+@Parcelize
 data class TokensBalance(
     @SerializedName("token_address") val tokenAddress: String,
     val symbol: String,
@@ -24,4 +27,4 @@ data class TokensBalance(
     @SerializedName("native_token") val nativeToken : Boolean = false,
     @SerializedName("portfolio_percentage") val portfolioPercentage : Float = 0.0f
 
-)
+) : Parcelable
