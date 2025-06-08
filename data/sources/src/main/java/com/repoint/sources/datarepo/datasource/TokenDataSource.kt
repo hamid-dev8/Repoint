@@ -1,12 +1,15 @@
 package com.repoint.sources.datarepo.datasource
 
 import com.repoint.models.sharedmodels.remote.BalanceByWallet
+import com.repoint.models.sharedmodels.remote.CmcMapData
 import com.repoint.models.sharedmodels.remote.NativesBalance
 import com.repoint.models.sharedmodels.remote.TokenPriceRequestItem
 import com.repoint.models.sharedmodels.remote.TokenPriceResponse
 import com.repoint.models.sharedmodels.remote.TokenPriceResponseItem
 
 interface TokenDataSource {
+
+    suspend fun getAllTokensList() : CmcMapData
 
     suspend fun getTokenBalance(
         address: String,

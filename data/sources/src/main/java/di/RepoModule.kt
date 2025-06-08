@@ -4,12 +4,14 @@ import com.repoint.sources.datarepo.TokenBalanceRepositoryImp
 import com.repoint.sources.datarepo.Web3jWalletRepositoryImp
 import com.repoint.sources.datarepo.datasource.HistoryDataSource
 import com.repoint.sources.datarepo.BiometricRepositoryImp
+import com.repoint.sources.datarepo.CmcRepositoryImp
 import com.repoint.sources.datarepo.HistoryRepositoryImp
 import com.repoint.sources.datarepo.NetworkRepositoryImp
 import com.repoint.sources.datarepo.UserRepositoryImp
 import com.repoint.sources.datarepo.WalletRepositoryImp
 import com.repoint.sources.datarepo.datasource.AuthDataSource
 import com.repoint.sources.datarepo.datasource.BiometricDataSource
+import com.repoint.sources.datarepo.datasource.CmcDataSource
 import com.repoint.sources.datarepo.datasource.NetworkDataSource
 import com.repoint.sources.datarepo.datasource.TokenDataSource
 import com.repoint.sources.datarepo.datasource.UserDataSource
@@ -54,4 +56,8 @@ interface RepoModule {
     @Binds
     @Singleton
     fun bindNetworkDataSource(imp : NetworkRepositoryImp) : NetworkDataSource
+
+    @Binds
+    @Singleton
+    fun bindCmcTokenDataSource(imp : CmcRepositoryImp) : CmcDataSource
 }

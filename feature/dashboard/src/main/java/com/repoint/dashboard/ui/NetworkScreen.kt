@@ -56,6 +56,7 @@ import androidx.navigation.NavController
 import com.repoint.basics.atoms.LoaderAnimation
 import com.repoint.basics.atoms.RepointAppBar
 import com.repoint.basics.atoms.RepointSearchBar
+import com.repoint.dashboard.CmcTokenViewModel
 import com.repoint.dashboard.NetworkViewModel
 import com.repoint.dependencies.accountmanager.SpManager
 import com.repoint.dependencies.theme.RepointTypography
@@ -74,8 +75,11 @@ import kotlinx.coroutines.withContext
 @Composable
 fun CryptoManageScreen(navController: NavController) {
     val networkViewModel: NetworkViewModel = hiltViewModel()
+    val cmcTokenViewModel : CmcTokenViewModel = hiltViewModel()
 
     val cryptoNetworks by networkViewModel.networks.collectAsState()
+    val allTokens by cmcTokenViewModel.tokens.collectAsState()
+
     var expanded by remember { mutableStateOf(false) }  // or come from your state
 
 
@@ -101,6 +105,7 @@ fun CryptoManageScreen(navController: NavController) {
     LaunchedEffect(activeWalletId, expanded) {
         if (!activeWalletId.isNullOrEmpty()) {
             networkViewModel.initializeWithWallet(activeWalletId!!)
+            cmcTokenViewModel.loadTokens()
             isLoading = false
             expanded = false
         }

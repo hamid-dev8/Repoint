@@ -6,6 +6,7 @@ import androidx.room.RoomDatabase
 import androidx.sqlite.db.SupportSQLiteDatabase
 import com.repoint.database.AppDatabase
 import com.repoint.database.dao.AuthDao
+import com.repoint.database.dao.CmcTokenDao
 import com.repoint.database.dao.NetworkDao
 import com.repoint.database.dao.UserDao
 import dagger.Module
@@ -47,5 +48,9 @@ internal object DatabaseModule {
     @Provides
     @Singleton
     fun provideNetworkDao(database: AppDatabase) : NetworkDao = database.networkDao()
+
+    @Provides
+    @Singleton
+    fun provideCmcTokenDao(database: AppDatabase) : CmcTokenDao = database.cmcTokenDao()
 
 }

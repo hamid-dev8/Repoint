@@ -5,10 +5,9 @@ import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.repoint.sources.datarepo.datasource.Web3DataSource
+import com.repoint.models.sharedmodels.ui.TxState
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -37,43 +36,73 @@ class Web3ViewModel @Inject constructor(
     private val _gasPrice = MutableStateFlow<BigDecimal?>(null)
     val gasPrice: StateFlow<BigDecimal?> = _gasPrice
 
+    private val _txState = MutableStateFlow<TxState>(TxState.Idle)
+    val txState : StateFlow<TxState> get() = _txState
 
-        init {
-            /*viewModelScope.launch {
-                val chainId = repository.getChainId()
-                fetchGasPrice(chainId)
-            }*/
-        }
+    private val _connectionStatus = MutableStateFlow<Boolean?>(null)
+    val connectionStatus: StateFlow<Boolean?> get() = _connectionStatus
 
-
-    suspend fun testConnectionToWeb3(chainId: Long): Boolean {
-        return repository.testWeb3Connection(chainId)
+    init {
+        /*viewModelScope.launch {
+            val chainId = repository.getChainId()
+            fetchGasPrice(chainId)
+        }*/
     }
 
-    suspend fun fetchNativeWalletBalance(walletAddress: String,chainId: Long): BigDecimal? {
 
-        return withContext(Dispatchers.IO) {
+     fun testConnectionToWeb3(chainId: Long) {
+        viewModelScope.launch {
             try {
-                val weiBalance = repository.getWalletBalance(walletAddress, chainId = chainId)
-                // Convert wei to ether and return it
-                Convert.fromWei(weiBalance.toString(), Convert.Unit.ETHER)
-            } catch (ex: Exception) {
-                ex.printStackTrace()
-                BigDecimal.ZERO  // or throw the exception further
+                _connectionStatus.value = repository.testWeb3Connection(chainId)
+            }
+            catch (e : Exception){
+                Log.e("Web3Connection", "❌ Connection test failed", e)
+                _connectionStatus.value = false
             }
         }
     }
+
+    suspend fun getChainId(chainId: Long): Long {
+        return repository.getChainId(chainId)
+    }
+
+    fun fetchNativeWalletBalance(walletAddress: String, chainId: Long) {
+        viewModelScope.launch {
+            try {
+                val balanceWei = repository.getWalletBalance(walletAddress, chainId)
+                val balanceEther = Convert.fromWei(balanceWei.toBigDecimal(), Convert.Unit.ETHER)
+
+                _balanceWei.postValue(balanceWei)
+                _balanceEther.postValue(balanceEther)
+
+
+                Log.d("Balance", "✅ $walletAddress → $balanceEther ETH")
+            } catch (e: Exception) {
+                Log.e("Balance", "❌ Failed to fetch balance for $walletAddress", e)
+                // optionally post null or reset values
+                _balanceWei.postValue(BigInteger.ZERO)
+                _balanceEther.postValue(BigDecimal.ZERO)
+            }
+        }
+    }
+
 
     suspend fun sendTokenOnChain(
         credentials: Credentials,
         amount: BigDecimal,
         recipientAddress: String,
-        contractAddress : String,
-        networkChainId : Long
-    ) : TransactionReceipt? {
+        contractAddress: String,
+        networkChainId: Long
+    ): TransactionReceipt? {
         try {
             val transactionReceipt =
-                repository.sendTokenOnChain(credentials, amount, recipientAddress = recipientAddress, contractAddress = contractAddress,networkChainId)
+                repository.sendTokenOnChain(
+                    credentials,
+                    amount,
+                    recipientAddress = recipientAddress,
+                    contractAddress = contractAddress,
+                    networkChainId
+                )
             Log.d(
                 "transaction",
                 "\uD83E\uDDE0 Sending Transaction : ${transactionReceipt?.transactionHash}"
@@ -89,14 +118,13 @@ class Web3ViewModel @Inject constructor(
                     "✅ Transaction Successful: ${transactionReceipt.transactionHash}"
                 )
                 return transactionReceipt
-            }
-            else{
-                Log.d("transaction"," error in transit for address : $recipientAddress")
+            } else {
+                Log.d("transaction", " error in transit for address : $recipientAddress")
                 return null
             }
         } catch (e: Exception) {
             Log.e("transaction", "❌ Error Sending Tokens", e)
-           return null
+            return null
         }
 
     }
@@ -105,10 +133,15 @@ class Web3ViewModel @Inject constructor(
         credentials: Credentials,
         recipientAddress: String,
         amount: BigDecimal,
-        chainId : Long
+        chainId: Long
     ): EthSendTransaction? {
         try {
-            val ethResponse = repository.sendNativeToken(credentials, recipientAddress, amount, networkChainId = chainId)
+            val ethResponse = repository.sendNativeToken(
+                credentials,
+                recipientAddress,
+                amount,
+                networkChainId = chainId
+            )
             Log.d(
                 "transaction",
                 "\uD83E\uDDE0 Sending Transaction : ${ethResponse?.transactionHash}"
@@ -123,7 +156,7 @@ class Web3ViewModel @Inject constructor(
                 println("❌ Failed: ${ethResponse.error.message}")
             }
         } catch (e: Exception) {
-            Log.d("transaction","failed with : $e")
+            Log.d("transaction", "failed with : $e")
             return null
         }
         return null
@@ -136,14 +169,13 @@ class Web3ViewModel @Inject constructor(
         contractAddress: String?,
         chainId: Long
     ): String? = withContext(Dispatchers.IO) {
-
-
-        return@withContext try {
+        _txState.value = TxState.Loading
+        try {
             val txHash = if (isNativeToken(contractAddress)) {
                 val tx = sendNativeToken(credentials, recipientAddress, amount, chainId)
-                Log.d("tx", "✅ Native Token TX Sent: ${tx?.transactionHash}")
                 tx?.transactionHash
-            } else {
+            }
+            else {
                 val receipt = sendTokenOnChain(
                     credentials = credentials,
                     amount = amount,
@@ -151,14 +183,22 @@ class Web3ViewModel @Inject constructor(
                     contractAddress = contractAddress!!,
                     networkChainId = chainId
                 )
-                receipt?.transactionHash.also {
-                    Log.d("tx", "✅ ERC20 Token TX Sent: $it")
-                }
+                receipt?.transactionHash
             }
-            txHash
-        } catch (e: Exception) {
-            Log.e("tx", "❌ Error sending token", e)
-            null
+
+            if (txHash != null) {
+                Log.d("tx", "✅ TX Success: $txHash")
+                _txState.value = TxState.Success(txHash)
+            } else {
+                _txState.value = TxState.Error("Transaction failed or was dropped.")
+            }
+
+            return@withContext txHash
+        }
+        catch (e : Exception){
+            Log.e("tx", "❌ TX Exception", e)
+            _txState.value = TxState.Error("Exception during transaction", e)
+            return@withContext null
         }
     }
 
@@ -170,7 +210,7 @@ class Web3ViewModel @Inject constructor(
     }
 
 
-     fun fetchGasPrice(chainId: Long) {
+    fun fetchGasPrice(chainId: Long) {
         viewModelScope.launch {
             try {
                 val gasPriceWei = repository.getGasPrice(chainId = chainId)

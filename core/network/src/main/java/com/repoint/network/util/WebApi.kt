@@ -1,9 +1,11 @@
 package com.repoint.network.util
 
 import com.repoint.models.sharedmodels.remote.BalanceByWallet
+import com.repoint.models.sharedmodels.remote.CmcMapData
 import com.repoint.models.sharedmodels.remote.History
 import com.repoint.models.sharedmodels.remote.NativesBalance
 import com.repoint.models.sharedmodels.remote.RepointTransactions
+import com.repoint.models.sharedmodels.remote.TokenInfoMetadataResponse
 import com.repoint.models.sharedmodels.remote.TokenPriceRequestBody
 import com.repoint.models.sharedmodels.remote.TokenPriceRequestItem
 import com.repoint.models.sharedmodels.remote.TokenPriceResponse
@@ -15,43 +17,51 @@ import retrofit2.http.POST
 import retrofit2.http.Path
 import retrofit2.http.Query
 
-interface WebApi
-{
+interface WebApi {
+
+    //Get the list of all available Tokens
+    @GET("v1/cryptocurrency/map")
+    suspend fun getAllTokensList() : CmcMapData
+
+    @GET("v2/cryptocurrency/info")
+    suspend fun getTokensInfo(
+        @Query("id") ids : String
+    ) : TokenInfoMetadataResponse
+
 
     //Get ERC-20 token balances for a wallet
     @GET("wallets/{address}/tokens")
     suspend fun getTokenBalances(
-        @Path("address") walletAddress : String,
-        @Query("chain") chain : String,
+        @Path("address") walletAddress: String,
+        @Query("chain") chain: String,
         @Query("token_addresses[]") tokenAddress: List<String>? = null
-    ) : NativesBalance
+    ): NativesBalance
 
     @POST("erc20/prices")
     suspend fun getTokenPricesByContract(
         @Query("chain") chain: String,
-        @Query("include") include : String = "percent_change",
-        @Body requestBody : TokenPriceRequestBody
-    ) : List<TokenPriceResponseItem>
-
+        @Query("include") include: String = "percent_change",
+        @Body requestBody: TokenPriceRequestBody
+    ): List<TokenPriceResponseItem>
 
 
     @GET("{address}/erc20")
     suspend fun getBalanceByWallet(
-        @Path("address")walletAddress: String,
-        @Query("chain")chain: String
-    ) : List<BalanceByWallet>
+        @Path("address") walletAddress: String,
+        @Query("chain") chain: String
+    ): List<BalanceByWallet>
 
     @GET("wallets/{address}/history")
     suspend fun getNativeHistory(
-        @Path("address")walletAddress: String,
-        @Query("chain")chain : String,
-        @Query("order")order : String
-    ) : History
+        @Path("address") walletAddress: String,
+        @Query("chain") chain: String,
+        @Query("order") order: String
+    ): History
 
     @GET("erc20/{tokenAddress}/price")
     suspend fun getTokenPrice(
-        @Path("tokenAddress")tokenAddress : String,
-        @Query("chain")chain: String
-    ) : TokenPriceResponse
+        @Path("tokenAddress") tokenAddress: String,
+        @Query("chain") chain: String
+    ): TokenPriceResponse
 
 }

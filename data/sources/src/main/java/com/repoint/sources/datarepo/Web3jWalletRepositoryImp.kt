@@ -53,30 +53,67 @@ class Web3jWalletRepositoryImp @Inject constructor(private val web3Provider: Web
 
 
     override suspend fun getChainId(chainId: Long): Long = withContext(Dispatchers.IO) {
-        val web3j = web3Provider.getWeb3j(chainId = chainId.toInt())
-        return@withContext web3j.ethChainId().send().chainId.toLong()
+        try {
+            val web3j = web3Provider.getWeb3j(chainId = chainId.toInt())
+            val actualChainId = web3j.ethChainId().send().chainId.toLong()
+
+            Log.d("Web3ChainId", "✅ Chain ID from node: $actualChainId (expected: $chainId)")
+
+            if (actualChainId != chainId) {
+                Log.w(
+                    "Web3ChainId",
+                    "⚠️ Mismatch: requested chainId=$chainId but node reports $actualChainId"
+                )
+            }
+            return@withContext actualChainId
+        } catch (e: Exception) {
+            Log.e("Web3ChainId", "❌ Failed to fetch chain ID for $chainId", e)
+            throw e // or: return@withContext chainId (if you prefer fallback behavior)
+        }
     }
 
 
     override suspend fun getNonce(address: String, chainId: Long): BigInteger =
         withContext(Dispatchers.IO) {
-            val web3j = web3Provider.getWeb3j(chainId.toInt())
-            return@withContext web3j.ethGetTransactionCount(
-                address,
-                DefaultBlockParameterName.PENDING
-            )
-                .send()
-                .transactionCount
+            try {
+                val web3j = web3Provider.getWeb3j(chainId.toInt())
+                val response = web3j.ethGetTransactionCount(
+                    address,
+                    DefaultBlockParameterName.PENDING
+                ).send()
+
+                val nonce = response.transactionCount
+                Log.d("Web3Nonce", "✅ Nonce for $address on chainId $chainId: $nonce")
+                return@withContext nonce
+            } catch (e: Exception) {
+                Log.e("Web3Nonce", "❌ Failed to get nonce for $address on chainId $chainId", e)
+                throw e
+            }
         }
 
 
     override suspend fun getWalletBalance(walletAddress: String, chainId: Long): BigInteger =
         withContext(Dispatchers.IO) {
-            val web3j = web3Provider.getWeb3j(chainId.toInt())
-            web3j.ethGetBalance(walletAddress, DefaultBlockParameterName.LATEST)
-                .sendAsync()
-                .get()
-                .balance
+            try {
+                val web3j = web3Provider.getWeb3j(chainId.toInt())
+                val response =
+                    web3j.ethGetBalance(walletAddress, DefaultBlockParameterName.LATEST).send()
+
+                val balance = response.balance
+
+                Log.d(
+                    "WalletBalance",
+                    "✅ Balance for $walletAddress on chainId $chainId: $balance Wei"
+                )
+                return@withContext balance
+            } catch (e: Exception) {
+                Log.e(
+                    "WalletBalance",
+                    "❌ Failed to fetch balance for $walletAddress on chainId $chainId",
+                    e
+                )
+                return@withContext BigInteger.ZERO
+            }
         }
 
 
@@ -88,74 +125,73 @@ class Web3jWalletRepositoryImp @Inject constructor(private val web3Provider: Web
         networkChainId: Long
     ): TransactionReceipt? = withContext(Dispatchers.IO) {
 
+        val web3j = web3Provider.getWeb3j(chainId = networkChainId.toInt())
         val senderAddress = credentials.address
-        val chainId = networkChainId
-        val web3j = web3Provider.getWeb3j(chainId = chainId.toInt())
-        Log.d("transaction", "the chain Id is : $chainId")
-        val nonce = getNonce(senderAddress, chainId)
-        val gasPrice = getGasPrice(chainId)
 
-        Log.d("transaction", "the gas price is  : $gasPrice")
+        try {
+            //step 1 : prepare values
+            val nonce = getNonce(senderAddress, networkChainId)
+            val gasPrice = getGasPrice(networkChainId)
+            val tokenDecimals =
+                getTokenDecimalsSafely(tokenAddress = contractAddress, credentials, networkChainId)
+            val amountInWei = amount.multiply(BigDecimal.TEN.pow(tokenDecimals)).toBigInteger()
 
-        val tokenDecimals =
-            getTokenDecimalsSafely(tokenAddress = contractAddress, credentials, chainId)
-
-        val defaultGasLimit = BigInteger.valueOf(21_000)
-
-        /*     val erc20 = TokenERC20.load(
-                 contractAddress,
-                 web3j,
-                 credentials,
-                 gasPrice,
-                 gasLimit
-             )*/
-        // val tokenDecimals = erc20.decimals().send().toInt()
-        //  val tokenAmount = amount.multiply(BigDecimal.TEN.pow(tokenDecimals)).toBigInteger()
-        // val amountInWei = Convert.toWei(amount.movePointRight(tokenDecimals), Convert.Unit.ETHER)
-        val amountInWei = amount.multiply(BigDecimal.TEN.pow(tokenDecimals)).toBigInteger()
-        val data = encodeERC20Transfer(recipientAddress, amountInWei = amountInWei)
-        val gasLimit = estimateGas(chainId, senderAddress, nonce, gasPrice, contractAddress, data)
-        Log.d("transaction", "🔹 Amount in Wei: $amountInWei")
+            Log.d("sendToken", "🧮 Decimals: $tokenDecimals | AmountInWei: $amountInWei")
 
 
-        val rawTransaction = RawTransaction.createTransaction(
-            nonce,
-            gasPrice,
-            gasLimit,
-            contractAddress,
-            data
-        )
-        val transactionManager = RawTransactionManager(web3j, credentials, chainId)
-        //Log.d("Transaction", "🔹 Encoded Function Call: $encodedFunction")
+            //step 2  : Encode ERC20 transfer
+            val data = encodeERC20Transfer(recipientAddress, amountInWei = amountInWei)
 
-        val ethSendTransaction: EthSendTransaction =
-            transactionManager.signAndSend(rawTransaction)
+            //step 3 : Estimate Gas
+            val gasLimit = estimateGas(
+                networkChainId,
+                from = senderAddress,
+                nonce = nonce,
+                gasPrice = gasPrice,
+                to = contractAddress,
+                data = data
+            )
+            Log.d("sendToken", "⛽ GasPrice: $gasPrice | GasLimit: $gasLimit")
 
-        val transactionHash = ethSendTransaction.transactionHash
-        Log.d("Transaction", "🔹 Transaction Submitted! TX Hash: $transactionHash")
+            val rawTransaction = RawTransaction.createTransaction(
+                nonce,
+                gasPrice,
+                gasLimit,
+                contractAddress,
+                data
+            )
+            val transactionManager = RawTransactionManager(web3j, credentials, networkChainId)
 
-        var transactionReceipt: TransactionReceipt? = null
+            val ethSendTransaction: EthSendTransaction =
+                transactionManager.signAndSend(rawTransaction)
+            val txHash = ethSendTransaction.transactionHash
+            Log.d("sendToken", "🚀 TX Sent! Hash: $txHash")
 
-        var attempt = 0
-
-        while (transactionReceipt == null && attempt < 20) {
-            transactionReceipt = web3j.ethGetTransactionReceipt(transactionHash)
-                .send().transactionReceipt.orElse(null)
-            if (transactionReceipt == null) {
-                delay(2000)
-                attempt++
+            if (ethSendTransaction.hasError()) {
+                Log.e("sendToken", "❌ TX Error: ${ethSendTransaction.error.message}")
+                return@withContext null
             }
+            var transactionReceipt: TransactionReceipt? = null
+
+            repeat(20) {
+                transactionReceipt =
+                    web3j.ethGetTransactionReceipt(txHash).send().transactionReceipt.orElse(null)
+                if (transactionReceipt != null) return@repeat
+                delay(2000)
+            }
+
+            if (transactionReceipt == null) {
+                Log.e("sendToken", "❌ TX dropped or timeout after 40s")
+            } else {
+                Log.d("sendToken", "✅ TX confirmed! Status: ${transactionReceipt!!.status}")
+            }
+
+            return@withContext transactionReceipt
+
+        } catch (e: Exception) {
+            Log.e("sendToken", "❌ Failed to send token TX", e)
+            return@withContext null
         }
-
-        if (transactionReceipt == null) {
-            Log.e("tx", "❌ TX was dropped or took too long")
-        } else {
-            Log.d("tx", "⛏️ Receipt status: ${transactionReceipt.status}")
-        }
-        // ✅ Check if Transaction was Successful
-
-        return@withContext transactionReceipt
-
     }
 
     override suspend fun sendNativeToken(
@@ -164,37 +200,50 @@ class Web3jWalletRepositoryImp @Inject constructor(private val web3Provider: Web
         amount: BigDecimal,
         networkChainId: Long
     ): EthSendTransaction = withContext(Dispatchers.IO) {
-        val senderAddress = credentials.address
-        val gasLimit = BigInteger.valueOf(21_000)
-
-        Log.d("transaction", "Signing with chainId = $networkChainId")
-        Log.d("transaction", "To: $recipient")
-
         val web3j = web3Provider.getWeb3j(networkChainId.toInt())
-        val amountInWei = Convert.toWei(amount, Convert.Unit.ETHER).toBigInteger()
-        Log.d("transaction", "Amount (wei): $amountInWei")
-        val nonce = getNonce(senderAddress, networkChainId)
-        val gasPrice = getGasPrice(networkChainId)
+        val senderAddress = credentials.address
 
-        val transaction = RawTransaction.createEtherTransaction(
-            nonce,
-            gasPrice,
-            gasLimit,
-            recipient,
-            amountInWei
-        )
+        try {
+            val nonce = getNonce(senderAddress, networkChainId)
+            val gasPrice = getGasPrice(networkChainId)
+            val gasLimit = BigInteger.valueOf(21_000)
+            val amountInWei = Convert.toWei(amount, Convert.Unit.ETHER).toBigInteger()
 
-        val signedMessage = TransactionEncoder.signMessage(transaction, networkChainId,credentials)
-        val hexValue = Numeric.toHexString(signedMessage)
-        Log.d("transaction", "🚀 Raw TX Hex: $hexValue")
-        // ✅ Send raw transaction
-        val ethResponse = web3j.ethSendRawTransaction(hexValue).send()
-        if (ethResponse.hasError()) {
-            Log.e("transaction", "❌ Failed: ${ethResponse.error.message}")
-        } else {
-            Log.d("transaction", "✅ TX Sent: ${ethResponse.transactionHash}")
+            Log.d(
+                "sendNative", """
+            🔐 Sending Native Token:
+            From: $senderAddress
+            To:   $recipient
+            Amount: $amountInWei wei
+            Nonce: $nonce
+            GasPrice: $gasPrice
+            ChainId: $networkChainId
+        """.trimIndent()
+            )
+
+            val rawTransaction = RawTransaction.createEtherTransaction(
+                nonce,
+                gasPrice,
+                gasLimit,
+                recipient,
+                amountInWei
+            )
+            val signedMessage =
+                TransactionEncoder.signMessage(rawTransaction, networkChainId, credentials)
+            val hexValue = Numeric.toHexString(signedMessage)
+
+            val ethResponse = web3j.ethSendRawTransaction(hexValue).send()
+            if (ethResponse.hasError()) {
+                Log.e("sendNative", "❌ Error sending TX: ${ethResponse.error.message}")
+            } else {
+                Log.d("sendNative", "✅ TX Hash: ${ethResponse.transactionHash}")
+            }
+
+            return@withContext ethResponse
+        } catch (e: Exception) {
+            Log.e("sendNative", "❌ Exception during native token send", e)
+            throw e // or return an empty EthSendTransaction().withError()
         }
-        return@withContext ethResponse
     }
 
     override suspend fun estimateGas(
@@ -206,30 +255,62 @@ class Web3jWalletRepositoryImp @Inject constructor(private val web3Provider: Web
         data: String
     ): BigInteger =
         withContext(Dispatchers.IO) {
-            val web3j = web3Provider.getWeb3j(chainId.toInt())
-            val gasEstimate = web3j.ethEstimateGas(
-                Transaction.createFunctionCallTransaction(
+            try {
+                val web3j = web3Provider.getWeb3j(chainId.toInt())
+                val callTx = Transaction.createFunctionCallTransaction(
                     from,
                     nonce,
                     gasPrice,
-                    BigInteger.valueOf(100_000),
+                    null,
                     to,
-                    BigInteger.ZERO,
+                    BigInteger.ZERO, // value = 0 for ERC20 transfer
                     data
                 )
-            ).send()
-            if (gasEstimate.hasError()) {
-                Log.e("gas", "❌ Gas estimation failed: ${gasEstimate.error.message}")
-                throw Exception("Gas estimation failed: ${gasEstimate.error.message}")
-            }
+                val response = web3j.ethEstimateGas(callTx).send()
 
-            val gasUsed = gasEstimate.amountUsed
-            return@withContext gasUsed
+                if (response.hasError()) {
+                    Log.e("GasEstimation", "❌ Estimation error: ${response.error.message}")
+                    throw Exception("Gas estimation failed: ${response.error.message}")
+                }
+                // Optional : add buffer (20%) to avoid understimation
+                val estimated = response.amountUsed
+                val buffered =
+                    estimated.multiply(BigInteger.valueOf(120)).divide(BigInteger.valueOf(100))
+
+                Log.d(
+                    "GasEstimation", """
+            ✅ Estimated gas: $estimated | Buffered: $buffered
+            ➤ From: $from
+            ➤ To: $to
+            ➤ Data: ${data.take(20)}...
+        """.trimIndent()
+                )
+
+
+                return@withContext buffered
+            } catch (e: Exception) {
+                Log.e("GasEstimation", "❌ Exception estimating gas", e)
+                throw e
+            }
         }
 
     override suspend fun getGasPrice(chainId: Long): BigInteger = withContext(Dispatchers.IO) {
-        val web3j = web3Provider.getWeb3j(chainId.toInt())
-        return@withContext web3j.ethGasPrice().send().gasPrice
+        try {
+            val web3j = web3Provider.getWeb3j(chainId.toInt())
+            val response = web3j.ethGasPrice().send()
+
+            if (response.hasError()) {
+                Log.e("GasPrice", "❌ Error fetching gas price: ${response.error.message}")
+                throw Exception("Gas price fetch failed: ${response.error.message}")
+            }
+            val gasPrice = response.gasPrice
+            Log.d("GasPrice", "✅ Current gas price on chain $chainId: $gasPrice Wei")
+
+            return@withContext gasPrice
+        } catch (e: Exception) {
+            Log.e("GasPrice", "❌ Exception while fetching gas price", e)
+            throw e
+        }
     }
 
     fun encodeERC20Transfer(recipient: String, amountInWei: BigInteger): String {
@@ -246,7 +327,6 @@ class Web3jWalletRepositoryImp @Inject constructor(private val web3Provider: Web
     }
 
 
-
     suspend fun getTokenDecimalsSafely(
         tokenAddress: String,
         credentials: Credentials,
@@ -255,26 +335,21 @@ class Web3jWalletRepositoryImp @Inject constructor(private val web3Provider: Web
         try {
             val web3j = web3Provider.getWeb3j(chainId = chainId.toInt())
             val gasPrice = web3j.ethGasPrice().send().gasPrice
-            val gasLimit = BigInteger.valueOf(100_000)
+            val gasLimit = BigInteger.valueOf(100_000) //reasonable default for decimals...
 
-            val token = TokenERC20.load(
+            val erc20 = TokenERC20.load(
                 tokenAddress,
                 web3j,
                 credentials,
                 gasPrice,
                 gasLimit
             )
-
-            val decimals = token.decimals().send()
-            Log.d("token-decimals", "✔️ Decimals for $tokenAddress: $decimals")
+            val decimals = erc20.decimals().send()
+            Log.d("TokenDecimals", "✅ Token $tokenAddress reports decimals = $decimals")
             decimals.toInt()
         } catch (e: Exception) {
-            Log.e(
-                "token-decimals",
-                "❌ Failed to get decimals for $tokenAddress. Defaulting to 18",
-                e
-            )
-            18 // fallback default used by most tokens
+            Log.e("TokenDecimals", "❌ Failed to get decimals for token: $tokenAddress — defaulting to 18", e)
+            18 // fallback // fallback default used by most tokens
         }
     }
 

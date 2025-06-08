@@ -43,6 +43,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -77,6 +78,7 @@ import com.repoint.basics.atoms.ViewPagerRobot
 import com.repoint.basics.atoms.launchBotTab
 import com.repoint.dashboard.NetworkViewModel
 import com.repoint.dashboard.TokenViewModel
+import com.repoint.dashboard.Web3ViewModel
 import com.repoint.dashboard.activity.WebBotActivity
 import com.repoint.dependencies.R
 import com.repoint.dependencies.accountmanager.SpManager
@@ -116,6 +118,7 @@ fun HomeScreen(
     userViewModel: UserViewModel = hiltViewModel<UserViewModel>(),
     tokenViewModel: TokenViewModel = hiltViewModel<TokenViewModel>(),
     networkViewModel: NetworkViewModel = hiltViewModel<NetworkViewModel>(),
+    web3ViewModel: Web3ViewModel = hiltViewModel()
 ) {
 
     var masterWallets by remember { mutableStateOf<List<MasterWallet>>(emptyList()) }
@@ -142,6 +145,9 @@ fun HomeScreen(
 
     val allChains = moralisChainMap.values.toList()
 
+
+    //native balance
+    val balanceEther by web3ViewModel.balanceEther.observeAsState()
 
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val coroutineScope = rememberCoroutineScope()
@@ -213,6 +219,7 @@ fun HomeScreen(
                 chainWallets = walletViewModel.getAllChainWallets(activeWalletId!!)
                 //   spManager.setActiveWallet(masterWallets[0].masterWalletId)
 
+
                 Log.d("token", "selected wallet is currently : $selectedWallet")
 
                 //Default to Polygon chain for balances
@@ -242,6 +249,11 @@ fun HomeScreen(
                         )
 
                     }
+
+                    web3ViewModel.fetchNativeWalletBalance(walletAddress = activeAddress!!, chainId = 11155111)
+
+                    Log.d("balanceEther","balance is this   $balanceEther")
+
 
                     //todo check this
                    // tokenViewModel.getTokenBalancesByWallet(walletAddress = activeAddress!!, chain = "eth")

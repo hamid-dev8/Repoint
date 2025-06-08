@@ -4,7 +4,7 @@ import javax.inject.Qualifier
 
 @Qualifier
 @Retention(AnnotationRetention.BINARY)
-annotation class MoralisOkHttp
+annotation class CmcOkHttp
 
 @Qualifier
 @Retention(AnnotationRetention.BINARY)
@@ -12,7 +12,7 @@ annotation class NetworkOkHttp
 
 @Qualifier
 @Retention(AnnotationRetention.BINARY)
-annotation class MoralisRetrofit
+annotation class CmcRetrofit
 
 @Qualifier
 @Retention(AnnotationRetention.BINARY)

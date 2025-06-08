@@ -31,6 +31,7 @@ import androidx.core.content.ContextCompat
 import androidx.fragment.app.FragmentActivity
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.repoint.account.WalletViewModel
+import com.repoint.dashboard.Web3ViewModel
 import com.repoint.dependencies.theme.ghostWhite
 import com.repoint.dependencies.accountmanager.SpManager
 import kotlinx.coroutines.delay
@@ -47,7 +48,7 @@ private fun PreviewSplashScreen() {
 }
 
 @Composable
-fun SplashScreenRepoint(onStay: () -> Unit, onProceed: () -> Unit,onAuthRequest : (onSuccess : () -> Unit) -> Unit,walletViewModel : WalletViewModel = hiltViewModel()) {
+fun SplashScreenRepoint(onStay: () -> Unit, onProceed: () -> Unit, onAuthRequest : (onSuccess : () -> Unit) -> Unit, web3ViewModel : Web3ViewModel = hiltViewModel(), walletViewModel : WalletViewModel = hiltViewModel()) {
 
     val splashTimeout = 3000L
 
@@ -58,12 +59,21 @@ fun SplashScreenRepoint(onStay: () -> Unit, onProceed: () -> Unit,onAuthRequest 
     // MutableState to track if navigation has already occurred
     var isSplashFinished by remember { mutableStateOf(false) }
 
+    val isConnectedToWeb3 by web3ViewModel.connectionStatus.collectAsState()
 
     LaunchedEffect(userIdFlow.value) {
         delay(splashTimeout)
         isSplashFinished = true
 
 
+        web3ViewModel.testConnectionToWeb3(chainId = 11155111)
+
+         Log.d("Test","connection to web3 status : $isConnectedToWeb3")
+
+
+
+        val actual = web3ViewModel.getChainId(11155111)
+        Log.d("Test", "Chain ID returned = $actual")
         val userId = userIdFlow.value
         Log.d("userId", " User id is : ${userIdFlow.value}")
         if (!userId.isNullOrEmpty()) {

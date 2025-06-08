@@ -57,6 +57,7 @@ import com.repoint.dependencies.accountmanager.SpManager
 import com.repoint.dependencies.theme.PurpleGrey80
 import com.repoint.dependencies.theme.RepointTypography
 import com.repoint.dependencies.theme.richBlack
+import com.repoint.models.sharedmodels.ui.TxState
 import kotlinx.coroutines.launch
 import org.web3j.crypto.Credentials
 import java.math.BigInteger
@@ -98,6 +99,8 @@ fun SendTokenScreen(
     var txHash by remember { mutableStateOf<String?>(null) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
 
+    val txState by web3ViewModel.txState.collectAsState()
+
     //
     LaunchedEffect(walletAddress) {
         val userId = userViewModel.fetchUser()
@@ -112,15 +115,28 @@ fun SendTokenScreen(
         val chainWallet =
             masterWalletId?.let { walletViewModel.getChainWallet(masterWalletId = it, coinType) }
         val privateKey = chainWallet?.privateKey
-        val decimalKey = privateKey?.let { BigInteger(it) }
-        val hexKey = decimalKey?.toString(16)
-        if (!hexKey.isNullOrEmpty()) {
-            credentials = Credentials.create(hexKey)
+       /* val decimalKey = privateKey?.let { BigInteger(it) }
+        val hexKey = decimalKey?.toString(16)*/
+        if (!privateKey.isNullOrEmpty()) {
+            credentials = Credentials.create(privateKey)
+            //todo remove this later on release
             Log.d("transaction", "🧾 ChainWallet address: ${chainWallet?.address}")
             Log.d("transaction", "🔑 Credentials address: ${credentials?.address}")
             Log.d("SendToken", "Credentials created for $walletAddress")
         } else {
             Log.e("SendToken", "Missing private key for wallet $walletAddress")
+        }
+
+        //newApproach todo
+        when(txState){
+            is TxState.Success -> {
+                val txHash = (txState as TxState.Success).txHash
+                Toast.makeText(context,"Transaction sent : $txHash",Toast.LENGTH_SHORT).show()
+            }
+            is TxState.Error -> {
+                Toast.makeText(context,"Transaction failed : ${(txState as TxState.Error).message}",Toast.LENGTH_SHORT).show()
+            }
+            else -> Unit
         }
 
         //    Log.d("transaction", "crendentials is : $credentials and private key is  : $privateKey")

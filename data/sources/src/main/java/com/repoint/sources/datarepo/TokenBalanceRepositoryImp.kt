@@ -1,6 +1,7 @@
 package com.repoint.sources.datarepo
 
 import com.repoint.models.sharedmodels.remote.BalanceByWallet
+import com.repoint.models.sharedmodels.remote.CmcMapData
 import com.repoint.models.sharedmodels.remote.NativesBalance
 import com.repoint.models.sharedmodels.remote.TokenPriceRequestBody
 import com.repoint.models.sharedmodels.remote.TokenPriceRequestItem
@@ -16,6 +17,12 @@ import javax.inject.Singleton
 class TokenBalanceRepositoryImp @Inject constructor(private val api : WebApi) :
     TokenDataSource
 {
+    override suspend fun getAllTokensList(): CmcMapData {
+        return api.getAllTokensList()
+    }
+
+
+
     override suspend fun getTokenBalance(address: String, chain: String,tokenAddress: List<String>?) : NativesBalance {
         return api.getTokenBalances(address,chain,tokenAddress)
     }

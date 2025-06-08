@@ -29,8 +29,8 @@ object NetworkModule {
     val timeOut = 10000L
     val REQUEST_TAG = "APIREQ"
     val RESPONSE_TAG = "APIRES"
-    val API_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJub25jZSI6IjllOWYwYzQ5LTI0Y2ItNGNlYi05NDg1LWY2ZjI4NGEzODZkMSIsIm9yZ0lkIjoiNDI1ODk2IiwidXNlcklkIjoiNDM4MDYyIiwidHlwZUlkIjoiZDBmMGJhMzctM2VmNi00OGNjLWJkNjgtNmE3MzE2NGZmMzc1IiwidHlwZSI6IlBST0pFQ1QiLCJpYXQiOjE3MzY5MzA1NDgsImV4cCI6NDg5MjY5MDU0OH0.0OMiwXnG7EhekR8hM41PngKIh0T9SG5NIUk8YsmaBP8"
-    private  val moralisUrl: String = "https://deep-index.moralis.io/api/v2.2/" //TODO add proper baseUrl!!!
+    val API_KEY = "92f9f4c3-0574-49b9-8767-85af50ccfc0b"
+    private  val cmcUrl: String = "https://pro-api.coinmarketcap.com" //TODO add proper baseUrl!!!
     private val networkUrl : String = "https://botapi.repointbot.com/api/" //Todo add repoint url
 
     @Provides
@@ -44,8 +44,8 @@ object NetworkModule {
 
     @Provides
     @Singleton
-    @MoralisOkHttp
-    fun getUnsafeMoralisOkHttpClient(): OkHttpClient {
+    @CmcOkHttp
+    fun getUnsafeCoinMarketCapOkHttpClient(): OkHttpClient {
         return try {
             // Create a trust manager that does not validate certificate chains
             val trustAllCerts = arrayOf<TrustManager>(
@@ -69,7 +69,7 @@ object NetworkModule {
                     val original: Request = chain.request()
                     val request: Request = original.newBuilder()
                         .header("accept", "application/json")
-                        .header("X-API-Key", API_KEY)
+                        .header("X-CMC_PRO_API_KEY", API_KEY)
                         .build()
                     chain.proceed(request)
                 }
@@ -140,10 +140,10 @@ object NetworkModule {
 
     @Provides
     @Singleton
-    @MoralisRetrofit
-    fun provideMoralisRetrofit(@MoralisOkHttp okHttpClient: OkHttpClient) : Retrofit {
+    @CmcRetrofit
+    fun provideMoralisRetrofit(@CmcOkHttp okHttpClient: OkHttpClient) : Retrofit {
         return Retrofit.Builder()
-            .baseUrl(moralisUrl)
+            .baseUrl(cmcUrl)
             .addConverterFactory(GsonConverterFactory.create())
             .client(okHttpClient)
             .build()
@@ -162,7 +162,7 @@ object NetworkModule {
 
     @Provides
     @Singleton
-    fun provideWebApi(@MoralisRetrofit retrofit: Retrofit):WebApi = retrofit.create(WebApi::class.java)
+    fun provideWebApi(@CmcRetrofit retrofit: Retrofit):WebApi = retrofit.create(WebApi::class.java)
 
     @Provides
     @Singleton
