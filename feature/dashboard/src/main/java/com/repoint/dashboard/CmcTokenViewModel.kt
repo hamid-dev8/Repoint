@@ -1,34 +1,27 @@
 package com.repoint.dashboard
 
 import android.util.Log
-import androidx.compose.runtime.MutableState
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.repoint.models.sharedmodels.local.CmcTokenEntity
 import com.repoint.models.sharedmodels.local.LocalActiveNetworks
-import com.repoint.models.sharedmodels.local.MasterWallet
 import com.repoint.models.sharedmodels.remote.CmcAllTokens
 import com.repoint.models.sharedmodels.remote.CmcStatus
 import com.repoint.models.sharedmodels.remote.TokenInfoMetadataResponse
 import com.repoint.models.sharedmodels.remote.TokenMetaData
 import com.repoint.models.sharedmodels.remote.TokenQuotesResponse
-import com.repoint.models.sharedmodels.ui.ApiException
 import com.repoint.models.sharedmodels.ui.ApiResult
 import com.repoint.models.sharedmodels.ui.UiState
 import com.repoint.sources.datarepo.datasource.CmcDataSource
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.channelFlow
-import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
-import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -147,15 +140,54 @@ class CmcTokenViewModel @Inject constructor(
         _isPaging.value = false
     }
 
+    private suspend fun searchTokenInLoadedMap(query: String): List<CmcTokenEntity> {
+        if (query.isBlank()) return emptyList()
+
+        return repository.searchTokensByQuery(query)
+    }
+
+    private suspend fun fetchMetadataAndEmit(mapTokens: List<CmcTokenEntity>) {
+        val ids = mapTokens.map { it.id }
+        val metadata = repository.fetchTokenMetadata(ids)
+
+        if (metadata is ApiResult.Success) {
+            val metaMap = metadata.data.data
+            Log.d("SearchDebug", "Fetched metadata keys: ${metaMap.keys}")
+
+            val result = mapTokens.mapNotNull {
+                val meta = metaMap[it.id.toString()] ?: return@mapNotNull null
+                mergeEntityAndMetadata(it, meta)
+            }
+            Log.d("SearchDebug", "Final result count: ${result.size}")
+            _searchState.value = UiState.Success(result)
+        } else {
+            _searchState.value = UiState.Error("Metadata fetch failed")
+            Log.e("SearchDebug", "Metadata fetch failed: ${metadata}")
+        }
+    }
+
+
+
     fun performSearch(query: String) {
         viewModelScope.launch {
             _searchState.value = UiState.Loading
-            val mapTokens = repository.searchTokensByQuery(query)
+            val mapTokens = searchTokenInLoadedMap(query)
             Log.d("SearchDebug", "DB Results for '$query': ${mapTokens.map { it.name to it.id }}")
 
             if (mapTokens.isEmpty() || query.isBlank()) {
-                _searchState.value = UiState.Success(emptyList())
+               fetchMetadataAndEmit(mapTokens)
                 return@launch
+            }
+            else{
+                //fallback to full map scan if not found
+                val symbol = query.trim().uppercase()
+                val fallbackToken = searchInGlobalMapBySymbol(symbol)
+                fallbackToken?.let {
+                    fetchMetadataAndEmitFromMapTokens(listOf(it))
+                } ?: run {
+                    _searchState.value = UiState.Success(emptyList())
+                    Log.d("SearchDebug","Nothing found in local or global map")
+                }
             }
 
             val ids = mapTokens.map { it.id }
@@ -178,6 +210,64 @@ class CmcTokenViewModel @Inject constructor(
             }
         }
     }
+
+    private suspend fun fetchMetadataAndEmitFromMapTokens(tokens: List<CmcAllTokens>) {
+        val ids = tokens.map { it.id }
+        val metadata = repository.fetchTokenMetadata(ids)
+
+        if (metadata is ApiResult.Success) {
+            val metaMap = metadata.data.data
+            Log.d("SearchDebug", "Fetched metadata keys (fallback): ${metaMap.keys}")
+
+            val result = tokens.mapNotNull { mapToken ->
+                val meta = metaMap[mapToken.id.toString()] ?: return@mapNotNull null
+
+                // Convert CmcAllTokens -> CmcTokenEntity (temporary/synthetic)
+                val syntheticEntity = CmcTokenEntity(
+                    id = mapToken.id,
+                    rank = mapToken.rank,
+                    name = mapToken.name,
+                    symbol = mapToken.symbol,
+                    slug = mapToken.slug,
+                    isActive = mapToken.isActive,
+                    firstHistoricalData = mapToken.firstHistoricalData,
+                    lastHistoricalData = mapToken.lastHistoricalData,
+                    platformId = mapToken.platform?.id,
+                    platformName = mapToken.platform?.name,
+                    platformSymbol = mapToken.platform?.symbol,
+                    platformSlug = mapToken.platform?.slug,
+                    tokenAddress = mapToken.platform?.tokenAddress,
+                    logo = null, // will be filled from metadata
+                    description = null,
+                    websiteUrl = null,
+                    lastUpdated = System.currentTimeMillis()
+                )
+
+                mergeEntityAndMetadata(syntheticEntity, meta)
+            }
+
+            _searchState.value = UiState.Success(result)
+            Log.d("SearchDebug", "Fallback final result count: ${result.size}")
+        } else {
+            _searchState.value = UiState.Error("Metadata fetch failed (fallback)")
+            Log.e("SearchDebug", "Metadata fetch failed (fallback): $metadata")
+        }
+    }
+
+
+    private suspend fun searchInGlobalMapBySymbol(symbol : String): CmcAllTokens? {
+
+        val result = repository.fetchTokenMapBySymbol(symbol)
+        return if (result is ApiResult.Success) {
+            result.data.firstOrNull() // return first match
+        } else {
+            Log.e("SearchDebug", "Symbol-based global map search failed: $result")
+            null
+        }
+    }
+
+
+
 
 
     fun toggleToken(tokenId: Int) = viewModelScope.launch {

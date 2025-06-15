@@ -113,7 +113,7 @@ fun CryptoManageScreen(navController: NavController) {
     LaunchedEffect(query) {
         snapshotFlow { query }
             .debounce(300)
-            .filter { it.isNotBlank() && it.length >= 2 }
+            .filter { it.isNotBlank() && it.length >= 3 }
             .distinctUntilChanged()
             .collect {
                 cmcTokenViewModel.performSearch(it)

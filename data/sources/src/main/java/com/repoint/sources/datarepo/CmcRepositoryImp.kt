@@ -25,6 +25,12 @@ class CmcRepositoryImp @Inject constructor(
         }
     }
 
+    override suspend fun fetchTokenMapBySymbol(symbol: String): ApiResult<List<CmcAllTokens>> {
+        return safeApiCall {
+            api.getTokensBySymbol(symbol.uppercase()).data
+        }
+    }
+
     override suspend fun fetchTokenMetadata(ids: List<Int>): ApiResult<TokenInfoMetadataResponse> {
         return safeApiCall {
             val joinedIds = ids.joinToString(",")

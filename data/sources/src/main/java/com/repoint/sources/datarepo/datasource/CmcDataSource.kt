@@ -24,6 +24,11 @@ interface CmcDataSource {
         limit: Int = 12
     ): ApiResult<CmcMapData>
 
+    //get map token  by symbol
+    suspend fun fetchTokenMapBySymbol(
+        symbol : String
+    ) : ApiResult<List<CmcAllTokens>>
+
     // Fetch metadata info for a chunk of token IDs
     suspend fun fetchTokenMetadata(
         ids: List<Int>

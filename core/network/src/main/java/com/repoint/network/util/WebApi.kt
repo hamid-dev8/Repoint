@@ -28,6 +28,11 @@ interface WebApi {
     ) : CmcMapData
 
     @GET("v1/cryptocurrency/map")
+    suspend fun getTokensBySymbol(
+        @Query("symbol") symbol: String
+    ) : CmcMapData
+
+    @GET("v1/cryptocurrency/map")
     suspend fun searchTokenBySymbolOrSlug(
         @Query("symbol") symbol: String? = null,
     ): CmcMapData
