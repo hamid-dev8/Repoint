@@ -29,6 +29,8 @@ interface NetworkDataSource
     suspend fun getNetworkById(networkId : Int) : BlockchainNetworkEntity
     suspend fun getActiveNetworks(walletId: String) : List<LocalActiveNetworks>
     suspend fun insertNetworks(networks: List<BlockchainNetworkEntity>)
+
+    suspend fun getActiveTokensId(walletId : Int) : Flow<LocalActiveNetworks>
     suspend fun insertActiveNetwork(active : LocalActiveNetworks)
     suspend fun deleteActiveNetwork(networkId : Int,masterWalletId : String)
 

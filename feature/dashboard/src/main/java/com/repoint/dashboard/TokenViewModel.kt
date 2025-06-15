@@ -45,11 +45,11 @@ class TokenViewModel @Inject constructor(
     val uiState = _uiState.asStateFlow()
 
 
-    fun getAllTokensList() {
+  /*  fun getAllTokensList() {
         viewModelScope.launch {
             val response = repository.getAllTokensList()
         }
-    }
+    }*/
 
     fun getAvailableTokensFromMoralisOnly(
         walletAddress: String,

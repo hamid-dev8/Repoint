@@ -9,8 +9,6 @@ import com.repoint.models.sharedmodels.remote.TokenPriceResponseItem
 
 interface TokenDataSource {
 
-    suspend fun getAllTokensList() : CmcMapData
-
     suspend fun getTokenBalance(
         address: String,
         chain: String,

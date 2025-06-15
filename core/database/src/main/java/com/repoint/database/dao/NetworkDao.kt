@@ -99,6 +99,9 @@ interface NetworkDao
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insertActiveNetwork(active: LocalActiveNetworks)
 
+/*    @Query("SELECT tokenId FROM actives WHERE masterWalletId = :walletId")
+    suspend fun getActiveTokenIds(walletId: String) : Flow<List<Int>>*/
+
     @Query("SELECT * FROM actives")
     suspend fun getAllActiveNetworksDebug(): List<LocalActiveNetworks>
 

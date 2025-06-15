@@ -30,10 +30,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
@@ -43,7 +45,6 @@ import com.repoint.account.WalletViewModel
 import com.repoint.basics.atoms.LoaderAnimation
 import com.repoint.basics.atoms.RepointAppBar
 import com.repoint.basics.atoms.RepointSearchBar
-import com.repoint.dashboard.NetworkViewModel
 import com.repoint.dashboard.Web3ViewModel
 import com.repoint.dependencies.accountmanager.SpManager
 import com.repoint.dependencies.theme.RepointTypography
@@ -58,19 +59,16 @@ import kotlinx.coroutines.launch
 @Composable
 fun ChooseTokenScreen(
     navController: NavController,
-    viewModel: NetworkViewModel = hiltViewModel(),
     walletViewModel: WalletViewModel = hiltViewModel(),
-    web3ViewModel : Web3ViewModel = hiltViewModel(),
+    web3ViewModel: Web3ViewModel = hiltViewModel(),
     isSend: Boolean
 ) {
     var searchQuery by remember { mutableStateOf("") }
 
-    val activeTokens by viewModel.activeTokens.collectAsState()
     val context = LocalContext.current
     val spManager = SpManager(context)
     val masterWalletId by spManager.getActiveWalletId().collectAsState(null)
 
-    val cryptoNetworks by viewModel.networks.collectAsState()
 // Suppose cryptoNetworks is your list of all BlockchainNetwork objects:
 
     var tokenImageLoaded by remember { mutableStateOf(false) }
@@ -80,6 +78,8 @@ fun ChooseTokenScreen(
 
 
     val focusManager = LocalFocusManager.current
+    val keyboardController = LocalSoftwareKeyboardController.current
+    val focusRequester = remember { FocusRequester() }
 
     val isLoading = !tokenImageLoaded && !networkImageLoaded
 
@@ -90,13 +90,13 @@ fun ChooseTokenScreen(
         if (!masterWalletId.isNullOrEmpty()) {
 
             Log.d("chooseToken", "Fetching active tokens for wallet : $masterWalletId")
-            viewModel.fetchActiveTokens(masterWalletId!!)
+            //viewModel.fetchActiveTokens(masterWalletId!!)
         }
 
     }
 
     RepointAppBar(
-        title = if (isSend) "Send" else "Receive", exp = {_,_,_ ->
+        title = if (isSend) "Send" else "Receive", exp = { _, _, _ ->
 
 
             if (isLoading) {
@@ -107,96 +107,102 @@ fun ChooseTokenScreen(
                 ) {
                     LoaderAnimation()
                 }
-            }else {
-                Column(Modifier.fillMaxSize()
-                    .pointerInput(Unit) {
-                        detectTapGestures(onTap = {
+            } else {
+                Column(
+                    Modifier
+                        .fillMaxSize()
+                        .pointerInput(Unit) {
+                            detectTapGestures(onTap = {
+                                focusManager.clearFocus()
+                                searchBarActive = false
+                            })
+                        }) {
+
+
+                    RepointSearchBar(
+                        query = searchQuery,
+                        onQueryChange = {
+                            searchQuery = it
                             focusManager.clearFocus()
-                            searchBarActive = false
-                        })
-                    }){
+                        },
+                        active = searchBarActive,
+                        onActiveChange = { searchBarActive = it },
+                        content = {
+                            /*   val filteredTokens = activeTokens.filter {
+                                   it.symbol.contains(searchQuery.lowercase(), ignoreCase = true) ||
+                                           it.name.contains(searchQuery.lowercase(), ignoreCase = true)
+                               }*/
 
 
-                   RepointSearchBar(
-                       query = searchQuery,
-                       onQueryChange =  {searchQuery = it},
-                       active = searchBarActive,
-                       onActiveChange = {searchBarActive = it},
-                       content = {
-                           val filteredTokens = activeTokens.filter {
-                               it.symbol.contains(searchQuery.lowercase(), ignoreCase = true) ||
-                                       it.name.contains(searchQuery.lowercase(), ignoreCase = true)
-                           }
-
-
-                           LazyColumn(
-                               modifier = Modifier
-                                   .fillMaxWidth()
-                                   .background(pureWhite)
-                           ) {
-                               if (filteredTokens.isEmpty()) {
-                                   item {
-                                       Text(
-                                           text = "No tokens found",
-                                           modifier = Modifier.padding(16.dp),
-                                           color = Color.Gray
-                                       )
-                                   }
-                               } else {
-                                   items(filteredTokens) { token ->
-                                       val networkForToken = cryptoNetworks?.find { it.id == token.networkId }
-                                       val defaultNetworkLogoUrl = "" // empty string or null, and in your AsyncImage you provide a placeholder drawable resource
-                                       val networkLogoUrl = networkForToken?.tokens?.firstOrNull()?.logoUrl ?: defaultNetworkLogoUrl
-
-                                       masterWalletId?.let { walletId ->
-                                           sendTokenItem(
-                                               token,
-                                               viewModel,
-                                               web3ViewModel,
-                                               walletViewModel,
-                                               walletId,
-                                               isSend,
-                                               networkLogoUrl,
-                                               navController
+                            LazyColumn(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .background(pureWhite)
+                            ) {
+                                /*   if (filteredTokens.isEmpty()) {
+                                       item {
+                                           Text(
+                                               text = "No tokens found",
+                                               modifier = Modifier.padding(16.dp),
+                                               color = Color.Gray
                                            )
                                        }
-                                   }
-                               }
-                           }
-                       },
-                       onSearch = {
+                                   } else {
+                                       items(filteredTokens) { token ->
+                                           val networkForToken = cryptoNetworks?.find { it.id == token.networkId }
+                                           val defaultNetworkLogoUrl = "" // empty string or null, and in your AsyncImage you provide a placeholder drawable resource
+                                           val networkLogoUrl = networkForToken?.tokens?.firstOrNull()?.logoUrl ?: defaultNetworkLogoUrl
 
-                       },
-                       modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
-                   )
+                                           masterWalletId?.let { walletId ->
+                                               sendTokenItem(
+                                                   token,
+                                                   viewModel,
+                                                   web3ViewModel,
+                                                   walletViewModel,
+                                                   walletId,
+                                                   isSend,
+                                                   networkLogoUrl,
+                                                   navController
+                                               )
+                                           }
+                                       }
+                                   }*/
+                            }
+                        },
+                        onSearch = {
+
+                        },
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                        focusRequester = focusRequester
+                    )
 
 
                     LazyColumn(modifier = Modifier.padding(16.dp)) {
 
-                        if (activeTokens.isEmpty()) {
-                            item {
-                                Text(
-                                    text = "No activated tokens found. Go to the Network screen and enable some.",
-                                    modifier = Modifier.padding(16.dp),
-                                    color = Color.Gray
-                                )
-                            }
-                        }
+                        /*  if (activeTokens.isEmpty()) {
+                              item {
+                                  Text(
+                                      text = "No activated tokens found. Go to the Network screen and enable some.",
+                                      modifier = Modifier.padding(16.dp),
+                                      color = Color.Gray
+                                  )
+                              }
+                          }*/
 
-                        items(activeTokens.filter {
-                            it.symbol.contains(searchQuery, ignoreCase = true) ||
-                                    it.name.contains(searchQuery, ignoreCase = true)
-                        }) { token ->
-                            val networkForToken = cryptoNetworks?.find { it.id == token.networkId }
-                            val defaultNetworkLogoUrl = "" // empty string or null, and in your AsyncImage you provide a placeholder drawable resource
-                            val networkLogoUrl = networkForToken?.tokens?.firstOrNull()?.logoUrl ?: defaultNetworkLogoUrl
-
-
-                            masterWalletId?.let {
-                                sendTokenItem(token,viewModel,web3ViewModel,walletViewModel,
-                                    it,isSend,networkLogoUrl,navController)
-                            }
-                        }
+//                     /*   items(activeTokens.filter {
+//                            it.symbol.contains(searchQuery, ignoreCase = true) ||
+//                                    it.name.contains(searchQuery, ignoreCase = true)
+//                        }) { token ->
+//                            val networkForToken = cryptoNetworks?.find { it.id == token.networkId }
+//                            val defaultNetworkLogoUrl = "" // empty string or null, and in your AsyncImage you provide a placeholder drawable resource
+//                            val networkLogoUrl = networkForToken?.tokens?.firstOrNull()?.logoUrl ?: defaultNetworkLogoUrl
+//
+//
+//                            masterWalletId?.let {
+//                                sendTokenItem(token,viewModel,web3ViewModel,walletViewModel,
+//                                    it,isSend,networkLogoUrl,navController)
+//                            }
+//                        }*/
                     }
                 }
             }
@@ -206,15 +212,23 @@ fun ChooseTokenScreen(
 }
 
 @Composable
-fun sendTokenItem(token : TokenEntity,viewModel: NetworkViewModel,web3ViewModel: Web3ViewModel,walletViewModel: WalletViewModel,masterWalletId : String,isSend: Boolean,networkUrl : String?,navController: NavController){
+fun sendTokenItem(
+    token: TokenEntity,
+    web3ViewModel: Web3ViewModel,
+    walletViewModel: WalletViewModel,
+    masterWalletId: String,
+    isSend: Boolean,
+    networkUrl: String?,
+    navController: NavController
+) {
 
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
-    val networkByToken by viewModel.specificNetworkByToken.collectAsState()
-    val networkForToken by viewModel.specificNetworkForToken.collectAsState()
+    /*  val networkByToken by viewModel.specificNetworkByToken.collectAsState()
+      val networkForToken by viewModel.specificNetworkForToken.collectAsState()*/
 
-    val activeTokens by viewModel.activeTokens.collectAsState()
+    //val activeTokens by viewModel.activeTokens.collectAsState()
     var tokenImageLoaded by remember { mutableStateOf(false) }
     var networkImageLoaded by remember { mutableStateOf(false) }
 
@@ -234,78 +248,79 @@ fun sendTokenItem(token : TokenEntity,viewModel: NetworkViewModel,web3ViewModel:
             Log.d("chooseToken", "tokenEntity is : $token")
 
             scope.launch {
-                val network = viewModel.getNetworkById(token.networkId)
-                viewModel.getNetworkForToken(tokenId)
+                /*   val network = viewModel.getNetworkById(token.networkId)
+                   viewModel.getNetworkForToken(tokenId)*/
 
-                val chainId = network?.chainId
-                val coinType = network?.coinType
+                /*    val chainId = network?.chainId
+                    val coinType = network?.coinType*/
 
-                if (chainId == null){
-                    Log.e("chooseToken", "❌ Chain ID not found for tokenId: ${token.tokenId}")
-                    Toast.makeText(context, "Network info missing", Toast.LENGTH_SHORT).show()
-                    return@launch
-                }else
-                {
-                    web3ViewModel.fetchGasPrice(chainId.toLong())
-                }
-
+                /*  if (chainId == null){
+                      Log.e("chooseToken", "❌ Chain ID not found for tokenId: ${token.tokenId}")
+                      Toast.makeText(context, "Network info missing", Toast.LENGTH_SHORT).show()
+                      return@launch
+                  }else
+                  {
+                      web3ViewModel.fetchGasPrice(chainId.toLong())
+                  }*/
 
 
                 // val coinType = viewModel.tokenWithNetworks.value?.network?.coinType
-                Log.d("chooseToken", "coinType is : $coinType")
+                //  Log.d("chooseToken", "coinType is : $coinType")
 
-                if (coinType == null) {
-                    Log.e(
-                        "chooseToken",
-                        "Coin type is null for networkId: ${token.networkId}"
-                    )
-                    Toast.makeText(
-                        context,
-                        "Invalid token network",
-                        Toast.LENGTH_SHORT
-                    ).show()
-                    return@launch
-                }
+                /*  if (coinType == null) {
+                      Log.e(
+                          "chooseToken",
+                          "Coin type is null for networkId: ${token.networkId}"
+                      )
+                      Toast.makeText(
+                          context,
+                          "Invalid token network",
+                          Toast.LENGTH_SHORT
+                      ).show()
+                      return@launch
+                  }*/
 
-                val chainWallet = walletViewModel.getChainWallet(
-                    masterWalletId.toString(),
-                    coinType!!
-                )
-                Log.d("chooseToken", "the chainWAllet is : $chainWallet")
+                /*   val chainWallet = walletViewModel.getChainWallet(
+                       masterWalletId.toString(),
+                       coinType!!
+                   )*/
+                //      Log.d("chooseToken", "the chainWAllet is : $chainWallet")
                 Log.d(
                     "chooseToken",
                     "the masterWAllet id is : ${masterWalletId}"
                 )
-                val walletAddress = chainWallet?.address ?: ""
-            /*    val jsonString = navController.previousBackStackEntry
-                    ?.savedStateHandle
-                    ?.get<String>("tokenBalances")
-                val gson = Gson()*/
+                //     val walletAddress = chainWallet?.address ?: ""
+                /*    val jsonString = navController.previousBackStackEntry
+                        ?.savedStateHandle
+                        ?.get<String>("tokenBalances")
+                    val gson = Gson()*/
                 if (tokenBalances.isEmpty()) {
                     Log.e("ChooseToken", "tokenBalances is empty or missing!")
                 }
 
-                Log.d("chooseToken", "wallet address is : $walletAddress")
+                //         Log.d("chooseToken", "wallet address is : $walletAddress")
                 //navigate to the right screen
-                if (isSend) {
-                    //TODO add token balance
+                /*      if (isSend) {
+                          //TODO add token balance
 
-                    //val balance = walletViewModel.gettok
-                    val balance = tokenBalances?.find { it.tokenAddress.lowercase() == token.contractAddress.lowercase() }?.balanceFormatted  ?: "0"
-                    Log.d("chooseToken", "token is : $tokenBalances")
-                    Log.d("chooseToken", "token is : ${networkByToken?.nativeToken}")
-                    navController.navigate(
-                        "sendToken/${Uri.encode(walletAddress)}/${Uri.encode(balance)}/$coinType/${Uri.encode(token.contractAddress)}/$chainId/${Uri.encode(token.name)}"
-                    )                } else {
-                    Log.d("chooseToken", "network name is : ${networkByToken?.nativeToken}")
-                    Log.d("chooseToken", "wallet address is : $walletAddress")
-                    Log.d("chooseToken", "masterwallet iD is : $masterWalletId")
-                    Log.d("chooseToken", "token id is : $tokenId")
-                    navController.navigate("qrCode/$walletAddress/$masterWalletId/$tokenId/${networkByToken?.nativeToken}")
-                }
+                          //val balance = walletViewModel.gettok
+                          val balance = tokenBalances?.find { it.tokenAddress.lowercase() == token.contractAddress.lowercase() }?.balanceFormatted  ?: "0"
+                          Log.d("chooseToken", "token is : $tokenBalances")
+                          Log.d("chooseToken", "token is : ${networkByToken?.nativeToken}")
+                          navController.navigate(
+                              "sendToken/${Uri.encode(walletAddress)}/${Uri.encode(balance)}/$coinType/${Uri.encode(token.contractAddress)}/$chainId/${Uri.encode(token.name)}"
+                          )                } else {
+                          Log.d("chooseToken", "network name is : ${networkByToken?.nativeToken}")
+                          Log.d("chooseToken", "wallet address is : $walletAddress")
+                          Log.d("chooseToken", "masterwallet iD is : $masterWalletId")
+                          Log.d("chooseToken", "token id is : $tokenId")
+                          navController.navigate("qrCode/$walletAddress/$masterWalletId/$tokenId/${networkByToken?.nativeToken}")
+                      }*/
             }
         },
-        networkUrl = networkUrl.toString(), onTokenImageLoaded = {tokenImageLoaded = true}, onNetworkImageLoaded = {networkImageLoaded = true}
+        networkUrl = networkUrl.toString(),
+        onTokenImageLoaded = { tokenImageLoaded = true },
+        onNetworkImageLoaded = { networkImageLoaded = true }
     )
 }
 
@@ -338,7 +353,7 @@ fun TokenItem(
         TokenWithNetworkDb(
             token,
             networkUrl,
-            onTokenImageLoaded = { onTokenImageLoaded()},
+            onTokenImageLoaded = { onTokenImageLoaded() },
             onNetworkImageLoaded = { onNetworkImageLoaded() })
 
         Spacer(modifier = Modifier.width(8.dp))

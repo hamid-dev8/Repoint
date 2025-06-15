@@ -45,6 +45,7 @@ import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
@@ -76,7 +77,7 @@ import com.repoint.basics.atoms.LoaderAnimation
 import com.repoint.basics.atoms.RepointAppBar
 import com.repoint.basics.atoms.ViewPagerRobot
 import com.repoint.basics.atoms.launchBotTab
-import com.repoint.dashboard.NetworkViewModel
+import com.repoint.dashboard.CmcTokenViewModel
 import com.repoint.dashboard.TokenViewModel
 import com.repoint.dashboard.Web3ViewModel
 import com.repoint.dashboard.activity.WebBotActivity
@@ -92,9 +93,14 @@ import com.repoint.dependencies.theme.richBlack
 import com.repoint.models.sharedmodels.local.ChainWallet
 import com.repoint.models.sharedmodels.local.MasterWallet
 import com.repoint.models.sharedmodels.local.TokenEntity
+import com.repoint.models.sharedmodels.remote.CmcStatus
 import com.repoint.models.sharedmodels.remote.NativesBalance
+import com.repoint.models.sharedmodels.remote.TokenInfoMetadataResponse
+import com.repoint.models.sharedmodels.remote.TokenMetaData
+import com.repoint.models.sharedmodels.remote.TokenQuotesResponse
 import com.repoint.models.sharedmodels.remote.TokensBalance
 import com.repoint.models.sharedmodels.remote.moralisChainMap
+import com.repoint.models.sharedmodels.ui.ApiResult
 import com.repoint.models.sharedmodels.ui.UiState
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.launch
@@ -117,13 +123,13 @@ fun HomeScreen(
     walletViewModel: WalletViewModel = hiltViewModel<WalletViewModel>(),
     userViewModel: UserViewModel = hiltViewModel<UserViewModel>(),
     tokenViewModel: TokenViewModel = hiltViewModel<TokenViewModel>(),
-    networkViewModel: NetworkViewModel = hiltViewModel<NetworkViewModel>(),
-    web3ViewModel: Web3ViewModel = hiltViewModel()
+    web3ViewModel: Web3ViewModel = hiltViewModel(),
+    cmcTokenViewModel: CmcTokenViewModel = hiltViewModel()
 ) {
 
     var masterWallets by remember { mutableStateOf<List<MasterWallet>>(emptyList()) }
     var chainWallets by remember { mutableStateOf<List<ChainWallet>>(emptyList()) }
-    var tokenList by remember { mutableStateOf<NativesBalance?>(null) }
+    var tokenList by remember { mutableStateOf<TokenInfoMetadataResponse?>(null) }
     var tokensOf by remember { mutableStateOf<List<TokensBalance?>>(emptyList()) }
     var balance by remember { mutableStateOf<String>(" ") }
     var selectedWallet by remember { mutableStateOf<MasterWallet?>(null) }
@@ -166,23 +172,70 @@ fun HomeScreen(
 
     val activeWalletId by spManager.activeWalletIdFlow.collectAsState()
     val allTokens by tokenViewModel.allTokens.collectAsState()
-    val activeTokens by networkViewModel.activeTokens.collectAsState()
+    //val activeTokens by networkViewModel.activeTokens.collectAsState()
 
     val sheetTokenState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     var showTokenBottomSheet by remember { mutableStateOf(false) }
-    val uiState by networkViewModel.uiState.collectAsState()
-    val uiStateBlockChain by networkViewModel.uiStateNetworkBlockChain.collectAsState()
+    // val uiState by networkViewModel.uiState.collectAsState()
+    // val uiStateBlockChain by networkViewModel.uiStateNetworkBlockChain.collectAsState()
 
     var isRefreshing by remember { mutableStateOf(false) }
 
     var isSortAscending by remember { mutableStateOf(true) }
     val sortedTokens = remember(tokenList, isSortAscending) {
-        tokenList?.result?.sortedBy { it.symbol.lowercase() }?.let { list ->
+        tokenList?.data?.values?.sortedBy { it.symbol.lowercase() }?.let { list ->
             if (isSortAscending) list else list.reversed()
         } ?: emptyList()
     }
 
     val rotationAngle by animateFloatAsState(targetValue = if (isSortAscending) 0f else 180f)
+
+
+    Log.d("activeWallet", "active wallet id is : $activeWalletId")
+
+// 2) Define a default “empty” ApiResult
+    val emptyInfo = ApiResult.Success(
+        TokenInfoMetadataResponse(
+            status = CmcStatus(
+                timestamp = "",
+                errorCode = "0",
+                errorMessage = null,
+                elapsed = null,
+                creditCount = 0,
+                notice = null
+            ),
+            data = emptyMap()
+        )
+    )
+// 3) Now call collectAsState _at top level_, choosing between the real flow or a fixed state
+    val apiResult by produceState<ApiResult<TokenInfoMetadataResponse>>(
+        initialValue = emptyInfo,
+        key1 = activeWalletId
+    ) {
+        value = activeWalletId?.let { cmcTokenViewModel.getActivatedTokensInfo(it) }!!
+    }
+
+
+    // 4) Pull out the response when it’s a success
+    val infoResponse = (apiResult as? ApiResult.Success)?.data
+
+    // now explicitly say “T = ApiResult<TokenInfoMetadataResponse>”
+    val infoResult by produceState<ApiResult<TokenInfoMetadataResponse>>(
+        initialValue = emptyInfo,
+        key1 = activeWalletId
+    ) {
+        // only call once per activeWalletId
+        val result = cmcTokenViewModel.getActivatedTokensInfo(activeWalletId ?: return@produceState)
+        // no cast needed—getActivatedTokensInfo already returns ApiResult<…>
+        value = result
+    }
+    // 2) prices
+    val priceResult by produceState<ApiResult<TokenQuotesResponse>>(
+        initialValue = ApiResult.Success(TokenQuotesResponse(CmcStatus.EMPTY, emptyMap())),
+        key1 = activeWalletId
+    ) {
+        value = cmcTokenViewModel.getPricesForActiveTokens(activeWalletId!!)
+    }
 
     LaunchedEffect(selectedWallet?.masterWalletId, activeWalletId, masterWallets) {
 
@@ -201,7 +254,10 @@ fun HomeScreen(
             masterWallets = walletViewModel.getAllMasterWallets(userId)
             Log.d("token", "Master Wallets: $masterWallets")
 
+
             if (masterWallets.isNotEmpty() && !activeWalletId.isNullOrEmpty()) {
+
+                Log.d("activeWallet", "active wallet id is : $activeWalletId")
 
                 selectedWallet = masterWallets.find { it.masterWalletId == activeWalletId }
                     ?: masterWallets.firstOrNull()
@@ -234,58 +290,61 @@ fun HomeScreen(
                     )
                     // tokenList = tokenViewModel.getTokenBalance(address = address, chain = "polygon")
 
-                    val enabledChains = networkViewModel.getEnabledMoralisChains(selectedWalletId)
+                    //val enabledChains = networkViewModel.getEnabledMoralisChains(selectedWalletId)
 
-                    tokenViewModel.getAllAvailableTokensFromMoralisOnly(
+                    /*  tokenViewModel.getAllAvailableTokensFromMoralisOnly(
+                          walletAddress = activeAddress!!,
+                          masterWalletId = selectedWalletId,
+                          enabledChains = enabledChains
+                      ){ tokens ->
+                          tokenList = NativesBalance(
+                              cursor = "",
+                              page = 1,
+                              pageSize = tokens.size,
+                              result = tokens
+                          )
+
+                      }*/
+
+                    web3ViewModel.fetchNativeWalletBalance(
                         walletAddress = activeAddress!!,
-                        masterWalletId = selectedWalletId,
-                        enabledChains = enabledChains
-                    ){ tokens ->
-                        tokenList = NativesBalance(
-                            cursor = "",
-                            page = 1,
-                            pageSize = tokens.size,
-                            result = tokens
-                        )
+                        chainId = 11155111
+                    )
 
-                    }
-
-                    web3ViewModel.fetchNativeWalletBalance(walletAddress = activeAddress!!, chainId = 11155111)
-
-                    Log.d("balanceEther","balance is this   $balanceEther")
+                    Log.d("balanceEther", "balance is this   $balanceEther")
 
 
                     //todo check this
-                   // tokenViewModel.getTokenBalancesByWallet(walletAddress = activeAddress!!, chain = "eth")
+                    // tokenViewModel.getTokenBalancesByWallet(walletAddress = activeAddress!!, chain = "eth")
 
-                /*    tokenViewModel.getAllChainTokenBalances(
-                        walletAddress = activeAddress!!,
-                        masterWalletId = selectedWallet!!.masterWalletId,
-                        chains = allChains
-                    ) { allBalances ->
-                        // ✅ Deduplicate by lowercased address AND balance presence
-                        val distinctBalances = allBalances
-                            .groupBy { (chain, token) -> "${token.tokenAddress.lowercase()}-$chain" }
-                            .map { (_, tokenPairs) ->
-                                tokenPairs.maxByOrNull { (_, token) ->
-                                    val hasPrice = if (token.usdPrice > 0) 100 else 0
-                                    val hasBalance = if (token.balance != "0" && token.balance != "0.0") 10 else 0
-                                    hasPrice + hasBalance
-                                }!!.second // pick TokensBalance only
-                            }
-                        Log.d("token-filter", "Tokens after deduplication: ${distinctBalances.map { it.symbol to it.usdPrice }}")
-
-
-                        tokenList = NativesBalance(
-                            cursor = "",
-                            page = 1,
-                            pageSize = allBalances.size,
-                            result = distinctBalances
-                        )
-                    }*/
+                    /*    tokenViewModel.getAllChainTokenBalances(
+                            walletAddress = activeAddress!!,
+                            masterWalletId = selectedWallet!!.masterWalletId,
+                            chains = allChains
+                        ) { allBalances ->
+                            // ✅ Deduplicate by lowercased address AND balance presence
+                            val distinctBalances = allBalances
+                                .groupBy { (chain, token) -> "${token.tokenAddress.lowercase()}-$chain" }
+                                .map { (_, tokenPairs) ->
+                                    tokenPairs.maxByOrNull { (_, token) ->
+                                        val hasPrice = if (token.usdPrice > 0) 100 else 0
+                                        val hasBalance = if (token.balance != "0" && token.balance != "0.0") 10 else 0
+                                        hasPrice + hasBalance
+                                    }!!.second // pick TokensBalance only
+                                }
+                            Log.d("token-filter", "Tokens after deduplication: ${distinctBalances.map { it.symbol to it.usdPrice }}")
 
 
-                    selectedWallet?.let { networkViewModel.initializeWithWallet(it.masterWalletId) }
+                            tokenList = NativesBalance(
+                                cursor = "",
+                                page = 1,
+                                pageSize = allBalances.size,
+                                result = distinctBalances
+                            )
+                        }*/
+
+
+                    // selectedWallet?.let { networkViewModel.initializeWithWallet(it.masterWalletId) }
 
                     // tokensOf = tokenViewModel.getAllActivatedTokenBalances(activeAddress, "polygon")
                     //tokensOf = tokenViewModel.getMergedActivatedTokenBalances(address,"polygon")
@@ -326,13 +385,13 @@ fun HomeScreen(
 
             PullToRefreshBox(
                 state = refreshState,
-                isRefreshing = uiState is UiState.Loading,
+                isRefreshing = false,
                 onRefresh = {
                     coroutineScope.launch {
                         val walletId = spManager.getActiveWalletId().firstOrNull()
                         if (!walletId.isNullOrEmpty()) {
-                            networkViewModel._uiState.value = UiState.Loading
-                            networkViewModel.initializeWithWallet(walletId) // your reload logic
+                            //networkViewModel._uiState.value = UiState.Loading
+                            //    networkViewModel.initializeWithWallet(walletId) // your reload logic
                         }
 
                         /*     // Wait for loading to complete (success or error)
@@ -346,197 +405,202 @@ fun HomeScreen(
                 modifier = Modifier.fillMaxSize(),
                 contentAlignment = Alignment.Center
             ) {
-                when (uiState) {
-                    is UiState.Loading -> {
-                        LoaderAnimation()
-                    }
 
-                    is UiState.Success -> {
-                        Box(modifier = Modifier.fillMaxSize()) {
-                            LazyColumn(
-                                Modifier
-                                    .fillMaxSize()
-                                    .padding(8.dp)
+                Box(modifier = Modifier.fillMaxSize()) {
+                    LazyColumn(
+                        Modifier
+                            .fillMaxSize()
+                            .padding(8.dp)
+                    ) {
+
+          /*              val amount = netWorthSection(tokenList?.data.values)
+                        val formattedBalanceAmount = DecimalFormat("#0.00").format(amount)*/
+                        item {
+                            Card(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(7.dp),
+                                shape = RoundedCornerShape(22.dp),
+                                border = BorderStroke(1.dp, lightGray),
+                                colors = CardDefaults.cardColors(containerColor = pureWhite)
                             ) {
 
-                                val amount = netWorthSection(tokenList?.result)
-                                val formattedBalanceAmount = DecimalFormat("#0.00").format(amount)
-                                item {
-                                    Card(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .padding(7.dp),
-                                        shape = RoundedCornerShape(22.dp),
-                                        border = BorderStroke(1.dp, lightGray),
-                                        colors = CardDefaults.cardColors(containerColor = pureWhite)
-                                    ) {
+                                // Spacer(Modifier.padding(top = 4.dp))
 
-                                        // Spacer(Modifier.padding(top = 4.dp))
+                                BalanceScreen(
+                                    masterWallets,
+                                    balance = "update later",
+                                    onAddWallet = {
+                                        showBottomSheet = true
+                                    },
+                                    onWalletSelected = { selectedWallet ->
+                                        coroutineScope.launch {
+                                            spManager.setActiveWallet(selectedWallet.masterWalletId)
 
-                                        BalanceScreen(
-                                            masterWallets,
-                                            balance = "$$formattedBalanceAmount",
-                                            onAddWallet = {
-                                                showBottomSheet = true
-                                            },
-                                            onWalletSelected = { selectedWallet ->
-                                                coroutineScope.launch {
-                                                    spManager.setActiveWallet(selectedWallet.masterWalletId)
-                                                    networkViewModel.initializeWithWallet(
-                                                        selectedWallet.masterWalletId
-                                                    )
-                                                    Log.d(
-                                                        "token",
-                                                        "selected wallet changed : ${selectedWallet.masterWalletId}"
-                                                    )
-                                                    Log.d(
-                                                        "token",
-                                                        "master wallet changed : $masterWallets"
-                                                    )
-                                                }
-                                                //TODO ezafe kardane safe add wallet va sakht wallet jadid
-                                                //walletViewModel.createUserWallet()
-
-                                                selectedWalletId =
-                                                    selectedWallet.masterWalletId
-                                            },
-                                            selectedWalletName = selectedWalletId
-                                        )
-                                        if (masterWallets.isNotEmpty() && !activeAddress.isNullOrEmpty()) {
-                                            ActionsRow(
-                                                navController,
-                                                wallet = selectedWallet,
-                                                tokenList,
-                                                activeAddress!!
+                                            Log.d(
+                                                "token",
+                                                "selected wallet changed : ${selectedWallet.masterWalletId}"
+                                            )
+                                            Log.d(
+                                                "token",
+                                                "master wallet changed : $masterWallets"
                                             )
                                         }
-                                    }
-                                    Spacer(Modifier.padding(bottom = 24.dp))
+                                        //TODO ezafe kardane safe add wallet va sakht wallet jadid
+                                        //walletViewModel.createUserWallet()
+
+                                        selectedWalletId =
+                                            selectedWallet.masterWalletId
+                                    },
+                                    selectedWalletName = selectedWalletId
+                                )
+                                if (masterWallets.isNotEmpty() && !activeAddress.isNullOrEmpty()) {
+                                    ActionsRow(
+                                        navController,
+                                        wallet = selectedWallet,
+                                        tokenList,
+                                        activeAddress!!
+                                    )
                                 }
+                            }
+                            Spacer(Modifier.padding(bottom = 24.dp))
+                        }
 
-                                item {
-                                    ViewPagerRobot()
-                                }
-                                // ─── sticky TabRow ─────────────────────────────────────
-                                // ① sticky header for your tab
-                                // s
-                                stickyHeader {
-                                    Row(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .background(ghostWhite)
-                                            .padding(horizontal = 10.dp, vertical = 16.dp),
-                                        verticalAlignment = Alignment.CenterVertically
-                                    ) {
-                                        // ✅ Manual tabs in a Row
-                                        Row(
-                                            horizontalArrangement = Arrangement.spacedBy(16.dp),
-                                            verticalAlignment = Alignment.CenterVertically
-                                        ) {
-                                            listOf("Tokens", "NFTs").forEachIndexed { idx, title ->
-                                                Column(
-                                                    horizontalAlignment = Alignment.CenterHorizontally,
-                                                    modifier = Modifier
-                                                        .padding(vertical = 2.dp)
-                                                        .clickable { selectedTab = idx }
-                                                ) {
-                                                    Text(
-                                                        text = title,
-                                                        style = RepointTypography.titleSmall.copy(
-                                                            color = if (selectedTab == idx) repointBlue else Color.Gray,
-                                                            fontWeight = if (selectedTab == idx) FontWeight.Bold else FontWeight.Normal
-                                                        ),
-                                                        modifier = Modifier
-                                                            .padding(
-                                                                horizontal = 8.dp,
-                                                                vertical = 4.dp
-                                                            )
-                                                            .padding(bottom = 8.dp)
-                                                    )
-
-                                                    // 🔽 Indicator under the selected tab
-                                                    if (selectedTab == idx) {
-                                                        Box(
-                                                            modifier = Modifier
-                                                                .height(2.dp)
-                                                                .width(24.dp)
-                                                                .clip(RoundedCornerShape(1.dp))
-                                                                .background(repointBlue)
-                                                        )
-                                                    } else {
-                                                        Spacer(modifier = Modifier.height(4.dp))
-                                                    }
-                                                }
-                                            }
-                                        }
-
-
-                                        Spacer(modifier = Modifier.weight(1f))
-
-                                        // ✅ Icons aligned to right
-                                        Row(
-                                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                            verticalAlignment = Alignment.CenterVertically
-                                        ) {
-                                            Icon(
-                                                painter = painterResource(R.drawable.add),
-                                                contentDescription = "Add",
-                                                modifier = Modifier
-                                                    .size(24.dp)
-                                                    .clickable { navController.navigate("networks") }
-                                            )
-                                            Icon(
-                                                painter = painterResource(R.drawable.sort_bottom),
-                                                contentDescription = "Sort",
-                                                modifier = Modifier
-                                                    .size(24.dp)
-                                                    .rotate(rotationAngle)
-                                                    .clickable {
-                                                        isSortAscending = !isSortAscending
-                                                    }
-                                            )
-                                        }
-                                    }
-                                }
-
-                                // ② under that header, show either your token rows or NFT placeholder
-                                if (selectedTab == 0) {
-                                    items(sortedTokens) { token ->
-                                        TokenRow(token)
-                                    }
-                                } else {
-                                    item {
-                                        Box(
-                                            Modifier
-                                                .fillMaxWidth()
-                                                .padding(24.dp),
-                                            contentAlignment = Alignment.Center
+                        item {
+                            ViewPagerRobot()
+                        }
+                        // ─── sticky TabRow ─────────────────────────────────────
+                        // ① sticky header for your tab
+                        // s
+                        stickyHeader {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .background(ghostWhite)
+                                    .padding(horizontal = 10.dp, vertical = 16.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                // ✅ Manual tabs in a Row
+                                Row(
+                                    horizontalArrangement = Arrangement.spacedBy(16.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    listOf("Tokens", "NFTs").forEachIndexed { idx, title ->
+                                        Column(
+                                            horizontalAlignment = Alignment.CenterHorizontally,
+                                            modifier = Modifier
+                                                .padding(vertical = 2.dp)
+                                                .clickable { selectedTab = idx }
                                         ) {
                                             Text(
-                                                "Coming Soon",
-                                                style = RepointTypography.headlineSmall
+                                                text = title,
+                                                style = RepointTypography.titleSmall.copy(
+                                                    color = if (selectedTab == idx) repointBlue else Color.Gray,
+                                                    fontWeight = if (selectedTab == idx) FontWeight.Bold else FontWeight.Normal
+                                                ),
+                                                modifier = Modifier
+                                                    .padding(
+                                                        horizontal = 8.dp,
+                                                        vertical = 4.dp
+                                                    )
+                                                    .padding(bottom = 8.dp)
                                             )
+
+                                            // 🔽 Indicator under the selected tab
+                                            if (selectedTab == idx) {
+                                                Box(
+                                                    modifier = Modifier
+                                                        .height(2.dp)
+                                                        .width(24.dp)
+                                                        .clip(RoundedCornerShape(1.dp))
+                                                        .background(repointBlue)
+                                                )
+                                            } else {
+                                                Spacer(modifier = Modifier.height(4.dp))
+                                            }
                                         }
                                     }
+                                }
+
+
+                                Spacer(modifier = Modifier.weight(1f))
+
+                                // ✅ Icons aligned to right
+                                Row(
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Icon(
+                                        painter = painterResource(R.drawable.add),
+                                        contentDescription = "Add",
+                                        modifier = Modifier
+                                            .size(24.dp)
+                                            .clickable { navController.navigate("networks") }
+                                    )
+                                    Icon(
+                                        painter = painterResource(R.drawable.sort_bottom),
+                                        contentDescription = "Sort",
+                                        modifier = Modifier
+                                            .size(24.dp)
+                                            .rotate(rotationAngle)
+                                            .clickable {
+                                                isSortAscending = !isSortAscending
+                                            }
+                                    )
                                 }
                             }
                         }
-                    }
 
-                    is UiState.Error -> {
-                        ErrorScreen(
-                            message = (uiState as UiState.Error).messages,
-                            modifier = Modifier,
-                            onRetry = {
-                                coroutineScope.launch {
-                                    tokenViewModel._uiState.value = UiState.Loading
-                                    val walletId = spManager.getActiveWalletId().firstOrNull()
-                                    if (!walletId.isNullOrEmpty()) {
-                                        networkViewModel.initializeWithWallet(walletId)
+                        // ② under that header, show either your token rows or NFT placeholder
+                        // ⑤ Main content under tabs
+                        if (selectedTab == 0) {
+                            // ➞ tokens list
+                            when {
+                                infoResult is ApiResult.Error || priceResult is ApiResult.Error -> {
+                                    item {
+                                        Text(
+                                            "Network problem",
+                                            style = RepointTypography.titleSmall,
+                                            modifier = Modifier.padding(16.dp)
+                                        )
                                     }
                                 }
-                            })
-                        //Text(text = (uiState as UiState.Error).messages, color = Color.Red)
+                                infoResult is ApiResult.Success && priceResult is ApiResult.Success -> {
+                                    val metas     = (infoResult as ApiResult.Success).data.data.values.toList()
+                                    val quotesMap = (priceResult as ApiResult.Success).data.data
+                                    items(metas) { meta ->
+                                        val priceUsd = quotesMap[meta.id.toString()]
+                                            ?.quote
+                                            ?.get("USD")
+                                            ?.price
+                                            ?: 0.0
+                                        TokenRow(item = meta, priceUsd = priceUsd)
+                                    }
+                                }
+                                else -> {
+                                    item {
+                                        LoaderAnimation(
+                                            Modifier
+                                                .fillMaxWidth()
+                                                .height(64.dp)
+                                                .padding(vertical = 16.dp)
+                                        )
+                                    }
+                                }
+                            }
+                        } else {
+                            // ➞ NFTs placeholder
+                            item {
+                                Box(
+                                    Modifier
+                                        .fillMaxWidth()
+                                        .padding(24.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text("Coming Soon", style = RepointTypography.headlineSmall)
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -625,7 +689,7 @@ fun HomeScreen(
         ) {
             TokenToggleSheet(
                 allTokens = allTokens,
-                activeTokens = activeTokens,
+                activeTokens = null,
                 onToggle = { token, isActive ->
                     /*   networkViewModel.toggleActiveNetwork(
                            tokenId = token.tokenId,
@@ -637,15 +701,51 @@ fun HomeScreen(
         }
     }
 }
+@Composable
+fun PriceListForWallet(walletId: String, vm: CmcTokenViewModel = hiltViewModel()) {
+    // 1) Make sure `empty` is declared as the supertype:
+    val empty: ApiResult<TokenQuotesResponse> = ApiResult.Success(
+        TokenQuotesResponse(
+            status = CmcStatus.EMPTY,
+            data   = emptyMap()
+        )
+    )
+
+    // 2) Tell produceState that T = ApiResult<TokenQuotesResponse>
+    val prices by produceState<ApiResult<TokenQuotesResponse>>(
+        initialValue = empty,
+        key1 = walletId
+    ) {
+        // this suspend call returns ApiResult<TokenQuotesResponse>
+        value = vm.getPricesForActiveTokens(walletId)
+    }
+
+    // 3) Now you can pattern‐match on `prices`:
+    when (prices) {
+        is ApiResult.Error   -> Text("Error loading prices")
+        is ApiResult.Success -> {
+            val quotes = (prices as ApiResult.Success).data.data.values.toList()
+            LazyColumn {
+                items(quotes) { q ->
+                    Row(Modifier.fillMaxWidth().padding(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Text(q.symbol, Modifier.weight(1f))
+                        Text("$${DecimalFormat("#0.00").format(q.quote["USD"]?.price ?: 0.0)}")
+                    }
+                }
+            }
+        }
+    }
+}
+
 
 
 @Composable
 fun TokenToggleSheet(
     allTokens: List<TokenEntity>,
-    activeTokens: List<TokenEntity>,
+    activeTokens: List<TokenEntity>?,
     onToggle: (TokenEntity, Boolean) -> Unit
 ) {
-    val activeTokenIds = remember(activeTokens) { activeTokens.map { it.tokenId }.toSet() }
+    val activeTokenIds = remember(activeTokens) { activeTokens?.map { it.tokenId }?.toSet() }
 
     var tokenImageLoaded by remember { mutableStateOf(false) }
     var networkImageLoaded by remember { mutableStateOf(false) }
@@ -666,12 +766,14 @@ fun TokenToggleSheet(
                     Text(token.symbol, style = RepointTypography.titleSmall)
                     Text(token.name, style = RepointTypography.labelSmall, color = Color.Gray)
                 }
-                Switch(
-                    checked = activeTokenIds.contains(token.tokenId),
-                    onCheckedChange = { checked ->
-                        onToggle(token, checked)
-                    }
-                )
+                activeTokenIds?.contains(token.tokenId)?.let {
+                    Switch(
+                        checked = it,
+                        onCheckedChange = { checked ->
+                            onToggle(token, checked)
+                        }
+                    )
+                }
             }
         }
     }
@@ -679,39 +781,37 @@ fun TokenToggleSheet(
 
 
 @Composable
-fun TokenRow(item: TokensBalance) {
+fun TokenRow(item: TokenMetaData?,priceUsd : Double) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .padding(vertical = 10.dp, horizontal = 8.dp)
             .clip(RoundedCornerShape(16.dp))
             .background(grayHound)
-            .border(0.5.dp, lightGray, shape = RoundedCornerShape(16.dp))
+            .border(0.5.dp, lightGray, RoundedCornerShape(16.dp))
             .padding(8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         AsyncImage(
-            model = item.logo,
-            contentDescription = item.symbol,
+            model = item?.logo,
+            contentDescription = item?.symbol,
             modifier = Modifier
                 .size(32.dp)
                 .padding(2.dp)
                 .clip(RoundedCornerShape(8.dp))
         )
         Spacer(Modifier.width(8.dp))
-        Column(
-            modifier = Modifier
-                .weight(1f)
-                .padding(4.dp)
-        ) {
-            Text(item.symbol.uppercase(), style = RepointTypography.titleMedium)
-            Text(item.name, style = RepointTypography.labelSmall, color = richBlack)
+        Column(modifier = Modifier
+            .weight(1f)
+            .padding(4.dp)) {
+            item?.symbol?.uppercase()?.let { Text(it, style = RepointTypography.titleMedium) }
+            item?.name?.let { Text(it, style = RepointTypography.labelSmall, color = richBlack) }
         }
         Column(horizontalAlignment = Alignment.End, modifier = Modifier.padding(4.dp)) {
-            val amt = item.balanceFormatted.toDoubleOrNull() ?: 0.0
-            Text(DecimalFormat("#0.00").format(amt), style = RepointTypography.titleMedium)
+            // if you have balanceFormatted & usdPrice on TokenMetaData, use them;
+            // otherwise drop that bit or lift it from CmcTokenEntity instead
             Text(
-                "$${DecimalFormat("#0.00").format(item.usdPrice)}",
+                text = "$${DecimalFormat("#0.00").format(priceUsd)}",
                 style = RepointTypography.titleSmall
             )
         }
@@ -749,12 +849,46 @@ fun SearchTokenItem(
         )
     }
 }
+@Composable
+fun ActivatedTokensList(
+    infoResult: ApiResult<TokenInfoMetadataResponse>,
+    priceResult: ApiResult<TokenQuotesResponse>
+) {
+    when {
+        infoResult is ApiResult.Error   || priceResult is ApiResult.Error ->
+            Text("Network problem", style = RepointTypography.titleSmall)
+
+        infoResult is ApiResult.Success && priceResult is ApiResult.Success -> {
+            // 1) pull out your lists
+            val metas  = infoResult.data.data.values.toList()
+            val quotesMap = priceResult.data.data  // Map<String,QuoteData>
+
+            // 2) render them together
+            LazyColumn {
+                items(metas) { meta ->
+                    // lookup this token’s price by its id:
+                    val priceUsd = quotesMap[meta.id.toString()]
+                        ?.quote
+                        ?.get("USD")
+                        ?.price
+                        ?: 0.0
+
+                    TokenRow(
+                        item     = meta,
+                        priceUsd = priceUsd
+                    )
+                }
+            }
+        }
+    }
+}
+
 
 @Composable
 fun ActionsRow(
     navController: NavController,
     wallet: MasterWallet?,
-    tokenList: NativesBalance?,
+    tokenList: TokenInfoMetadataResponse?,
     activeAddress: String
 ) {
 
@@ -774,10 +908,10 @@ fun ActionsRow(
                 //todo handle which is native token to do gas fees
                 //send choose token // Todo modify send
                 //navController.navigate("sendToken/${wallet?.address}/${tokenList?.result?.get(0)?.balanceFormatted}")
-           /*     val gson = Gson()
-                val type = object : TypeToken<List<TokensBalance>>() {}.type
-                val jsonString = gson.toJson(tokenList?.result,type)*/
-                val tokenListSafe = ArrayList(tokenList?.result ?: emptyList())
+                /*     val gson = Gson()
+                     val type = object : TypeToken<List<TokensBalance>>() {}.type
+                     val jsonString = gson.toJson(tokenList?.result,type)*/
+                val tokenListSafe = ArrayList(tokenList?.data?.values ?: emptyList())
 
                 navController.currentBackStackEntry?.savedStateHandle?.set(
                     "tokenBalances",
@@ -812,9 +946,9 @@ fun ActionsRow(
             text = "To Bot",
             iconSize = 26.dp,
             onClick = {
-             /*    val encodedUrl = Uri.encode("https://repoint.app") // or your actual bot URL
-                 navController.navigate("bot/$encodedUrl")*/
-             //   launchBotTab(context = context, "https://repoint.app")
+                /*    val encodedUrl = Uri.encode("https://repoint.app") // or your actual bot URL
+                    navController.navigate("bot/$encodedUrl")*/
+                //   launchBotTab(context = context, "https://repoint.app")
                 val intent = Intent(context, WebBotActivity::class.java)
                 intent.putExtra("bot_url", "https://repoint.app")
                 context.startActivity(intent)
@@ -827,9 +961,10 @@ fun ActionsRow(
             iconSize = 24.dp,
             onClick = {
                 val encodedAddress = Uri.encode(activeAddress)
-                val balance = tokenList?.result?.firstOrNull()?.usdPrice ?: 0.0
-                val formattedBalance = DecimalFormat("#0.00").format(balance)
-                navController.navigate("history/$formattedBalance/$encodedAddress")
+                //todo ok history balance and etc...
+               // val balance = tokenList?.data?.firstOrNull()?.usdPrice ?: 0.0
+            //    val formattedBalance = DecimalFormat("#0.00").format(balance)
+          //      navController.navigate("history/$formattedBalance/$encodedAddress")
             },
             modifier = Modifier.weight(1f)
         )

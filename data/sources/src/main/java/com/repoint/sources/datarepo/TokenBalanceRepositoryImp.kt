@@ -17,10 +17,6 @@ import javax.inject.Singleton
 class TokenBalanceRepositoryImp @Inject constructor(private val api : WebApi) :
     TokenDataSource
 {
-    override suspend fun getAllTokensList(): CmcMapData {
-        return api.getAllTokensList()
-    }
-
 
 
     override suspend fun getTokenBalance(address: String, chain: String,tokenAddress: List<String>?) : NativesBalance {

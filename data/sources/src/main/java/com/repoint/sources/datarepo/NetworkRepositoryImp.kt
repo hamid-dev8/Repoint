@@ -79,6 +79,10 @@ class NetworkRepositoryImp @Inject constructor(private val networkDao : NetworkD
         return networkDao.insertNetworks(networks)
     }
 
+    override suspend fun getActiveTokensId(walletId: Int): Flow<LocalActiveNetworks> {
+        TODO("Not yet implemented")
+    }
+
     override suspend fun insertActiveNetwork(active: LocalActiveNetworks) {
         return networkDao.insertActiveNetwork(active)
     }

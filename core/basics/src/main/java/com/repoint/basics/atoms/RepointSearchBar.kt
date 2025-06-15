@@ -20,6 +20,8 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.repoint.dependencies.theme.RoseWood
@@ -39,8 +41,10 @@ fun RepointSearchBar(
     active: Boolean,
     onActiveChange: (Boolean) -> Unit,
     onSearch: (String) -> Unit,
+    onClear : () -> Unit = {},
     content: @Composable () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    focusRequester: FocusRequester
 ) {
     SearchBar(
         query = query,
@@ -52,7 +56,10 @@ fun RepointSearchBar(
         leadingIcon = { Icon(Icons.Default.Search, contentDescription = "Search Icon") },
         trailingIcon = {
             if (query.isNotEmpty()) {
-                IconButton(onClick = { onQueryChange("") }) {
+                IconButton(onClick = {
+                    onQueryChange("")
+                    onClear()
+                }) {
                     Icon(Icons.Default.Clear, contentDescription = "Clear Search", tint = darkGray)
                 }
             }
@@ -63,8 +70,9 @@ fun RepointSearchBar(
         ),
         tonalElevation = 0.dp,
         shadowElevation = 0.dp,
-        windowInsets = WindowInsets(0,0,0,0),
+        windowInsets = WindowInsets(0, 0, 0, 0),
         modifier = modifier
+            .focusRequester(focusRequester)
             .fillMaxWidth()
             .heightIn(min = 32.dp) // Slim height initially
             // Wrap SearchBar with border & background to create the rounded pill shape
@@ -76,18 +84,28 @@ fun RepointSearchBar(
             .background(color = grayHound, shape = RoundedCornerShape(22.dp)),
         shape = RoundedCornerShape(22.dp), // Rounded corners matching border
     ) {
-        // Content shown when expanded
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 8.dp, vertical = 4.dp)
-                .clip(RoundedCornerShape(22.dp))
-                .background(transparentColor,shape = RoundedCornerShape(22.dp)).padding(4.dp) // card style for content
-        ) {
-            if (query.isEmpty()) {
-                Text(text = "No recent searches", color = Color.Red, modifier = modifier.padding(4.dp))
-            } else {
-                content()
+        // Content shown when expanded - improved styling
+        if (active) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(
+                        color = grayHound,
+                        shape = RoundedCornerShape(bottomStart = 22.dp, bottomEnd = 22.dp)
+                    )
+                    .padding(horizontal = 8.dp, vertical = 8.dp)
+            ) {
+                if (query.isEmpty()) {
+                    Text(
+                        text = "Start typing to search tokens...",
+                        color = Color.Gray,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp)
+                    )
+                } else {
+                    content()
+                }
             }
         }
     }

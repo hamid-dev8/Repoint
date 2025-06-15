@@ -50,7 +50,6 @@ import com.repoint.basics.atoms.LoaderAnimation
 import com.repoint.basics.atoms.RepointAppBar
 import com.repoint.basics.atoms.RepointCommonButton
 import com.repoint.basics.logic.SendRoutes
-import com.repoint.dashboard.NetworkViewModel
 import com.repoint.dashboard.TokenViewModel
 import com.repoint.dashboard.Web3ViewModel
 import com.repoint.dependencies.accountmanager.SpManager

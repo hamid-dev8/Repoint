@@ -9,4 +9,15 @@ data class CmcStatus(
     val elapsed : Int?,
     @SerializedName("credit_count")val creditCount : Int,
     val notice : String?
-)
+){
+    companion object {
+        val EMPTY = CmcStatus(
+            timestamp    = "",
+            errorCode    = "0",
+            errorMessage = null,
+            elapsed      = null,
+            creditCount  = 0,
+            notice       = null
+        )
+    }
+}

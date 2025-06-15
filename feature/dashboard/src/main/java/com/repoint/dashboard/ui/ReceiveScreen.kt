@@ -57,7 +57,6 @@ import com.repoint.basics.atoms.RepointAppBar
 import com.repoint.basics.atoms.WarningBanner
 import com.repoint.basics.logic.saveBitmapToFile
 import com.repoint.basics.logic.shareImage
-import com.repoint.dashboard.NetworkViewModel
 import com.repoint.dependencies.theme.RepointTypography
 import com.repoint.dependencies.theme.ghostWhite
 import com.repoint.dependencies.theme.lightGray
@@ -74,7 +73,6 @@ fun WalletQrCodeScreen(
     masterWalletId: String,
     tokenId: Int?,
     networkName: String,
-    networkViewModel: NetworkViewModel = hiltViewModel()
 ) {
 
     RepointAppBar("Receive", exp = { _, _, _ ->
@@ -85,23 +83,23 @@ fun WalletQrCodeScreen(
             context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
 
         Log.d("receiveScreen", "token id is $tokenId")
-        val activeTokens by networkViewModel.activeTokens.collectAsState()
-        val activeNetworks by networkViewModel.activeNetworks.collectAsState()
-        val selectedToken = activeTokens.firstOrNull { it.tokenId == tokenId }
+       // val activeTokens by networkViewModel.activeTokens.collectAsState()
+      //  val activeNetworks by networkViewModel.activeNetworks.collectAsState()
+    //    val selectedToken = activeTokens.firstOrNull { it.tokenId == tokenId }
 
         var tokenImageLoaded by remember { mutableStateOf(false) }
         var networkImageLoaded by remember { mutableStateOf(false) }
 
-        val uiState by networkViewModel.uiState.collectAsState()
+       // val uiState by networkViewModel.uiState.collectAsState()
 
         LaunchedEffect(masterWalletId) {
-            networkViewModel.fetchActiveTokens(masterWalletId = masterWalletId)
+       //     networkViewModel.fetchActiveTokens(masterWalletId = masterWalletId)
             delay(1000)
             /*    tokenImageLoaded = true
                 networkImageLoaded = true*/
         }
 
-        when (uiState) {
+      /*  when (uiState) {
             is UiState.Loading -> {
                 LoaderAnimation()
             }
@@ -257,7 +255,7 @@ fun WalletQrCodeScreen(
             }
 
 
-        }
+        }*/
     }, navController = navController)
 
 
