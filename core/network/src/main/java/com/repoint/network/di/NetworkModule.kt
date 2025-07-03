@@ -2,6 +2,7 @@ package com.repoint.network.di
 
 import com.ihsanbal.logging.Level
 import com.ihsanbal.logging.LoggingInterceptor
+import com.repoint.models.sharedmodels.rpc.AlchemyChain
 import com.repoint.network.util.NetworkApiService
 import com.repoint.network.util.WebApi
 import dagger.Module
@@ -28,10 +29,13 @@ object NetworkModule {
 
     val timeOut = 10000L
     val REQUEST_TAG = "APIREQ"
+    val REQUEST_TAG_ALCHEMY = "APIREQAL"
+    val RESPONSE_TAG_ALCHEMY = "APIRESAL"
     val RESPONSE_TAG = "APIRES"
     val API_KEY = "92f9f4c3-0574-49b9-8767-85af50ccfc0b"
+    private const val ALCHEMY_API_KEY = "bAyoxiiQWwUCS2jJdMZ9hVkoKPZwD9dB"
     private  val cmcUrl: String = "https://pro-api.coinmarketcap.com" //TODO add proper baseUrl!!!
-    private val networkUrl : String = "https://botapi.repointbot.com/api/" //Todo add repoint url
+    private val networkUrl : String = "https://eth-mainnet.g.alchemy.com/v2/$ALCHEMY_API_KEY/" //Todo add repoint url
 
     @Provides
     @Singleton
@@ -127,8 +131,8 @@ object NetworkModule {
                         .log(Platform.INFO)
                         .log(Platform.WARN)
                         .setLevel(Level.BODY)
-                        .request(REQUEST_TAG)
-                        .response(RESPONSE_TAG)
+                        .request(REQUEST_TAG_ALCHEMY)
+                        .response(RESPONSE_TAG_ALCHEMY)
                         .build()
                 )
                 .addInterceptor(provideHttpLoggingInterceptor())
@@ -153,8 +157,10 @@ object NetworkModule {
     @Singleton
     @NetworkRetrofit
     fun provideNetworkRetrofit(@NetworkOkHttp okHttpClient  : OkHttpClient) : Retrofit{
+        val defaultChain = AlchemyChain.POLYGON
+        val url = getAlchemyBaseUrl(defaultChain)
         return Retrofit.Builder()
-            .baseUrl(networkUrl)
+            .baseUrl(url)
             .addConverterFactory(GsonConverterFactory.create())
             .client(okHttpClient)
             .build()
@@ -168,6 +174,9 @@ object NetworkModule {
     @Singleton
     fun provideNetworkApiService(@NetworkRetrofit retrofit: Retrofit): NetworkApiService = retrofit.create(NetworkApiService::class.java)
 
+    fun getAlchemyBaseUrl(chain: AlchemyChain): String {
+        return "${chain.baseUrl}$ALCHEMY_API_KEY/"
+    }
 
   /*  @Provides
     @Singleton

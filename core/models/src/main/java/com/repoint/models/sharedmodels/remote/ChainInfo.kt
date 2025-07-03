@@ -1,6 +1,9 @@
 package com.repoint.models.sharedmodels.remote
 
-data class ChainInfo(val moralisChain : String, val wrappedTokenAddress : String)
+import com.repoint.models.sharedmodels.rpc.AlchemyChainNativeBalance
+import java.math.BigDecimal
+
+data class ChainInfo(val moralisChain: String, val wrappedTokenAddress: String)
 
 val chainInfoMap = mapOf(
     1 to "0xC02aaA39b223FE8D0A0E5C4F27eAD9083C756Cc2",     // ETH
@@ -12,7 +15,7 @@ val chainInfoMap = mapOf(
     10 to "0x4200000000000000000000000000000000000006" //Optimism
 )
 
-val moralisChainMap : Map<Int,String> = mapOf(
+val moralisChainMap: Map<Int, String> = mapOf(
     1 to "eth",
     56 to "bsc",
     137 to "polygon",
@@ -21,3 +24,33 @@ val moralisChainMap : Map<Int,String> = mapOf(
     42161 to "arbitrum",
     10 to "optimism"
 )
+
+// Manual override for known native coins
+val symbolToChain = mapOf(
+    "ETH" to "eth",
+    "BNB" to "bsc",
+    "MATIC" to "polygon",
+    "POL" to "polygon",  // ← Your case
+    "AVAX" to "avalanche",
+    "FTM" to "fantom",
+    "ARB" to "arbitrum",
+    "OP" to "optimism"
+)
+
+fun getNativeBalanceForMetaSmart(
+    meta: TokenMetaData,
+    nativeBalances: List<AlchemyChainNativeBalance>
+): BigDecimal? {
+    val slug = meta.platform?.slug?.lowercase()
+    val symbol = meta.symbol.uppercase()
+
+    // First: try to match by curated map
+    val chainKey = symbolToChain[symbol]
+
+    // Fallback: try slug
+    return nativeBalances.firstOrNull {
+        it.chainName.equals(chainKey, true) ||
+                it.chainName.equals(slug, true)
+    }?.balance
+}
+

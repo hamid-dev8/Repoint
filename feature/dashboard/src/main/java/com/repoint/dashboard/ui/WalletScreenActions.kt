@@ -65,18 +65,15 @@ import androidx.constraintlayout.compose.ConstraintLayout
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import coil3.compose.AsyncImage
-import com.google.gson.Gson
-import com.google.gson.reflect.TypeToken
 import com.repoint.account.UserViewModel
 import com.repoint.account.WalletViewModel
 import com.repoint.basics.atoms.AuthBottomSheetContent
 import com.repoint.basics.atoms.BalanceScreen
 import com.repoint.basics.atoms.CircularCardWithIcon
-import com.repoint.basics.atoms.ErrorScreen
 import com.repoint.basics.atoms.LoaderAnimation
 import com.repoint.basics.atoms.RepointAppBar
 import com.repoint.basics.atoms.ViewPagerRobot
-import com.repoint.basics.atoms.launchBotTab
+import com.repoint.dashboard.AlchemyViewModel
 import com.repoint.dashboard.CmcTokenViewModel
 import com.repoint.dashboard.TokenViewModel
 import com.repoint.dashboard.Web3ViewModel
@@ -92,19 +89,22 @@ import com.repoint.dependencies.theme.repointBlue
 import com.repoint.dependencies.theme.richBlack
 import com.repoint.models.sharedmodels.local.ChainWallet
 import com.repoint.models.sharedmodels.local.MasterWallet
+import com.repoint.models.sharedmodels.local.ResolvedTokenInstance
 import com.repoint.models.sharedmodels.local.TokenEntity
 import com.repoint.models.sharedmodels.remote.CmcStatus
-import com.repoint.models.sharedmodels.remote.NativesBalance
 import com.repoint.models.sharedmodels.remote.TokenInfoMetadataResponse
 import com.repoint.models.sharedmodels.remote.TokenMetaData
 import com.repoint.models.sharedmodels.remote.TokenQuotesResponse
 import com.repoint.models.sharedmodels.remote.TokensBalance
+import com.repoint.models.sharedmodels.remote.getNativeBalanceForMetaSmart
 import com.repoint.models.sharedmodels.remote.moralisChainMap
+import com.repoint.models.sharedmodels.rpc.AlchemyTokenBalance
 import com.repoint.models.sharedmodels.ui.ApiResult
 import com.repoint.models.sharedmodels.ui.UiState
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.launch
 import java.math.BigDecimal
+import java.math.RoundingMode
 import java.text.DecimalFormat
 
 
@@ -124,7 +124,8 @@ fun HomeScreen(
     userViewModel: UserViewModel = hiltViewModel<UserViewModel>(),
     tokenViewModel: TokenViewModel = hiltViewModel<TokenViewModel>(),
     web3ViewModel: Web3ViewModel = hiltViewModel(),
-    cmcTokenViewModel: CmcTokenViewModel = hiltViewModel()
+    cmcTokenViewModel: CmcTokenViewModel = hiltViewModel(),
+    alchemyViewModel: AlchemyViewModel = hiltViewModel()
 ) {
 
     var masterWallets by remember { mutableStateOf<List<MasterWallet>>(emptyList()) }
@@ -155,6 +156,22 @@ fun HomeScreen(
     //native balance
     val balanceEther by web3ViewModel.balanceEther.observeAsState()
 
+    val nativeBalanceState by alchemyViewModel.nativeBalance.collectAsState()
+    val balances by alchemyViewModel.tokenBalances.collectAsState()
+
+
+    //by web3 view model generic
+    val nativeBalances by web3ViewModel.allChainBalances.collectAsState()
+
+    //total balances
+    val totalUsdBalanceFormatted = remember { mutableStateOf("$0.00") }
+
+    //tokens
+    val tokens by cmcTokenViewModel.filteredMetas.collectAsState()
+
+    val activeTokenKeys by cmcTokenViewModel.activeTokenKeyFlow.collectAsState()
+
+
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val coroutineScope = rememberCoroutineScope()
     var showBottomSheet by remember { mutableStateOf(false) }
@@ -173,6 +190,37 @@ fun HomeScreen(
     val activeWalletId by spManager.activeWalletIdFlow.collectAsState()
     val allTokens by tokenViewModel.allTokens.collectAsState()
     //val activeTokens by networkViewModel.activeTokens.collectAsState()
+    val activeTokenEntities by cmcTokenViewModel.activeTokenEntities.collectAsState()
+    val activeKeys = remember(activeTokenEntities) {
+        activeTokenEntities.map { "${it.tokenId}_${it.chain.lowercase()}" }.toSet()
+    }
+
+    //val activeTokenKeys by cmcTokenViewModel.activeTokenKeyFlow.collectAsState()
+/*    val tokenInstances = remember(tokens, balances) {
+        val grouped = tokens.groupBy { it.tokenId to it.contractAddress.lowercase() }
+
+        grouped.map { (_, group) ->
+            group.maxByOrNull { token ->
+                getTokenBalance(token.tokenMeta, (balances as? UiState.Success)?.data ?: emptyList())
+                    ?: BigDecimal.ZERO
+            } ?: group.first()
+        }
+    }*/
+
+    val dedupedInstances = remember(tokens, balances) {
+        tokens
+            .groupBy { it.tokenId to it.chain.lowercase() } // ✅ Correct granularity
+            .mapNotNull { (_, group) ->
+                val best = group.maxByOrNull { token ->
+                    getTokenBalanceFromInstance(token, (balances as? UiState.Success)?.data ?: emptyList())
+                        ?: BigDecimal.ZERO
+                }
+                Log.d("Deduped", "🧠Picked ${best?.symbol} on ${best?.chain} with balance=${getTokenBalanceFromInstance(best!!, (balances as? UiState.Success)?.data ?: emptyList())}")
+                best
+            }
+    }
+
+
 
     val sheetTokenState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     var showTokenBottomSheet by remember { mutableStateOf(false) }
@@ -227,8 +275,11 @@ fun HomeScreen(
         // only call once per activeWalletId
         val result = cmcTokenViewModel.getActivatedTokensInfo(activeWalletId ?: return@produceState)
         // no cast needed—getActivatedTokensInfo already returns ApiResult<…>
+        Log.d("main", " the result of contract_addresses is $result")
         value = result
     }
+    Log.d("main", " the result of contract_addresses by infoResult is $infoResult")
+
     // 2) prices
     val priceResult by produceState<ApiResult<TokenQuotesResponse>>(
         initialValue = ApiResult.Success(TokenQuotesResponse(CmcStatus.EMPTY, emptyMap())),
@@ -237,8 +288,15 @@ fun HomeScreen(
         value = cmcTokenViewModel.getPricesForActiveTokens(activeWalletId!!)
     }
 
+    LaunchedEffect(activeAddress) {
+        if (activeAddress != null) {
+            web3ViewModel.loadAllNativeBalances(activeAddress!!, moralisChainMap)
+        }
+    }
+
     LaunchedEffect(selectedWallet?.masterWalletId, activeWalletId, masterWallets) {
 
+        activeWalletId?.let { cmcTokenViewModel.setCurrentWallet(it) }
 
         tokenList = null
         tokensOf = emptyList()
@@ -271,6 +329,10 @@ fun HomeScreen(
                 }
                 tokenViewModel.getAllTokens(masterWalletId = selectedWallet?.masterWalletId)
 
+                Log.d("main", "the balances of tokens  is -> $balances")
+                Log.d("main", "the native balances is -> $nativeBalanceState")
+                Log.d("main", "the native balances by web3  is -> $nativeBalances")
+
                 //TODO generic the wallet
                 chainWallets = walletViewModel.getAllChainWallets(activeWalletId!!)
                 //   spManager.setActiveWallet(masterWallets[0].masterWalletId)
@@ -282,6 +344,14 @@ fun HomeScreen(
                 val address = chainWallets.firstOrNull { it.coinType == 60 }?.address
                 if (address != null) {
                     activeAddress = address
+                    selectedWallet?.let {
+                        alchemyViewModel.loadTokenBalances(
+                            masterWalletId = it.masterWalletId,
+                            walletAddress = activeAddress!!
+                        )
+                    }
+                    alchemyViewModel.loadNativeBalance(walletAddress = activeAddress!!)
+
                     //todo
                     //  web3ViewModel.testConnectionToWeb3(chainId = )
                     Log.d(
@@ -308,7 +378,7 @@ fun HomeScreen(
 
                     web3ViewModel.fetchNativeWalletBalance(
                         walletAddress = activeAddress!!,
-                        chainId = 11155111
+                        chainId = 1
                     )
 
                     Log.d("balanceEther", "balance is this   $balanceEther")
@@ -413,8 +483,8 @@ fun HomeScreen(
                             .padding(8.dp)
                     ) {
 
-          /*              val amount = netWorthSection(tokenList?.data.values)
-                        val formattedBalanceAmount = DecimalFormat("#0.00").format(amount)*/
+                        /*              val amount = netWorthSection(tokenList?.data.values)
+                                      val formattedBalanceAmount = DecimalFormat("#0.00").format(amount)*/
                         item {
                             Card(
                                 modifier = Modifier
@@ -429,7 +499,7 @@ fun HomeScreen(
 
                                 BalanceScreen(
                                     masterWallets,
-                                    balance = "update later",
+                                    balance = totalUsdBalanceFormatted.value,
                                     onAddWallet = {
                                         showBottomSheet = true
                                     },
@@ -565,18 +635,119 @@ fun HomeScreen(
                                         )
                                     }
                                 }
+
                                 infoResult is ApiResult.Success && priceResult is ApiResult.Success -> {
-                                    val metas     = (infoResult as ApiResult.Success).data.data.values.toList()
+                                    val metas =
+                                        (infoResult as ApiResult.Success).data.data.values.toList()
                                     val quotesMap = (priceResult as ApiResult.Success).data.data
-                                    items(metas) { meta ->
-                                        val priceUsd = quotesMap[meta.id.toString()]
+                                    val nativeBalanceList =
+                                        (nativeBalances as? UiState.Success)?.data ?: emptyList()
+
+                                    val slugToTokenIdMap = metas.associateBy { it.slug } // optional
+                                    val tokenIdToPriceMap =
+                                        quotesMap.mapValues { it.value.quote["USD"]?.price ?: 0.0 }
+
+
+                                    //val filteredMetas = cmcTokenViewModel.filterActivatedMetadata(metas,activeTokenEntities)
+
+                               /*     val filteredMetas = metas.filter { meta ->
+                                        meta.contractAddress.any { contract ->
+                                            val contractChain = contract.platform.coin.slug.lowercase()
+                                            Log.d("ChainSlugChecks", "Checking: tokenId=${meta.id}, chain=$contractChain, contract=${contract.contractAddress}")
+                                            Log.d("ChainSlugChecks", "→ Is in activeKeys? ${activeTokenKeys.contains(ActiveTokenKey(meta.id, contractChain))}")
+                                            activeTokenKeys.contains(ActiveTokenKey(meta.id, contractChain))
+                                        }
+                                    }*/
+                                   // Log.d("ChainSlugChecks", "ActiveKeys: $activeTokenKeys")
+
+                                    Log.d("ChainSlugChecks","filtered META is  1: $tokens")
+                                    Log.d("ChainSlugChecks", "Original metas count: ${metas.size}")
+                                    metas.forEach { Log.d("ChainSlugChecks", "meta id=${it.id}, symbol=${it.symbol}") }
+
+                                    dedupedInstances.forEach {
+                                        Log.d("FinalTokens", "🧩Token: ${it.symbol} (${it.tokenId}) on ${it.chain} → ${it.contractAddress}")
+                                    }
+                                    Log.d("DebugToken", "⚠️ Raw tokens = ${tokens.size}")
+
+
+                                    items(dedupedInstances) { token ->
+                                        val balanceValue: BigDecimal? = when (val result = balances) {
+                                            is UiState.Success -> getTokenBalanceFromInstance(token, result.data)
+                                            else -> null
+                                        }
+                                        Log.d("ChainSlugChecks","filtered META is  2: $tokens")
+                                        Log.d("ChainSlugChecks","balance value is  2: $balanceValue")
+
+                                        val priceUsd = quotesMap[token.tokenMeta.id.toString()]
                                             ?.quote
                                             ?.get("USD")
                                             ?.price
                                             ?: 0.0
-                                        TokenRow(item = meta, priceUsd = priceUsd)
+
+                                        Log.d("ChainSlugChecks", "Meta is: ${token.contractAddress}")
+
+                                        val balanceOfNative =
+                                            getNativeBalanceForMetaSmart(token.tokenMeta, nativeBalanceList)
+
+
+                                        Log.d(
+                                            "ChainSlugCheck",
+                                            "Platform slug: ${token.tokenMeta.platform?.slug}"
+                                        )
+                                        Log.d("ChainSlugCheck", "meta name: ${token.name}")
+                                        Log.d("ChainSlugCheck", "meta slug: ${token.tokenMeta.slug}")
+                                        Log.d("ChainSlugCheck", "meta symbol: ${token.symbol}")
+                                        Log.d("ChainSlugCheck", "meta category: ${token.tokenMeta.category}")
+
+                                        Log.d(
+                                            "native",
+                                            "the balance list of native tokens are : $nativeBalances"
+                                        )
+                                        Log.d(
+                                            "native",
+                                            "the balance of native tokens are : $balanceOfNative"
+                                        )
+
+                                        Log.d(
+                                            "native",
+                                            "the balances is : $balances"
+                                        )
+
+                                        val tokenBalance = (balances as? UiState.Success)?.data
+                                        Log.d("TokenMatch", "Resulting token balance for ${token.symbol} is: $tokenBalance")
+
+                                        Log.d("token","the token balances are :$tokenBalance")
+
+
+
+                                        TokenRow(
+                                            item = token,
+                                            priceUsd = priceUsd,
+                                            balance = balanceValue
+                                        )
                                     }
+
+                                    Log.d("BalanceDebug", "nativeBalanceList: $nativeBalanceList")
+
+                                    val totalUsdBalance = nativeBalanceList.sumOf { native ->
+                                        val tokenMeta = metas.find {
+                                            it.platform?.slug.equals(
+                                                native.chainName,
+                                                ignoreCase = true
+                                            )
+                                        }
+                                        val price = tokenMeta?.let {
+                                            quotesMap[it.id.toString()]?.quote?.get("USD")?.price
+                                        } ?: 0.0
+                                        native.balance.multiply(price.toBigDecimal())
+                                    }
+
+                                    totalUsdBalanceFormatted.value =
+                                        "$" + totalUsdBalance.setScale(2, RoundingMode.HALF_UP)
+                                            .toPlainString()
+
                                 }
+
                                 else -> {
                                     item {
                                         LoaderAnimation(
@@ -701,13 +872,14 @@ fun HomeScreen(
         }
     }
 }
+
 @Composable
 fun PriceListForWallet(walletId: String, vm: CmcTokenViewModel = hiltViewModel()) {
     // 1) Make sure `empty` is declared as the supertype:
     val empty: ApiResult<TokenQuotesResponse> = ApiResult.Success(
         TokenQuotesResponse(
             status = CmcStatus.EMPTY,
-            data   = emptyMap()
+            data = emptyMap()
         )
     )
 
@@ -722,12 +894,17 @@ fun PriceListForWallet(walletId: String, vm: CmcTokenViewModel = hiltViewModel()
 
     // 3) Now you can pattern‐match on `prices`:
     when (prices) {
-        is ApiResult.Error   -> Text("Error loading prices")
+        is ApiResult.Error -> Text("Error loading prices")
         is ApiResult.Success -> {
             val quotes = (prices as ApiResult.Success).data.data.values.toList()
             LazyColumn {
                 items(quotes) { q ->
-                    Row(Modifier.fillMaxWidth().padding(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Row(
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
                         Text(q.symbol, Modifier.weight(1f))
                         Text("$${DecimalFormat("#0.00").format(q.quote["USD"]?.price ?: 0.0)}")
                     }
@@ -736,7 +913,6 @@ fun PriceListForWallet(walletId: String, vm: CmcTokenViewModel = hiltViewModel()
         }
     }
 }
-
 
 
 @Composable
@@ -779,9 +955,18 @@ fun TokenToggleSheet(
     }
 }
 
-
 @Composable
-fun TokenRow(item: TokenMetaData?,priceUsd : Double) {
+fun TokenRow(
+    item: ResolvedTokenInstance,
+    priceUsd: Double,
+    balance: BigDecimal?
+) {
+    val formatter = remember { DecimalFormat("#0.####") }
+    val displayBalance = balance?.stripTrailingZeros()?.toPlainString() ?: "0"
+
+    val mainChain = item.chain.ifBlank { "Unknown" }
+    val contract = item.contractAddress
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -793,25 +978,29 @@ fun TokenRow(item: TokenMetaData?,priceUsd : Double) {
         verticalAlignment = Alignment.CenterVertically
     ) {
         AsyncImage(
-            model = item?.logo,
-            contentDescription = item?.symbol,
+            model = item.logo,
+            contentDescription = item.symbol,
             modifier = Modifier
                 .size(32.dp)
                 .padding(2.dp)
                 .clip(RoundedCornerShape(8.dp))
         )
         Spacer(Modifier.width(8.dp))
-        Column(modifier = Modifier
-            .weight(1f)
-            .padding(4.dp)) {
-            item?.symbol?.uppercase()?.let { Text(it, style = RepointTypography.titleMedium) }
-            item?.name?.let { Text(it, style = RepointTypography.labelSmall, color = richBlack) }
+        Column(
+            modifier = Modifier
+                .weight(0.5f)
+                .padding(4.dp),
+            verticalArrangement = Arrangement.Center
+        ) {
+            Text(item.symbol.uppercase(), style = RepointTypography.titleMedium)
+            Text(item.name, style = RepointTypography.labelSmall, color = richBlack)
+            Text("Chain: $mainChain", style = RepointTypography.labelSmall, color = richBlack)
+            Text("Contract: $contract", style = RepointTypography.labelSmall, color = grayHound)
         }
         Column(horizontalAlignment = Alignment.End, modifier = Modifier.padding(4.dp)) {
-            // if you have balanceFormatted & usdPrice on TokenMetaData, use them;
-            // otherwise drop that bit or lift it from CmcTokenEntity instead
+            Text("Balance: $displayBalance", style = RepointTypography.labelSmall)
             Text(
-                text = "$${DecimalFormat("#0.00").format(priceUsd)}",
+                text = "$${formatter.format(priceUsd)}",
                 style = RepointTypography.titleSmall
             )
         }
@@ -849,18 +1038,19 @@ fun SearchTokenItem(
         )
     }
 }
+
 @Composable
 fun ActivatedTokensList(
     infoResult: ApiResult<TokenInfoMetadataResponse>,
     priceResult: ApiResult<TokenQuotesResponse>
 ) {
     when {
-        infoResult is ApiResult.Error   || priceResult is ApiResult.Error ->
+        infoResult is ApiResult.Error || priceResult is ApiResult.Error ->
             Text("Network problem", style = RepointTypography.titleSmall)
 
         infoResult is ApiResult.Success && priceResult is ApiResult.Success -> {
             // 1) pull out your lists
-            val metas  = infoResult.data.data.values.toList()
+            val metas = infoResult.data.data.values.toList()
             val quotesMap = priceResult.data.data  // Map<String,QuoteData>
 
             // 2) render them together
@@ -872,11 +1062,12 @@ fun ActivatedTokensList(
                         ?.get("USD")
                         ?.price
                         ?: 0.0
-
+/*
                     TokenRow(
-                        item     = meta,
-                        priceUsd = priceUsd
-                    )
+                        item = meta,
+                        priceUsd = priceUsd,
+                        balance = token
+                    )*/
                 }
             }
         }
@@ -962,9 +1153,9 @@ fun ActionsRow(
             onClick = {
                 val encodedAddress = Uri.encode(activeAddress)
                 //todo ok history balance and etc...
-               // val balance = tokenList?.data?.firstOrNull()?.usdPrice ?: 0.0
-            //    val formattedBalance = DecimalFormat("#0.00").format(balance)
-          //      navController.navigate("history/$formattedBalance/$encodedAddress")
+                // val balance = tokenList?.data?.firstOrNull()?.usdPrice ?: 0.0
+                //    val formattedBalance = DecimalFormat("#0.00").format(balance)
+                //      navController.navigate("history/$formattedBalance/$encodedAddress")
             },
             modifier = Modifier.weight(1f)
         )
@@ -1153,10 +1344,80 @@ fun ListScreen(items: List<TokensBalance>?) {
 
 }
 
+fun matchBalance(
+    tokenMeta: TokenMetaData,
+    alchemyBalances: List<AlchemyTokenBalance>,
+    currentChain: String // e.g., "polygon"
+): BigDecimal? {
+    val contract = tokenMeta.contractAddress.firstOrNull {
+        it.platform.coin.slug.equals(currentChain, ignoreCase = true)
+    } ?: return null
+
+    val contractAddress = contract.contractAddress.lowercase()
+
+    val match = alchemyBalances.find {
+        it.contractAddress.equals(contractAddress, ignoreCase = true)
+                && it.chainSlug.equals(currentChain, ignoreCase = true)
+    }
+
+    return match?.tokenBalance?.removePrefix("0x")?.toBigIntegerOrNull(16)
+        ?.toBigDecimal()?.movePointLeft(getDecimals(tokenMeta))
+}
+
+
+fun getDecimals(meta: TokenMetaData): Int {
+    return when (meta.symbol.uppercase()) {
+        "USDT" -> 6
+        "USDC" -> 6
+        "DAI" -> 18
+        "LINK" -> 18
+        else -> 18 // fallback
+    }
+}
+
+
+
+fun getTokenBalanceFromInstance(
+    instance: ResolvedTokenInstance,
+    balances: List<AlchemyTokenBalance>
+): BigDecimal? {
+    val slug = instance.chain.lowercase()
+    val address = instance.contractAddress.lowercase()
+
+    val matchedBalance = balances.firstOrNull {
+        it.contractAddress.lowercase() == address && it.chainSlug.lowercase() == slug
+    }
+
+    val balance = matchedBalance?.tokenBalance?.toBigDecimalOrNull()
+
+    Log.d("🔁 BalanceMatch", "Looking for: $address on $slug → balance=$balance")
+    return balance
+}
+
+
+fun normalizeSlug(slug: String): String {
+    return when (slug.lowercase()) {
+        "polygon-ecosystem-token", "polygon" -> "polygon"
+        "bnb-smart-chain", "bnb" -> "bnb"
+        "ethereum" -> "ethereum"
+        "arbitrum" -> "arbitrum"
+        else -> slug.lowercase()
+    }
+}
+
 
 fun netWorthSection(tokenList: List<TokensBalance>?): Float {
     return tokenList?.sumOf { it.balanceFormatted.toDouble() * it.usdPrice.toDouble() }?.toFloat()
         ?: 0f
+}
+
+fun isNativeToken(meta: TokenMetaData): Boolean {
+    if (meta.contractAddress.isEmpty()) return true
+
+    //case 2 : Knownn native token Symbols
+    // Case 2: Known native token symbols
+    val knownNativeSymbols = setOf("ETH", "MATIC", "BNB", "AVAX", "FTM", "ARB", "OP")
+    return knownNativeSymbols.contains(meta.symbol.uppercase())
 }
 
 /*fun generateFakeData(tabIndex: Int): List<Tokens> {

@@ -1,0 +1,189 @@
+package com.repoint.sources.datarepo
+
+import android.util.Log
+import com.repoint.database.dao.CmcTokenDao
+import com.repoint.models.sharedmodels.local.LocalActiveNetworks
+import com.repoint.models.sharedmodels.remote.TokenMetaData
+import com.repoint.models.sharedmodels.rpc.AlchemyChain
+import com.repoint.models.sharedmodels.rpc.AlchemyTokenBalance
+import com.repoint.models.sharedmodels.rpc.AlchemyTokenBalanceResponse
+import com.repoint.models.sharedmodels.ui.ApiResult
+import com.repoint.network.util.resolveChainFromPlatform
+import com.repoint.network.util.NetworkApiService
+import com.repoint.network.util.safeApiCall
+import com.repoint.sources.datarepo.datasource.AlchemyDataSource
+import java.math.BigDecimal
+import java.math.BigInteger
+import javax.inject.Inject
+
+class AlchemyRepositoryImp @Inject constructor(private val networkApi: NetworkApiService,private val db : CmcTokenDao) :
+    AlchemyDataSource {
+
+    override suspend fun getTokenBalances(walletAddress: String,contracts : List<String>): ApiResult<AlchemyTokenBalanceResponse> {
+        return safeApiCall {
+
+            Log.d("AlchemyDebug", "walletAddress: $walletAddress")
+
+            val body = mapOf(
+                "jsonrpc" to "2.0",
+                "id" to 1,
+                "method" to "alchemy_getTokenBalances",
+                "params" to listOf(
+                    walletAddress, contracts
+                )
+            )
+            networkApi.getTokenBalances(body)
+        }
+    }
+
+    override suspend fun getMultiChainTokenBalances(
+        walletAddress: String,
+        tokenMetaMap: Map<String, TokenMetaData>,
+        alchemyClientFactory: (AlchemyChain) -> NetworkApiService
+    ): ApiResult<List<AlchemyTokenBalance>> = safeApiCall {
+
+        val groupedByChain: Map<AlchemyChain, List<Pair<String, TokenMetaData>>> = tokenMetaMap
+            .values
+            .flatMap { meta ->
+                meta.contractAddress.mapNotNull { contract ->
+                    val chain = resolveChainFromPlatform(contract.platform.name) ?: return@mapNotNull null
+                    chain to (contract.contractAddress.lowercase() to meta)
+                }
+            }
+            .groupBy({ it.first }, { it.second })
+
+        val finalBalances = mutableListOf<AlchemyTokenBalance>()
+
+        groupedByChain.forEach { (chain, contracts) ->
+            Log.d("AlchemyDebug", "Chain: $chain → ${contracts.size} contracts: $contracts")
+        }
+        for ((chain, tokenPairs) in groupedByChain) {
+            val client = alchemyClientFactory(chain)
+            val contractAddresses = tokenPairs.map { it.first }
+
+            val requestBody = mapOf(
+                "jsonrpc" to "2.0",
+                "id" to 1,
+                "method" to "alchemy_getTokenBalances",
+                "params" to listOf(walletAddress, contractAddresses)
+            )
+            Log.d("AlchemyRequest", "Requesting $chain with ${contractAddresses.size} contracts → $contractAddresses")
+
+            try {
+                val result = client.getTokenBalances(requestBody)
+                Log.d("AlchemyDebug", "Response from $chain → ${result.result.tokenBalances}")
+
+                val balances = result.result.tokenBalances
+
+                balances.forEachIndexed { index, rawBalance ->
+                    val balanceHex = rawBalance.tokenBalance
+                    val contractAddress = rawBalance.contractAddress.lowercase()
+                    val matchedMeta = tokenPairs.find { (addr, _) ->
+                        addr.equals(rawBalance.contractAddress, ignoreCase = true)
+                    }?.second
+                    val filtered = result.result.tokenBalances.filterNot {
+                        it.tokenBalance == "0x0" || it.tokenBalance == "0x000...000"
+                    }
+                    Log.d("AlchemyDebug", "Filtered non-zero balances from $chain → ${filtered.size}")
+                    val decimals = matchedMeta?.let { getTokenDecimals(it) }
+                    val balance = balanceHex?.removePrefix("0x")?.toBigIntegerOrNull(16) ?: BigInteger.ZERO
+                    val normalized = decimals?.let { balance.toBigDecimal().movePointLeft(it) }
+
+
+                    finalBalances.add(
+                        AlchemyTokenBalance(
+                            contractAddress = rawBalance.contractAddress,
+                            tokenBalance = normalized?.toPlainString(),
+                            symbol = matchedMeta?.symbol!!,
+                            name = matchedMeta.name.toString(),
+                            logo = matchedMeta.logo.toString(),
+                            chainSlug = chain.name.lowercase()
+                        )
+                    )
+                    finalBalances.forEach{
+                        Log.d("AlchemyParsed", "Parsed: ${it.name} (${it.symbol}) → ${it.tokenBalance}")
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e("AlchemyChain", "Error fetching from ${chain.name}: ${e.message}")
+            }
+        }
+
+        return@safeApiCall finalBalances
+    }
+    fun getTokenDecimals(meta: TokenMetaData): Int {
+        return when (meta.symbol.uppercase()) {
+            "USDT", "USDC" -> 6
+            "DAI", "LINK", "POL" -> 18
+            else -> 18
+        }
+    }
+    fun parseAlchemyBalances(
+        rawResponse: AlchemyTokenBalanceResponse,
+        currentChain: String,
+        metaList: List<TokenMetaData> // ← optional, if using dynamic resolve
+    ): List<AlchemyTokenBalance> {
+        return rawResponse.result.tokenBalances.map { raw ->
+            val meta = resolveFromMeta(raw.contractAddress, currentChain, metaList)
+
+            meta?.logo?.let {
+                AlchemyTokenBalance(
+                    name = meta?.name ?: "Unknown",
+                    symbol = meta?.symbol ?: "???",
+                    logo = it,
+                    contractAddress = raw.contractAddress,
+                    tokenBalance = raw.tokenBalance?.let { it1 -> convertHexToDecimal(it1, decimals = 6).toPlainString() },
+                    chainSlug = currentChain
+                )
+            }!!
+        }
+    }
+    fun resolveFromMeta(contract: String, chain: String, metaList: List<TokenMetaData>): TokenMetaData? {
+        return metaList.firstOrNull { meta ->
+            meta.contractAddress.any {
+                it.contractAddress.equals(contract, ignoreCase = true) &&
+                        it.platform.coin.slug.equals(chain, ignoreCase = true)
+            }
+        }
+    }
+
+    fun resolveName(contract: String, chain: String, metaList: List<TokenMetaData>) =
+        resolveFromMeta(contract, chain, metaList)?.name ?: "Unknown"
+
+    fun resolveSymbol(contract: String, chain: String, metaList: List<TokenMetaData>) =
+        resolveFromMeta(contract, chain, metaList)?.symbol ?: "???"
+
+    fun resolveLogo(contract: String, chain: String, metaList: List<TokenMetaData>) =
+        resolveFromMeta(contract, chain, metaList)?.logo
+
+    fun convertHexToDecimal(hex: String, decimals: Int): BigDecimal {
+        return hex.removePrefix("0x")
+            .toBigIntegerOrNull(16)
+            ?.toBigDecimal()
+            ?.movePointLeft(decimals) // Adjust for token decimals (e.g., 6 or 18)
+            ?: BigDecimal.ZERO
+    }
+
+    override suspend fun getNativeBalance(walletAddress: String): ApiResult<String> {
+        return safeApiCall {
+            val body = mapOf(
+                "jsonrpc" to "2.0",
+                "id" to 1,
+                "method" to "eth_getBalance",
+                "params" to listOf(
+                    walletAddress,"latest"
+                )
+            )
+            val response = networkApi.getNativeBalance(body)
+            response.result
+        }
+    }
+
+    override suspend fun getTokenContracts(walletAddress: String): List<Int> {
+        return db.getActiveTokenContracts(walletAddress)
+    }
+
+    override suspend fun debugAllActives(): List<LocalActiveNetworks> {
+        return db.debugAllActives()
+    }
+}

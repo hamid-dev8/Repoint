@@ -15,31 +15,32 @@ import kotlinx.coroutines.flow.Flow
 
 
 @Dao
-interface NetworkDao
-{
+interface NetworkDao {
 
-   @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertTokens(tokens : List<TokenEntity>)
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertTokens(tokens: List<TokenEntity>)
 
     @Query("SELECT * FROM tokens WHERE  networkId= :networkId")
     suspend fun getTokensForNetwork(networkId: Int): List<TokenEntity>
 
     @Query("SELECT * FROM tokens WHERE masterWalletId = :masterWalletId")
-    suspend fun getAllTokens(masterWalletId: String?) : List<TokenEntity>
+    suspend fun getAllTokens(masterWalletId: String?): List<TokenEntity>
 
     /* get embeded token cointype!*/
     @Transaction
     @Query("SELECT * FROM tokens WHERE tokenId = :tokenId")
-    suspend fun getTokenWithNetwork(tokenId : Int) : TokenWithNetwork
+    suspend fun getTokenWithNetwork(tokenId: Int): TokenWithNetwork
 
     @Transaction
-    @Query("""
+    @Query(
+        """
     SELECT * FROM tokens 
     INNER JOIN networks ON tokens.networkId = networks.id
     WHERE tokens.tokenId IN (
         SELECT tokenId FROM actives WHERE masterWalletId = :masterWalletId
     )
-""")
+"""
+    )
     suspend fun getActiveTokensWithNetworks(masterWalletId: String): List<TokenWithNetwork>
 
 
@@ -51,24 +52,26 @@ interface NetworkDao
     suspend fun getNetworkCount(): Int
 
     @Query("SELECT * From networks")
-    suspend fun getAllNetworks() : List<BlockchainNetworkEntity>
+    suspend fun getAllNetworks(): List<BlockchainNetworkEntity>
 
     @Query("SELECT * FROM networks WHERE id = :networkId LIMIT 1")
     suspend fun getNetworkById(networkId: Int): BlockchainNetworkEntity
 
     @Query("SELECT * From actives WHERE masterWalletId = :walletId")
-    suspend fun getActiveNetworks(walletId: String) : List<LocalActiveNetworks>
+    suspend fun getActiveNetworks(walletId: String): List<LocalActiveNetworks>
 
     //debug
 
     @Query("SELECT * FROM actives WHERE masterWalletId =:masterWalletId")
     suspend fun getAllActiveNetworksDebug(masterWalletId: String): List<LocalActiveNetworks>
 
-    @Query("""
+    @Query(
+        """
     SELECT networks.* FROM networks
     INNER JOIN tokens ON tokens.networkId = networks.id
     WHERE tokens.tokenId = :tokenId
-""")
+"""
+    )
     suspend fun getNetworkByTokenId(tokenId: Int): BlockchainNetworkEntity?
 
     /*
@@ -77,13 +80,16 @@ interface NetworkDao
     suspend fun getActiveTokens() : List<TokenEntity>
 */
 
-    @Query("""
+    @Query(
+        """
     SELECT * FROM tokens
     WHERE masterWalletId = :masterWalletId
     AND tokenId IN (
         SELECT tokenId FROM actives WHERE masterWalletId = :masterWalletId
     )
-""") fun getActiveTokens(masterWalletId: String): Flow<List<TokenEntity>>
+"""
+    )
+    fun getActiveTokens(masterWalletId: String): Flow<List<TokenEntity>>
 
     @Query("SELECT * FROM tokens WHERE masterWalletId = :walletId AND tokenId IN (SELECT tokenId FROM actives WHERE masterWalletId = :walletId)")
     suspend fun getActiveTokensNow(walletId: String): List<TokenEntity>
@@ -94,20 +100,20 @@ interface NetworkDao
 
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertNetworks(networks : List<BlockchainNetworkEntity>)
+    suspend fun insertNetworks(networks: List<BlockchainNetworkEntity>)
 
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insertActiveNetwork(active: LocalActiveNetworks)
 
-/*    @Query("SELECT tokenId FROM actives WHERE masterWalletId = :walletId")
-    suspend fun getActiveTokenIds(walletId: String) : Flow<List<Int>>*/
+    /*    @Query("SELECT tokenId FROM actives WHERE masterWalletId = :walletId")
+        suspend fun getActiveTokenIds(walletId: String) : Flow<List<Int>>*/
 
     @Query("SELECT * FROM actives")
     suspend fun getAllActiveNetworksDebug(): List<LocalActiveNetworks>
 
-/*    @Query("DELETE FROM actives WHERE  tokenId= :networkId")
-    suspend fun deleteActiveNetwork(networkId : Int)*/
+    /*    @Query("DELETE FROM actives WHERE  tokenId= :networkId")
+        suspend fun deleteActiveNetwork(networkId : Int)*/
 
- @Query("DELETE FROM actives WHERE tokenId = :tokenId AND masterWalletId = :masterWalletId")
- suspend fun deleteActiveNetwork(tokenId: Int, masterWalletId: String)
+    @Query("DELETE FROM actives WHERE tokenId = :tokenId AND masterWalletId = :masterWalletId")
+    suspend fun deleteActiveNetwork(tokenId: Int, masterWalletId: String)
 }

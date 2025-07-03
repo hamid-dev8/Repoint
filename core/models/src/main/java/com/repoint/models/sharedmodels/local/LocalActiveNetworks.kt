@@ -1,16 +1,15 @@
 package com.repoint.models.sharedmodels.local
 
 import androidx.room.Entity
-import androidx.room.ForeignKey
-import androidx.room.Index
-import androidx.room.PrimaryKey
 
 @Entity(
     tableName = "actives",
-    primaryKeys = ["tokenId", "masterWalletId"]
+    primaryKeys = ["tokenId", "masterWalletId","chain"]
 )
 data class LocalActiveNetworks(
     val tokenId: Int,
-    val masterWalletId: String
+    val tokenAddress : String,
+    val masterWalletId: String,
+    val chain : String
 )
 

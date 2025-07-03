@@ -31,6 +31,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
@@ -57,21 +58,31 @@ import com.repoint.dependencies.accountmanager.SpManager
 import com.repoint.dependencies.theme.RepointTypography
 import com.repoint.dependencies.theme.grayHound
 import com.repoint.dependencies.theme.lightGray
+import com.repoint.models.sharedmodels.local.ActiveTokenKey
 import com.repoint.models.sharedmodels.local.CmcTokenEntity
+import com.repoint.models.sharedmodels.local.TokenPerChainUiModel
+import com.repoint.models.sharedmodels.rpc.AlchemyChain
+import com.repoint.models.sharedmodels.ui.ApiResult
 import com.repoint.models.sharedmodels.ui.UiState
 import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.flow.map
 
 @OptIn(ExperimentalMaterial3Api::class, FlowPreview::class)
 @Composable
 fun CryptoManageScreen(navController: NavController) {
     val cmcTokenViewModel: CmcTokenViewModel = hiltViewModel()
 
-    val tokens by cmcTokenViewModel.tokens.collectAsState()
+   // val tokens by cmcTokenViewModel.tokens.collectAsState()
     val activeTokenIds by cmcTokenViewModel.activeTokenIds.collectAsState()
+    val perChainTokens by cmcTokenViewModel.perChainTokens.collectAsState()
+    val activeTokenKeys by cmcTokenViewModel.activeTokenKeyFlow.collectAsState()
+
+
 
     var expanded by remember { mutableStateOf(false) }
     val listState = rememberLazyListState()
@@ -95,6 +106,19 @@ fun CryptoManageScreen(navController: NavController) {
     val keyboardController = LocalSoftwareKeyboardController.current
     val focusRequester = remember { FocusRequester() }
 
+    var showLoader by remember { mutableStateOf(false) }
+
+    val tokenIds = (searchState as? UiState.Success)?.data?.map { it.id }
+
+    val searchPerChainTokens = produceState<List<TokenPerChainUiModel>>(initialValue = emptyList(), tokenIds) {
+        if (!tokenIds.isNullOrEmpty()) {
+            val metadataResult = cmcTokenViewModel.fetchMetadata(tokenIds)
+            if (metadataResult is ApiResult.Success) {
+                value = cmcTokenViewModel.toPerChainUiModels(metadataResult.data.data)
+            }
+        }
+    }
+
 // Whenever the bar becomes active, grab focus & show keyboard
     LaunchedEffect(searchBarActive) {
         if (searchBarActive) {
@@ -103,9 +127,18 @@ fun CryptoManageScreen(navController: NavController) {
         }
     }
 
+    LaunchedEffect(searchState) {
+        if (searchState is UiState.Loading) {
+            delay(500) // Delay only if still loading
+            if (searchState is UiState.Loading) showLoader = true
+        } else {
+            showLoader = false
+        }
+    }
+
     LaunchedEffect(activeWalletId) {
         if (activeWalletId != null && !isInitialLoaded) {
-            cmcTokenViewModel.loadInitialTokens()
+            cmcTokenViewModel.loadNextDbPage()
             activeWalletId?.let { cmcTokenViewModel.setCurrentWallet(it) }
         }
     }
@@ -121,17 +154,35 @@ fun CryptoManageScreen(navController: NavController) {
     }
 
     // Only trigger pagination when NOT searching
-    LaunchedEffect(Unit) {
-        snapshotFlow { listState.layoutInfo.visibleItemsInfo.lastOrNull()?.index }
-            .collectLatest { lastIndex ->
-                if (query.length < 2 && lastIndex != null && lastIndex >= tokens.lastIndex - 2) {
-                    cmcTokenViewModel.loadMapPageAndShow()
+    /*   LaunchedEffect(Unit) {
+           snapshotFlow { listState.layoutInfo.visibleItemsInfo.lastOrNull()?.index }
+               .collectLatest { lastIndex ->
+                   if (query.length < 2 && lastIndex != null && lastIndex >= tokens.lastIndex - 2) {
+                       cmcTokenViewModel.loadMapPageAndShow()
+                   }
+               }
+       }*/
+
+    LaunchedEffect(listState) {
+        snapshotFlow { listState.layoutInfo }
+            .map { layoutInfo ->
+                val visibleItems = layoutInfo.visibleItemsInfo
+                val totalItems = layoutInfo.totalItemsCount
+                val lastVisible = visibleItems.lastOrNull()?.index ?: 0
+
+                lastVisible >= totalItems - 4  // Trigger near end
+            }
+            .distinctUntilChanged()
+            .collect { shouldLoadMore ->
+                if (shouldLoadMore) {
+                    cmcTokenViewModel.loadNextDbPage()  // 👈 Your manual page loader
                 }
             }
     }
 
-    LaunchedEffect(tokens) {
-        Log.d("ScreenDebug", "Tokens count: ${tokens.size}")
+
+    LaunchedEffect(perChainTokens) {
+        Log.d("ScreenDebug", "Tokens count: ${perChainTokens.size}")
     }
 
     val onExpandedChange: (Boolean) -> Unit = { expandedValue ->
@@ -139,16 +190,7 @@ fun CryptoManageScreen(navController: NavController) {
     }
 
     RepointAppBar("Manage Crypto", exp = { _, _, _ ->
-        if (isLoading) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .zIndex(0f)
-                    .clickable(enabled = false) {}
-            ) {
-                LoaderAnimation()
-            }
-        } else {
+
             Column(modifier = Modifier
                 .fillMaxSize()
                 .pointerInput(Unit) {
@@ -184,15 +226,12 @@ fun CryptoManageScreen(navController: NavController) {
                             is UiState.Loading -> {
                                 Box(
                                     modifier = Modifier
-                                        .fillMaxWidth()
-                                        .height(200.dp), // Fixed height for centering
+                                        .fillMaxSize(), // This ensures it uses all available space
                                     contentAlignment = Alignment.Center
                                 ) {
-                                    LoaderAnimation(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .height(200.dp)
-                                    ) // Use your custom LoaderAnimation
+                                    CircularProgressIndicator(
+                                        modifier = Modifier.size(40.dp)
+                                    )
                                 }
                             }
 
@@ -230,14 +269,27 @@ fun CryptoManageScreen(navController: NavController) {
                                     LazyColumn(
                                         modifier = Modifier.fillMaxSize()
                                     ) {
-                                        items(searchResults) { token ->
-                                            CmcTokenItem(
+
+
+
+                                        //search section part
+                                        items(perChainTokens) { token ->
+
+                                            val isActive = activeTokenKeys.contains(
+                                                ActiveTokenKey(tokenId = token.tokenId, chain = token.chainName.name.lowercase())
+                                            )
+
+                                            CmcPerChainTokenItem (
                                                 token = token,
-                                                isActive = activeTokenIds.contains(token.id),
+                                                isActive = isActive,
                                                 onToggle = {
-                                                    cmcTokenViewModel.toggleToken(token.id)
+                                                    cmcTokenViewModel.toggleToken(
+                                                        token.tokenId,
+                                                        token.contractAddress,
+                                                        chain = token.chainName
+                                                    )
                                                     // Optionally close search after selection
-                                                     searchBarActive = false
+                                                    // searchBarActive = false
                                                 }
                                             )
                                         }
@@ -248,7 +300,7 @@ fun CryptoManageScreen(navController: NavController) {
                     },
                     onSearch = {},
                     onClear = {
-                       // cmcTokenViewModel.updateSearchQuery("")
+                        // cmcTokenViewModel.updateSearchQuery("")
                         searchBarActive = false
                     },
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
@@ -264,7 +316,7 @@ fun CryptoManageScreen(navController: NavController) {
                         .padding(horizontal = 16.dp),
                     state = listState
                 ) {
-                    if (tokens.isEmpty() && !isPaging) {
+                    if (perChainTokens.isEmpty() && !isPaging) {
                         item {
                             Text(
                                 "No tokens available.",
@@ -273,11 +325,21 @@ fun CryptoManageScreen(navController: NavController) {
                             )
                         }
                     } else {
-                        items(tokens) { token ->
-                            CmcTokenItem(
+                        items(perChainTokens) { token ->
+
+                            val isActive = activeTokenKeys.contains(
+                                ActiveTokenKey(tokenId = token.tokenId, chain = token.chainName.name.lowercase())
+                            )
+                            CmcPerChainTokenItem (
                                 token = token,
-                                isActive = activeTokenIds.contains(token.id),
-                                onToggle = { cmcTokenViewModel.toggleToken(token.id) }
+                                isActive = isActive,
+                                onToggle = {
+                                    cmcTokenViewModel.toggleToken(
+                                        token.tokenId,
+                                        token.contractAddress,
+                                        chain = token.chainName
+                                    )
+                                }
                             )
                         }
                     }
@@ -297,8 +359,44 @@ fun CryptoManageScreen(navController: NavController) {
                     }
                 }
             }
-        }
     }, navController = navController)
+}
+@Composable
+fun CmcPerChainTokenItem(
+    token: TokenPerChainUiModel,
+    isActive: Boolean,
+    onToggle: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(12.dp)
+            .clip(RoundedCornerShape(16.dp))
+            .border(0.5.dp, lightGray)
+            .background(grayHound)
+            .padding(horizontal = 12.dp, vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        AsyncImage(
+            model = token.logo,
+            contentDescription = "${token.name} Logo",
+            modifier = Modifier
+                .size(32.dp)
+                .clip(CircleShape)
+        )
+        Spacer(modifier = Modifier.width(12.dp))
+
+        Column(modifier = Modifier.weight(1f)) {
+            Text("${token.symbol} (${token.chainDisplayName})", style = RepointTypography.titleSmall)
+            Text(token.name, style = RepointTypography.labelSmall, color = Color.Gray)
+        }
+
+        Switch(
+            checked = isActive,
+            onCheckedChange = { onToggle() },
+            modifier = Modifier.scale(0.75f)
+        )
+    }
 }
 
 @Composable

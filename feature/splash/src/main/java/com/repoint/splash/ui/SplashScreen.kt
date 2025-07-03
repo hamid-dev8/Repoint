@@ -31,10 +31,14 @@ import androidx.core.content.ContextCompat
 import androidx.fragment.app.FragmentActivity
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.repoint.account.WalletViewModel
+import com.repoint.dashboard.CmcTokenViewModel
 import com.repoint.dashboard.Web3ViewModel
 import com.repoint.dependencies.theme.ghostWhite
 import com.repoint.dependencies.accountmanager.SpManager
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 
 @Preview(showBackground = true)
@@ -48,7 +52,7 @@ private fun PreviewSplashScreen() {
 }
 
 @Composable
-fun SplashScreenRepoint(onStay: () -> Unit, onProceed: () -> Unit, onAuthRequest : (onSuccess : () -> Unit) -> Unit, web3ViewModel : Web3ViewModel = hiltViewModel(), walletViewModel : WalletViewModel = hiltViewModel()) {
+fun SplashScreenRepoint(onStay: () -> Unit, onProceed: () -> Unit, onAuthRequest : (onSuccess : () -> Unit) -> Unit, web3ViewModel : Web3ViewModel = hiltViewModel(), walletViewModel : WalletViewModel = hiltViewModel(),cmcTokenViewModel: CmcTokenViewModel = hiltViewModel()) {
 
     val splashTimeout = 3000L
 
@@ -66,13 +70,17 @@ fun SplashScreenRepoint(onStay: () -> Unit, onProceed: () -> Unit, onAuthRequest
         isSplashFinished = true
 
 
-        web3ViewModel.testConnectionToWeb3(chainId = 11155111)
+        web3ViewModel.testConnectionToWeb3(chainId = 1)
+
+        CoroutineScope(Dispatchers.IO).launch {
+            cmcTokenViewModel.syncTopTokensToDb()
+        }
 
          Log.d("Test","connection to web3 status : $isConnectedToWeb3")
 
 
 
-        val actual = web3ViewModel.getChainId(11155111)
+        val actual = web3ViewModel.getChainId(1)
         Log.d("Test", "Chain ID returned = $actual")
         val userId = userIdFlow.value
         Log.d("userId", " User id is : ${userIdFlow.value}")

@@ -1,6 +1,8 @@
 package com.repoint.sources.datarepo
 
+import android.util.Log
 import com.repoint.database.dao.CmcTokenDao
+import com.repoint.models.sharedmodels.local.ActiveTokenKey
 import com.repoint.models.sharedmodels.local.CmcTokenEntity
 import com.repoint.models.sharedmodels.local.LocalActiveNetworks
 import com.repoint.models.sharedmodels.remote.CmcAllTokens
@@ -19,9 +21,15 @@ class CmcRepositoryImp @Inject constructor(
     private val cmcDao: CmcTokenDao
 ) : CmcDataSource {
 
-    override suspend fun fetchTokenMapPage(start: Int, limit: Int): ApiResult<CmcMapData> {
+    override suspend fun fetchTokenMapPageByLimit(start: Int, limit: Int): ApiResult<CmcMapData> {
         return safeApiCall {
-            api.getAllTokensList(start, limit)
+            api.getTokensListByLimit(start, limit)
+        }
+    }
+
+    override suspend fun fetchTokenMapBySort(sort: String): ApiResult<CmcMapData> {
+        return safeApiCall {
+            api.getAllTokensSorted(sort)
         }
     }
 
@@ -50,7 +58,7 @@ class CmcRepositoryImp @Inject constructor(
     }
     override suspend fun cacheMapDataPage(start: Int, limit: Int): ApiResult<List<CmcAllTokens>> {
         return safeApiCall {
-            val response = api.getAllTokensList(start,limit)
+            val response = api.getTokensListByLimit(start,limit)
             val mapped = response.data.map { map ->
                 CmcTokenEntity(
                     id = map.id,
@@ -80,6 +88,10 @@ class CmcRepositoryImp @Inject constructor(
         return cmcDao.searchTokensByQuery(query)
     }
 
+    override suspend fun insertAllTokens(entities: List<CmcTokenEntity>) {
+        cmcDao.insertAllTokens(entities)
+    }
+
     override suspend fun insertActiveToken(activeNetworks: LocalActiveNetworks) {
         return cmcDao.insertActiveToken(activeNetworks)
     }
@@ -88,8 +100,29 @@ class CmcRepositoryImp @Inject constructor(
         return cmcDao.getActiveTokenIds(walletId)
     }
 
-    override suspend fun deleteActiveNetworks(tokenId: Int, walletId: String) {
-        return cmcDao.deleteActiveNetworks(tokenId,walletId)
+    override suspend fun getActiveTokenKeys(walletId: String): Flow<List<ActiveTokenKey>> {
+        Log.d("DAO", "Emitting active tokens for $walletId")
+        return cmcDao.getActiveTokenKeys(walletId)
+    }
+
+    override suspend fun getActiveTokenEntities(walletId: String): Flow<List<LocalActiveNetworks>> {
+        return cmcDao.getActiveTokenEntities(walletId)
+    }
+
+    override suspend fun deleteActiveNetworks(tokenId: Int, walletId: String,chainName : String) {
+        return cmcDao.deleteActiveNetworks(tokenId,walletId,chainName)
+    }
+
+    override suspend fun getTokenCount(): Int {
+        return cmcDao.countTokens()
+    }
+
+    override suspend fun getLastUpdatedTime(): Long? {
+        return cmcDao.getLastUpdatedTime()
+    }
+
+    override suspend fun getDbTokensPaged(offset: Int, limit: Int): List<CmcTokenEntity> {
+        return cmcDao.getTokensPaged(offset,limit)
     }
 
 }

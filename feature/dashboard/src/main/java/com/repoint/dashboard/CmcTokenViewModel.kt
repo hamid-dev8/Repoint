@@ -3,13 +3,23 @@ package com.repoint.dashboard
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.repoint.basics.logic.mapPlatformToAlchemyChain
+import com.repoint.dashboard.ui.getDecimals
+import com.repoint.dashboard.ui.normalizeSlug
+import com.repoint.models.sharedmodels.local.ActiveTokenKey
 import com.repoint.models.sharedmodels.local.CmcTokenEntity
 import com.repoint.models.sharedmodels.local.LocalActiveNetworks
+import com.repoint.models.sharedmodels.local.MatchedTokenMeta
+import com.repoint.models.sharedmodels.local.ResolvedTokenInstance
+import com.repoint.models.sharedmodels.local.TokenPerChainUiModel
 import com.repoint.models.sharedmodels.remote.CmcAllTokens
+import com.repoint.models.sharedmodels.remote.CmcPlatforms
 import com.repoint.models.sharedmodels.remote.CmcStatus
 import com.repoint.models.sharedmodels.remote.TokenInfoMetadataResponse
 import com.repoint.models.sharedmodels.remote.TokenMetaData
 import com.repoint.models.sharedmodels.remote.TokenQuotesResponse
+import com.repoint.models.sharedmodels.rpc.AlchemyChain
+import com.repoint.models.sharedmodels.rpc.AlchemyTokenBalance
 import com.repoint.models.sharedmodels.ui.ApiResult
 import com.repoint.models.sharedmodels.ui.UiState
 import com.repoint.sources.datarepo.datasource.CmcDataSource
@@ -19,13 +29,17 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.math.BigDecimal
+import java.util.Locale
 import javax.inject.Inject
 
 @HiltViewModel
@@ -35,6 +49,8 @@ class CmcTokenViewModel @Inject constructor(
 
     private val pageSize = 12
     private var currentStartIndex = 1
+    private var currentPage = 0
+
     private val buffer = mutableListOf<CmcAllTokens>()
 
     private val _tokens = MutableStateFlow<List<CmcTokenEntity>>(emptyList())
@@ -58,11 +74,29 @@ class CmcTokenViewModel @Inject constructor(
 
     private val _activeNetworks = MutableStateFlow<LocalActiveNetworks?>(null)
 
+    private val _activeTokenEntities = MutableStateFlow<List<LocalActiveNetworks>>(emptyList())
+    val activeTokenEntities: StateFlow<List<LocalActiveNetworks>> = _activeTokenEntities.asStateFlow()
+
+
+    private val _perChainTokens = MutableStateFlow<List<TokenPerChainUiModel>>(emptyList())
+    val perChainTokens: StateFlow<List<TokenPerChainUiModel>> = _perChainTokens.asStateFlow()
+
+    private val _infoResult = MutableStateFlow<ApiResult<TokenInfoMetadataResponse>>(
+        ApiResult.Success(
+            TokenInfoMetadataResponse(
+                status = CmcStatus.EMPTY,
+                data = emptyMap()
+            )
+        )
+    )
+    val infoResult: StateFlow<ApiResult<TokenInfoMetadataResponse>> = _infoResult.asStateFlow()
+
 
     // 1️⃣ Which master-wallet are we looking at?
     private val _currentWalletId = MutableStateFlow<String?>(null)
     fun setCurrentWallet(walletId: String) {
         _currentWalletId.value = walletId
+        Log.d("wallety","the current wallet id : $_currentWalletId and the actual wallet id is setting : $walletId")
     }
 
     // 2️⃣ Stream the DB list of active IDs → as an Immutable Set
@@ -79,6 +113,64 @@ class CmcTokenViewModel @Inject constructor(
                 emptySet()
             )
 
+    private val _activeTokenKeys = MutableStateFlow<Set<ActiveTokenKey>>(emptySet())
+    val activeTokenKeys: StateFlow<Set<ActiveTokenKey>> = _activeTokenKeys.asStateFlow()
+
+
+    val activeTokenKeyFlow: StateFlow<Set<ActiveTokenKey>> =
+        _currentWalletId
+            .filterNotNull()
+            .flatMapLatest { wid ->
+              repository.getActiveTokenKeys(wid)
+            }
+            .map {
+                Log.d("activeToken","active token key is : $it")
+                it.toSet() }
+            .stateIn(
+                viewModelScope,
+                SharingStarted.Lazily,
+                emptySet()
+            )
+
+    init {
+        viewModelScope.launch {
+            _currentWalletId
+                .filterNotNull()
+                .flatMapLatest { walletId ->
+                    repository.getActiveTokenEntities(walletId)
+                }
+                .collect { actives ->
+                    _activeTokenEntities.value = actives
+                }
+        }
+
+        viewModelScope.launch {
+            _currentWalletId
+                .filterNotNull()
+                .collect { wid ->
+                    val result = getActivatedTokensInfo(wid)
+                    Log.d("ViewModel", "Fetched info result: $result")
+                    _infoResult.value = result
+                }
+        }
+    }
+
+    val tokenMetasFlow: StateFlow<List<TokenMetaData>> = _infoResult
+        .map { result ->
+            when (result) {
+                is ApiResult.Success -> result.data.data.values.toList()
+                else -> emptyList()
+            }
+        }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(), emptyList())
+
+
+    val filteredMetas: StateFlow<List<ResolvedTokenInstance>> = combine(
+        tokenMetasFlow,
+        activeTokenKeyFlow
+    ) { metas, keys ->
+        getFilteredMetas(metas, keys)
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(), emptyList())
 
     fun updateSearchQuery(query: String) {
         _searchQuery.value = query
@@ -93,15 +185,43 @@ class CmcTokenViewModel @Inject constructor(
             buffer.clear()
             _tokens.value = emptyList()
             _isInitialLoaded.value = true
-            loadMapPageAndShow()
+            //loadMapPageAndShow()
         }
     }
+
+
+    fun getFilteredMetas(
+        allMetas: List<TokenMetaData>,
+        activeKeys: Set<ActiveTokenKey>
+    ): List<ResolvedTokenInstance> {
+        return allMetas.flatMap { meta ->
+            meta.contractAddress.mapNotNull { contract ->
+                val slug = normalizeSlug(contract.platform.coin.slug)
+                val key = ActiveTokenKey(meta.id, slug)
+
+                if (key in activeKeys) {
+                    ResolvedTokenInstance(
+                        tokenId = meta.id,
+                        symbol = meta.symbol,
+                        name = meta.name,
+                        logo = meta.logo,
+                        contractAddress = contract.contractAddress,
+                        chain = slug,
+                        decimals = getDecimals(meta),
+                        tokenMeta = meta
+                    )
+                } else null
+            }
+        }
+    }
+
+
 
     suspend fun loadMapPageAndShow() {
         if (_isPaging.value) return
         _isPaging.value = true
 
-        val mapResult = repository.fetchTokenMapPage(currentStartIndex, 100)
+        val mapResult = repository.fetchTokenMapPageByLimit(currentStartIndex, 100)
         if (mapResult is ApiResult.Success) {
             val newMapTokens = mapResult.data.data
             buffer.addAll(newMapTokens)
@@ -118,6 +238,12 @@ class CmcTokenViewModel @Inject constructor(
                     val entities = nextSlice.mapNotNull { mapItem ->
                         val meta = metaMap[mapItem.id.toString()] ?: return@mapNotNull null
                         mergeMapAndMetadata(mapItem, meta)
+
+                   /*     //only include EVM-compatible tokens
+                        val allowedChains = setOf("ethereum" , "bnb" , "polygon" , "arbitrum" , "optimism" , "avalanche")
+                        if (merged.platformSlug != null && merged.tokenAddress != null && merged.platformSlug in allowedChains)
+                            merged
+                        else null*/
                     }
 
                     Log.d("CmcPaging", " the entities are these : $entities")
@@ -140,12 +266,100 @@ class CmcTokenViewModel @Inject constructor(
         _isPaging.value = false
     }
 
+    fun loadNextDbPage() {
+        viewModelScope.launch {
+            val page = currentPage++
+            val pageSize = 12
+
+            val tokens = withContext(Dispatchers.IO) {
+                repository.getDbTokensPaged(page * pageSize, pageSize) // You must implement this in DAO
+            }
+
+            val ids = tokens.map { it.id }
+
+            val metaDataResult = repository.fetchTokenMetadata(ids)
+            if (metaDataResult !is ApiResult.Success){
+                Log.e("PerChainTokens","Meta data failed")
+                return@launch
+            }
+
+            val metaMap = metaDataResult.data.data
+            val perChain = toPerChainUiModels(metaMap)
+            _perChainTokens.update { it + perChain }
+
+            Log.d("PerChainTokens", "Loaded page with ${perChain.size} per-chain tokens")
+        }
+    }
+
+
+    /*    fun fetchAllTokenSortedInBackground(sort: String = "cmc_rank", onDone: (List<CmcAllTokens>) -> Unit) {
+            viewModelScope.launch(Dispatchers.IO) {
+                val mapResult = repository.fetchTokenMapBySort(sort)
+
+                if (mapResult is ApiResult.Success) {
+                    Log.d("SortedTokens", "Fetched ${mapResult.data.data.size} tokens sorted by $sort")
+                    onDone(mapResult.data.data)
+                } else if (mapResult is ApiResult.Error) {
+                    Log.e("SortedTokens", "Failed to fetch sorted tokens: ${mapResult.exception}")
+                    onDone(emptyList())
+                }
+            }
+        }*/
+
+    fun syncTopTokensToDb() {
+        viewModelScope.launch(Dispatchers.IO) {
+            val tokenCount = repository.getTokenCount()
+            val lastUpdateTime = repository.getLastUpdatedTime() ?: 0L
+            val now = System.currentTimeMillis()
+
+            val threeDaysMillis = 3 * 24 * 60 * 60 * 1000L
+
+            val needsRefresh = tokenCount == 0 || (now - lastUpdateTime) > threeDaysMillis
+            if (!needsRefresh) {
+                Log.d("CMC_SYNC", "Skipping sync — cache is fresh")
+                return@launch
+            }
+
+            // 🧠 Continue with sync as before
+            val mapResult = repository.fetchTokenMapBySort("cmc_rank")
+            if (mapResult !is ApiResult.Success) return@launch
+
+            val mapTokens = mapResult.data.data
+            val mapById = mapTokens.associateBy { it.id }
+            val ids = mapTokens.map { it.id }
+
+            val allEntities = mutableListOf<CmcTokenEntity>()
+
+            ids.chunked(100).forEach { chunk ->
+                when (val infoResult = repository.fetchTokenMetadata(chunk)) {
+                    is ApiResult.Success -> {
+                        val metaMap = infoResult.data.data
+                        chunk.forEach { id ->
+                            val mapItem = mapById[id] ?: return@forEach
+                            val meta = metaMap[id.toString()] ?: return@forEach
+                            val entity = mergeMapAndMetadata(mapItem, meta)
+                            allEntities.add(entity)
+                        }
+                    }
+                    is ApiResult.Error -> {
+                        Log.e("CMC_SYNC", "Metadata error: ${infoResult.exception}")
+                    }
+                }
+            }
+
+            repository.insertAllTokens(allEntities)
+            Log.d("CMC_SYNC", "DB updated with ${allEntities.size} tokens")
+        }
+    }
+
+
     private suspend fun searchTokenInLoadedMap(query: String): List<CmcTokenEntity> {
         if (query.isBlank()) return emptyList()
 
         return repository.searchTokensByQuery(query)
     }
 
+    //search
     private suspend fun fetchMetadataAndEmit(mapTokens: List<CmcTokenEntity>) {
         val ids = mapTokens.map { it.id }
         val metadata = repository.fetchTokenMetadata(ids)
@@ -154,9 +368,15 @@ class CmcTokenViewModel @Inject constructor(
             val metaMap = metadata.data.data
             Log.d("SearchDebug", "Fetched metadata keys: ${metaMap.keys}")
 
+            val allowedChains = setOf("ethereum" , "bnb" , "polygon" , "arbitrum" ,"optimism","avalanche")
+
             val result = mapTokens.mapNotNull {
                 val meta = metaMap[it.id.toString()] ?: return@mapNotNull null
                 mergeEntityAndMetadata(it, meta)
+/*
+                if (merged.platformSlug != null && merged.tokenAddress != null && merged.platformSlug in allowedChains)
+                    merged
+                else null*/
             }
             Log.d("SearchDebug", "Final result count: ${result.size}")
             _searchState.value = UiState.Success(result)
@@ -167,50 +387,81 @@ class CmcTokenViewModel @Inject constructor(
     }
 
 
-
     fun performSearch(query: String) {
         viewModelScope.launch {
             _searchState.value = UiState.Loading
-            val mapTokens = searchTokenInLoadedMap(query)
-            Log.d("SearchDebug", "DB Results for '$query': ${mapTokens.map { it.name to it.id }}")
 
-            if (mapTokens.isEmpty() || query.isBlank()) {
-               fetchMetadataAndEmit(mapTokens)
+            if (query.isBlank()) {
+                _searchState.value = UiState.Success(emptyList())
                 return@launch
             }
-            else{
-                //fallback to full map scan if not found
-                val symbol = query.trim().uppercase()
-                val fallbackToken = searchInGlobalMapBySymbol(symbol)
-                fallbackToken?.let {
-                    fetchMetadataAndEmitFromMapTokens(listOf(it))
-                } ?: run {
-                    _searchState.value = UiState.Success(emptyList())
-                    Log.d("SearchDebug","Nothing found in local or global map")
-                }
+
+            val results = withContext(Dispatchers.IO) {
+                repository.searchTokensByQuery(query.trim())
             }
 
-            val ids = mapTokens.map { it.id }
-            val metadata = repository.fetchTokenMetadata(ids)
+            val ids = results.map { it.id }
 
-            if (metadata is ApiResult.Success) {
-                val metaMap = metadata.data.data
-                Log.d("SearchDebug", "Fetched metadata keys: ${metaMap.keys}")
+            val metadataResult = repository.fetchTokenMetadata(ids)
 
-                val result = mapTokens.mapNotNull {
-                    val meta = metadata.data.data[it.id.toString()] ?: return@mapNotNull null
-                    mergeEntityAndMetadata(it, meta)
-                }
-                Log.d("SearchDebug", "Final result count: ${result.size}")
+            if (metadataResult is ApiResult.Success){
+                val perChain = toPerChainUiModels(metadataResult.data.data)
+                _perChainTokens.value = perChain
+            }
+            _searchState.value = UiState.Success(results)
+            Log.d("SearchDebug", "DB Results for '$query': ${results.map { it.name to it.id }}")
+        }
+    }
 
-                _searchState.value = UiState.Success(result)
-            } else {
-                _searchState.value = UiState.Error("Metadata fetch failed")
-                Log.e("SearchDebug", "Metadata fetch failed: ${metadata}")
+    fun expandMetaInstances(
+        metas: List<TokenMetaData>,
+        activeKeys: Set<ActiveTokenKey>
+    ): List<ResolvedTokenInstance> {
+        return metas.flatMap { meta ->
+            meta.contractAddress.mapNotNull { contract ->
+                val chain = mapPlatformToAlchemyChain(contract)?.name?.lowercase() ?: return@mapNotNull null
+                val key = ActiveTokenKey(meta.id, chain)
+                if (key in activeKeys) {
+                    ResolvedTokenInstance(
+                        tokenId = meta.id,
+                        symbol = meta.symbol,
+                        name = meta.name,
+                        logo = meta.logo,
+                        contractAddress = contract.contractAddress,
+                        chain = chain,
+                        decimals = getDecimals(meta),
+                        tokenMeta = meta
+                    )
+                } else null
             }
         }
     }
 
+    fun toPerChainUiModels(metaMap: Map<String, TokenMetaData>): List<TokenPerChainUiModel> {
+        return metaMap.values.flatMap { meta ->
+            meta.contractAddress.mapNotNull { contract ->
+                val chain = AlchemyChain.entries.find {
+                    it.name.equals(contract.platform.coin.slug, ignoreCase = true)
+                } ?: return@mapNotNull null
+
+                TokenPerChainUiModel(
+                    tokenId = meta.id,
+                    name = meta.name,
+                    symbol = meta.symbol,
+                    logo = meta.logo,
+                    description = meta.description,
+                    contractAddress = contract.contractAddress,
+                    chainName = chain,
+                    chainDisplayName = contract.platform.name
+                )
+            }
+        }
+    }
+
+
+    suspend fun fetchMetadata(ids: List<Int>): ApiResult<TokenInfoMetadataResponse> {
+        return repository.fetchTokenMetadata(ids)
+    }
     private suspend fun fetchMetadataAndEmitFromMapTokens(tokens: List<CmcAllTokens>) {
         val ids = tokens.map { it.id }
         val metadata = repository.fetchTokenMetadata(ids)
@@ -270,15 +521,20 @@ class CmcTokenViewModel @Inject constructor(
 
 
 
-    fun toggleToken(tokenId: Int) = viewModelScope.launch {
+    fun toggleToken(tokenId: Int,tokenAddress : String,chain : AlchemyChain) = viewModelScope.launch {
         val wid = _currentWalletId.value ?: return@launch
+        val chainName = chain.name.lowercase(Locale.US)
+        val key = ActiveTokenKey(tokenId, chainName)
 
-        if (tokenId in activeTokenIds.value) {
-            repository.deleteActiveNetworks(tokenId, wid)
+        Log.d("ToggleToken", "Current active keys: ${activeTokenKeyFlow.value}")
+        Log.d("ToggleToken", "Toggling key: $key")
+
+        if (key in activeTokenKeyFlow.value) {
+            repository.deleteActiveNetworks(tokenId, wid , chainName)
             Log.d("ToggleToken","deleted the token in $tokenId & $wid")
         } else {
-            repository.insertActiveToken(LocalActiveNetworks(tokenId,wid))
-            Log.d("ToggleToken","added the token in $tokenId & $wid")
+            repository.insertActiveToken(LocalActiveNetworks(tokenId,tokenAddress,wid,chainName))
+            Log.d("ToggleToken", "adding token: id=$tokenId, address=$tokenAddress, wid=$wid , chain name : $chainName")
         }
     }
 
@@ -308,6 +564,8 @@ class CmcTokenViewModel @Inject constructor(
         }
     }
 
+
+
     suspend fun getPricesForActiveTokens(walletId: String) : ApiResult<TokenQuotesResponse> {
         val ids = repository.getActiveTokenIds(walletId = walletId).first()
 
@@ -317,6 +575,37 @@ class CmcTokenViewModel @Inject constructor(
         return repository.fetchTokenPrices(ids)
     }
 
+
+    /*    fun filterActivatedMetadata(
+            allMetas: List<TokenMetaData>,
+            activeTokenEntities: List<LocalActiveNetworks>
+        ): List<TokenMetaData> {
+            val activeKeys = activeTokenEntities.map {
+                ActiveTokenKey(it.tokenId, it.chain.lowercase())
+            }.toSet()
+
+            return getFilteredMetas(allMetas, activeKeys)
+        }*/
+
+    fun filterActivatedMeta(
+        tokenMetaMap: Map<String, TokenMetaData>,
+        actives: List<LocalActiveNetworks>
+    ): List<MatchedTokenMeta> {
+        return actives.mapNotNull { active ->
+            val meta = tokenMetaMap[active.tokenId.toString()] ?: return@mapNotNull null
+
+            val contract = meta.contractAddress.find {
+                it.contractAddress.equals(active.tokenAddress, ignoreCase = true) &&
+                        it.platform.coin.slug.equals(active.chain, ignoreCase = true)
+            } ?: return@mapNotNull null
+
+            MatchedTokenMeta(
+                meta = meta,
+                contract = contract,
+                chain = active.chain
+            )
+        }
+    }
 }
 
 private fun mergeEntityAndMetadata(
@@ -349,10 +638,21 @@ private fun mergeMapAndMetadata(
         platformName = map.platform?.name,
         platformSymbol = map.platform?.symbol,
         platformSlug = map.platform?.slug,
-        tokenAddress = map.platform?.tokenAddress,
+        tokenAddress = meta.contractAddress.firstOrNull()?.contractAddress,
         logo = meta.logo,
         description = meta.description,
         websiteUrl = meta.urls?.website?.firstOrNull(),
         lastUpdated = System.currentTimeMillis()
     )
+}
+
+fun getSupportedChains(meta: TokenMetaData): List<AlchemyChain> {
+    return meta.contractAddress.mapNotNull { contract ->
+        AlchemyChain.entries.find { chain ->
+            chain.name.equals(contract.platform.name, ignoreCase = true) ||
+                    chain.name.equals(contract.platform.coin.name, ignoreCase = true) ||
+                    chain.name.equals(contract.platform.coin.slug, ignoreCase = true)
+        }
+    }.distinct()
+
 }

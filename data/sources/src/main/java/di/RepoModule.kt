@@ -1,5 +1,6 @@
 package di
 
+import com.repoint.sources.datarepo.AlchemyRepositoryImp
 import com.repoint.sources.datarepo.TokenBalanceRepositoryImp
 import com.repoint.sources.datarepo.Web3jWalletRepositoryImp
 import com.repoint.sources.datarepo.datasource.HistoryDataSource
@@ -9,6 +10,7 @@ import com.repoint.sources.datarepo.HistoryRepositoryImp
 import com.repoint.sources.datarepo.NetworkRepositoryImp
 import com.repoint.sources.datarepo.UserRepositoryImp
 import com.repoint.sources.datarepo.WalletRepositoryImp
+import com.repoint.sources.datarepo.datasource.AlchemyDataSource
 import com.repoint.sources.datarepo.datasource.AuthDataSource
 import com.repoint.sources.datarepo.datasource.BiometricDataSource
 import com.repoint.sources.datarepo.datasource.CmcDataSource
@@ -60,4 +62,8 @@ interface RepoModule {
     @Binds
     @Singleton
     fun bindCmcTokenDataSource(imp : CmcRepositoryImp) : CmcDataSource
+
+    @Binds
+    @Singleton
+    fun bindAlchemyDataSource(imp : AlchemyRepositoryImp) : AlchemyDataSource
 }

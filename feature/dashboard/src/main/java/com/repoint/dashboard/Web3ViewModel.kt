@@ -5,7 +5,9 @@ import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.repoint.models.sharedmodels.rpc.AlchemyChainNativeBalance
 import com.repoint.models.sharedmodels.ui.TxState
+import com.repoint.models.sharedmodels.ui.UiState
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -13,6 +15,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.web3j.crypto.Credentials
+import org.web3j.protocol.Web3j
 import org.web3j.protocol.core.methods.response.EthSendTransaction
 import org.web3j.protocol.core.methods.response.TransactionReceipt
 import org.web3j.utils.Convert
@@ -20,6 +23,7 @@ import java.math.BigDecimal
 import java.math.BigInteger
 import java.math.RoundingMode
 import javax.inject.Inject
+import javax.inject.Named
 
 
 @HiltViewModel
@@ -41,6 +45,8 @@ class Web3ViewModel @Inject constructor(
 
     private val _connectionStatus = MutableStateFlow<Boolean?>(null)
     val connectionStatus: StateFlow<Boolean?> get() = _connectionStatus
+
+
 
     init {
         /*viewModelScope.launch {
@@ -223,4 +229,40 @@ class Web3ViewModel @Inject constructor(
             }
         }
     }
+
+    private val _allChainBalances = MutableStateFlow<UiState<List<AlchemyChainNativeBalance>>>(UiState.Loading)
+    val allChainBalances: StateFlow<UiState<List<AlchemyChainNativeBalance>>> = _allChainBalances
+
+
+    fun loadAllNativeBalances(walletAddress: String, chainMap: Map<Int, String>) {
+        viewModelScope.launch {
+            _allChainBalances.value = UiState.Loading
+
+            val resultList = mutableListOf<AlchemyChainNativeBalance>()
+
+            chainMap.entries.forEach { (chainId, chainName) ->
+                try {
+                    val wei = repository.getWalletBalance(walletAddress, chainId.toLong())
+                    val ether = wei.toBigDecimal().divide(BigDecimal("1e18"))
+                    Log.d("ChainBalance", " success on $chainName and the balance is : $ether")
+
+                    resultList.add(AlchemyChainNativeBalance(chainId, chainName, ether))
+                } catch (e: Exception) {
+                    Log.e("ChainBalance", "❌ Failed on $chainName", e)
+                    resultList.add(AlchemyChainNativeBalance(chainId, chainName, BigDecimal.ZERO))
+                }
+            }
+
+            _allChainBalances.value = UiState.Success(resultList)
+        }
+    }
+
+
+
+    fun formatNativeBalance(wei: BigInteger): BigDecimal {
+        return wei.toBigDecimal().divide(BigDecimal("1e18"))
+    }
+
+
+
 }

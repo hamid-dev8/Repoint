@@ -1,5 +1,6 @@
 package com.repoint.sources.datarepo.datasource
 
+import com.repoint.models.sharedmodels.local.ActiveTokenKey
 import com.repoint.models.sharedmodels.local.CmcTokenEntity
 import com.repoint.models.sharedmodels.local.LocalActiveNetworks
 import com.repoint.models.sharedmodels.remote.CmcAllTokens
@@ -19,10 +20,16 @@ interface CmcDataSource {
 */
     //just api
     // Fetch 12-by-12 paginated raw map data
-    suspend fun fetchTokenMapPage(
+    suspend fun fetchTokenMapPageByLimit(
         start: Int,
         limit: Int = 12
     ): ApiResult<CmcMapData>
+
+    //get the sorted /map
+
+    suspend fun fetchTokenMapBySort(
+        sort : String
+    ) : ApiResult<CmcMapData>
 
     //get map token  by symbol
     suspend fun fetchTokenMapBySymbol(
@@ -42,11 +49,18 @@ interface CmcDataSource {
     suspend fun getCachedTokens(): List<CmcTokenEntity>
     suspend fun cacheMapDataPage(start: Int, limit: Int): ApiResult<List<CmcAllTokens>>
     suspend fun searchTokensByQuery(query: String): List<CmcTokenEntity>
+    suspend fun insertAllTokens(entities: List<CmcTokenEntity>)
 
 
     //active tokens in db
     suspend fun insertActiveToken(activeNetworks: LocalActiveNetworks)
     suspend fun getActiveTokenIds(walletId: String): Flow<List<Int>>
-    suspend fun deleteActiveNetworks(tokenId: Int, walletId: String)
+    suspend fun getActiveTokenKeys(walletId: String) : Flow<List<ActiveTokenKey>>
+    suspend fun getActiveTokenEntities(walletId: String) : Flow<List<LocalActiveNetworks>>
+    suspend fun deleteActiveNetworks(tokenId: Int, walletId: String,chainName : String)
 
+    //time of db
+    suspend fun getTokenCount() : Int
+    suspend fun getLastUpdatedTime() : Long?
+    suspend fun getDbTokensPaged(offset : Int,limit : Int) : List<CmcTokenEntity>
 }
