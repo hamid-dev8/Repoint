@@ -41,6 +41,10 @@ interface CmcDataSource {
         ids: List<Int>
     ): ApiResult<TokenInfoMetadataResponse>
 
+    suspend fun fetchTokenMetadataBySlug(
+        slug : String
+    ) : ApiResult<TokenInfoMetadataResponse>
+
     suspend fun fetchTokenPrices(
         ids: List<Int>
     ): ApiResult<TokenQuotesResponse>

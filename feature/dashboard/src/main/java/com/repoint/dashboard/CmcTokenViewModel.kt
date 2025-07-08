@@ -22,6 +22,7 @@ import com.repoint.models.sharedmodels.rpc.AlchemyChain
 import com.repoint.models.sharedmodels.rpc.AlchemyTokenBalance
 import com.repoint.models.sharedmodels.ui.ApiResult
 import com.repoint.models.sharedmodels.ui.UiState
+import com.repoint.network.util.resolveChainFromPlatform
 import com.repoint.sources.datarepo.datasource.CmcDataSource
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
@@ -145,13 +146,20 @@ class CmcTokenViewModel @Inject constructor(
         }
 
         viewModelScope.launch {
-            _currentWalletId
-                .filterNotNull()
-                .collect { wid ->
-                    val result = getActivatedTokensInfo(wid)
-                    Log.d("ViewModel", "Fetched info result: $result")
-                    _infoResult.value = result
+            activeTokenIds.collect { ids ->
+                val result = if (ids.isEmpty()) {
+                    ApiResult.Success(
+                        TokenInfoMetadataResponse(
+                            status = CmcStatus.EMPTY,
+                            data = emptyMap()
+                        )
+                    )
+                } else {
+                    repository.fetchTokenMetadata(ids.toList())
                 }
+                Log.d("ViewModel", "Fetched info result: $result")
+                _infoResult.value = result
+            }
         }
     }
 
@@ -169,6 +177,7 @@ class CmcTokenViewModel @Inject constructor(
         tokenMetasFlow,
         activeTokenKeyFlow
     ) { metas, keys ->
+        Log.d("flowDebug","metas and keys are $metas & $keys")
         getFilteredMetas(metas, keys)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(), emptyList())
 
@@ -306,51 +315,52 @@ class CmcTokenViewModel @Inject constructor(
             }
         }*/
 
-    fun syncTopTokensToDb() {
-        viewModelScope.launch(Dispatchers.IO) {
-            val tokenCount = repository.getTokenCount()
-            val lastUpdateTime = repository.getLastUpdatedTime() ?: 0L
-            val now = System.currentTimeMillis()
+    suspend fun syncTopTokensToDb(): Boolean {
+        val tokenCount = repository.getTokenCount()
+        val lastUpdateTime = repository.getLastUpdatedTime() ?: 0L
+        val now = System.currentTimeMillis()
 
-            val threeDaysMillis = 3 * 24 * 60 * 60 * 1000L
+        val threeDaysMillis = 3 * 24 * 60 * 60 * 1000L
+        val needsRefresh = tokenCount == 0 || (now - lastUpdateTime) > threeDaysMillis
 
-            val needsRefresh = tokenCount == 0 || (now - lastUpdateTime) > threeDaysMillis
-            if (!needsRefresh) {
-                Log.d("CMC_SYNC", "Skipping sync — cache is fresh")
-                return@launch
-            }
+        if (!needsRefresh) {
+            Log.d("CMC_SYNC", "Skipping sync — cache is fresh")
+            return true
+        }
 
-            // 🧠 Continue with sync as before
-            val mapResult = repository.fetchTokenMapBySort("cmc_rank")
-            if (mapResult !is ApiResult.Success) return@launch
+        val mapResult = repository.fetchTokenMapBySort("cmc_rank")
+        if (mapResult !is ApiResult.Success) {
+            Log.e("CMC_SYNC", "Failed to fetch map")
+            return false
+        }
 
-            val mapTokens = mapResult.data.data
-            val mapById = mapTokens.associateBy { it.id }
-            val ids = mapTokens.map { it.id }
+        val mapTokens = mapResult.data.data
+        val mapById = mapTokens.associateBy { it.id }
+        val ids = mapTokens.map { it.id }
 
-            val allEntities = mutableListOf<CmcTokenEntity>()
-
-            ids.chunked(100).forEach { chunk ->
-                when (val infoResult = repository.fetchTokenMetadata(chunk)) {
-                    is ApiResult.Success -> {
-                        val metaMap = infoResult.data.data
-                        chunk.forEach { id ->
-                            val mapItem = mapById[id] ?: return@forEach
-                            val meta = metaMap[id.toString()] ?: return@forEach
-                            val entity = mergeMapAndMetadata(mapItem, meta)
-                            allEntities.add(entity)
-                        }
-                    }
-                    is ApiResult.Error -> {
-                        Log.e("CMC_SYNC", "Metadata error: ${infoResult.exception}")
+        val allEntities = mutableListOf<CmcTokenEntity>()
+        ids.chunked(100).forEach { chunk ->
+            when (val infoResult = repository.fetchTokenMetadata(chunk)) {
+                is ApiResult.Success -> {
+                    val metaMap = infoResult.data.data
+                    chunk.forEach { id ->
+                        val mapItem = mapById[id] ?: return@forEach
+                        val meta = metaMap[id.toString()] ?: return@forEach
+                        val entity = mergeMapAndMetadata(mapItem, meta)
+                        allEntities.add(entity)
                     }
                 }
+                is ApiResult.Error -> {
+                    Log.e("CMC_SYNC", "Metadata error: ${infoResult.exception}")
+                }
             }
-
-            repository.insertAllTokens(allEntities)
-            Log.d("CMC_SYNC", "DB updated with ${allEntities.size} tokens")
         }
+
+        repository.insertAllTokens(allEntities)
+        Log.d("CMC_SYNC", "DB updated with ${allEntities.size} tokens")
+        return true
     }
+
 
 
     private suspend fun searchTokenInLoadedMap(query: String): List<CmcTokenEntity> {
@@ -386,32 +396,62 @@ class CmcTokenViewModel @Inject constructor(
         }
     }
 
-
     fun performSearch(query: String) {
         viewModelScope.launch {
             _searchState.value = UiState.Loading
 
-            if (query.isBlank()) {
+            val trimmed = query.trim().lowercase()
+            if (trimmed.isBlank()) {
                 _searchState.value = UiState.Success(emptyList())
                 return@launch
             }
 
+            // Step 1: Search token map in DB
             val results = withContext(Dispatchers.IO) {
-                repository.searchTokensByQuery(query.trim())
+                repository.searchTokensByQuery(trimmed)
             }
 
             val ids = results.map { it.id }
 
-            val metadataResult = repository.fetchTokenMetadata(ids)
-
-            if (metadataResult is ApiResult.Success){
-                val perChain = toPerChainUiModels(metadataResult.data.data)
-                _perChainTokens.value = perChain
+            // Step 2: Fetch metadata for search matches
+            val metaResult = repository.fetchTokenMetadata(ids)
+            val metaMap = if (metaResult is ApiResult.Success) {
+                metaResult.data.data
+            } else {
+                emptyMap()
             }
+
+            // Step 3: Try slug match (additional)
+            val slugMeta = when (val slugResult = repository.fetchTokenMetadataBySlug(trimmed)) {
+                is ApiResult.Success -> slugResult.data.data
+                else -> emptyMap()
+            }
+
+            // Merge slug + db metas
+            val combinedMeta = (metaMap + slugMeta).values.associateBy { it.id.toString() }
+
+            // Step 4: Expand into per-chain UI models
+            val perChainList = toPerChainUiModels(combinedMeta)
+
+            // Step 5: Prioritize best matches (exact symbol or name)
+            val sorted = perChainList.sortedWith(
+                compareByDescending<TokenPerChainUiModel> {
+                    it.symbol.equals(query, ignoreCase = true)
+                }.thenBy {
+                    it.name.lowercase().contains(query.lowercase())
+                            || it.symbol.lowercase().contains(query.lowercase())
+                }
+            )
+
+            _perChainTokens.value = sorted
             _searchState.value = UiState.Success(results)
-            Log.d("SearchDebug", "DB Results for '$query': ${results.map { it.name to it.id }}")
+
+            Log.d("SearchDebug", "Final matches: ${sorted.map { it.symbol + " on " + it.chainDisplayName }}")
         }
     }
+
+
+
 
     fun expandMetaInstances(
         metas: List<TokenMetaData>,
@@ -440,10 +480,12 @@ class CmcTokenViewModel @Inject constructor(
     fun toPerChainUiModels(metaMap: Map<String, TokenMetaData>): List<TokenPerChainUiModel> {
         return metaMap.values.flatMap { meta ->
             meta.contractAddress.mapNotNull { contract ->
-                val chain = AlchemyChain.entries.find {
-                    it.name.equals(contract.platform.coin.slug, ignoreCase = true)
-                } ?: return@mapNotNull null
-
+                val chain = resolveChainFromPlatform(contract.platform.name)
+                    ?: resolveChainFromPlatform(contract.platform.coin.slug)
+                    ?: AlchemyChain.entries.find {
+                        it.name.equals(contract.platform.coin.slug, ignoreCase = true)
+                    }
+                    ?: return@mapNotNull null
                 TokenPerChainUiModel(
                     tokenId = meta.id,
                     name = meta.name,
@@ -566,14 +608,85 @@ class CmcTokenViewModel @Inject constructor(
 
 
 
-    suspend fun getPricesForActiveTokens(walletId: String) : ApiResult<TokenQuotesResponse> {
+    suspend fun getPricesForActiveTokens(walletId: String): ApiResult<TokenQuotesResponse> {
         val ids = repository.getActiveTokenIds(walletId = walletId).first()
+        Log.d("PriceFetch", "Active token IDs for wallet [$walletId]: $ids")
 
-        if (ids.isEmpty())  return ApiResult.Success(
-            TokenQuotesResponse(status = CmcStatus.EMPTY, data = emptyMap())
+        if (ids.isEmpty()) {
+            Log.d("PriceFetch", "No active tokens — returning empty result.")
+            return ApiResult.Success(
+                TokenQuotesResponse(status = CmcStatus.EMPTY, data = emptyMap())
+            )
+        }
+
+        val result = repository.fetchTokenPrices(ids)
+        if (result !is ApiResult.Success) {
+            Log.e("PriceFetch", "Failed to fetch prices: ${result}")
+            return result
+        }
+
+        val originalData = result.data.data
+        Log.d("PriceFetch", "Fetched prices: ${originalData.mapValues { it.value.quote["USD"]?.price }}")
+
+        // 🔁 Group by symbol
+        val groupedBySymbol = originalData.values.groupBy { it.symbol.uppercase() }
+        val groupedBySlug = originalData.values.groupBy { it.slug.lowercase() }
+
+        val manualFallbacks = mapOf(
+            3890 to 28321, // MATIC → POL (new token)
+            // add more if needed
         )
-        return repository.fetchTokenPrices(ids)
+
+        // 🛠 Patch missing prices
+        val patchedData = originalData.mapValues { (id, quoteData) ->
+            val primaryPrice = quoteData.quote["USD"]?.price
+
+            if (primaryPrice != null && primaryPrice > 0.0) {
+                quoteData
+            } else {
+                val fallbackBySymbol = groupedBySymbol[quoteData.symbol.uppercase()]
+                    ?.firstOrNull {
+                        it.id != quoteData.id &&
+                                it.quote["USD"]?.price != null &&
+                                it.quote["USD"]!!.price > 0.0
+                    }
+
+                val fallbackBySlug = groupedBySlug[quoteData.slug.lowercase()]
+                    ?.firstOrNull {
+                        it.id != quoteData.id &&
+                                it.quote["USD"]?.price != null &&
+                                it.quote["USD"]!!.price > 0.0
+                    }
+                val fallbackByManual = manualFallbacks[id.toIntOrNull() ?: -1]?.let { fallbackId ->
+                    originalData[fallbackId.toString()]
+                }?.takeIf {
+                    it.quote["USD"]?.price != null && it.quote["USD"]!!.price > 0.0
+                }
+                val fallback = fallbackBySymbol ?: fallbackBySlug ?: fallbackByManual
+
+                Log.d("PriceFallback" , "fall back by slug is : $fallbackBySlug and fallback by symbol is : $fallbackBySymbol and fallback is :$fallback")
+                if (fallback != null) {
+                    Log.w(
+                        "PriceFallback",
+                        "Price missing for token ID $id (${quoteData.symbol}/${quoteData.slug}), " +
+                                "falling back to ID ${fallback.id} (${fallback.symbol}/${fallback.slug}) with price ${fallback.quote["USD"]?.price}"
+                    )
+                    quoteData.copy(
+                        quote = mapOf("USD" to fallback.quote["USD"]!!)
+                    )
+                } else {
+                    Log.w("PriceFallback", "No fallback found for token ID $id (${quoteData.symbol})")
+                    quoteData
+                }
+            }
+        }
+
+        Log.d("PriceFetch", "Final patched prices: ${patchedData.mapValues { it.value.quote["USD"]?.price }}")
+
+        return ApiResult.Success(TokenQuotesResponse(result.data.status, patchedData))
     }
+
+
 
 
     /*    fun filterActivatedMetadata(

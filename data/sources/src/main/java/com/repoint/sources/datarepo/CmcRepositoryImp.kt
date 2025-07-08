@@ -46,6 +46,12 @@ class CmcRepositoryImp @Inject constructor(
         }
     }
 
+    override suspend fun fetchTokenMetadataBySlug(slug : String): ApiResult<TokenInfoMetadataResponse> {
+        return safeApiCall {
+            api.getTokensInfoBySlug(slug)
+        }
+    }
+
     override suspend fun fetchTokenPrices(ids: List<Int>): ApiResult<TokenQuotesResponse> {
        return safeApiCall {
             val idParam = ids.joinToString(",")

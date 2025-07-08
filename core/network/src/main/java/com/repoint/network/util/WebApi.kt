@@ -45,6 +45,11 @@ interface WebApi {
         @Query("id") ids : String
     ) : TokenInfoMetadataResponse
 
+    @GET("v2/cryptocurrency/info")
+    suspend fun getTokensInfoBySlug(
+        @Query("slug")slug : String
+    ) : TokenInfoMetadataResponse
+
 
     @GET("v1/cryptocurrency/quotes/latest")
     suspend fun getTokenPrices(

@@ -11,6 +11,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -59,6 +60,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.constraintlayout.compose.ConstraintLayout
@@ -132,7 +134,7 @@ fun HomeScreen(
     var chainWallets by remember { mutableStateOf<List<ChainWallet>>(emptyList()) }
     var tokenList by remember { mutableStateOf<TokenInfoMetadataResponse?>(null) }
     var tokensOf by remember { mutableStateOf<List<TokensBalance?>>(emptyList()) }
-    var balance by remember { mutableStateOf<String>(" ") }
+    //var balance by remember { mutableStateOf<String>(" ") }
     var selectedWallet by remember { mutableStateOf<MasterWallet?>(null) }
     var activeAddress by remember { mutableStateOf<String?>(null) }
     var ether by remember { mutableStateOf<BigDecimal?>(BigDecimal.ZERO) }
@@ -196,30 +198,40 @@ fun HomeScreen(
     }
 
     //val activeTokenKeys by cmcTokenViewModel.activeTokenKeyFlow.collectAsState()
-/*    val tokenInstances = remember(tokens, balances) {
-        val grouped = tokens.groupBy { it.tokenId to it.contractAddress.lowercase() }
+    /*    val tokenInstances = remember(tokens, balances) {
+            val grouped = tokens.groupBy { it.tokenId to it.contractAddress.lowercase() }
 
-        grouped.map { (_, group) ->
-            group.maxByOrNull { token ->
-                getTokenBalance(token.tokenMeta, (balances as? UiState.Success)?.data ?: emptyList())
-                    ?: BigDecimal.ZERO
-            } ?: group.first()
-        }
-    }*/
+            grouped.map { (_, group) ->
+                group.maxByOrNull { token ->
+                    getTokenBalance(token.tokenMeta, (balances as? UiState.Success)?.data ?: emptyList())
+                        ?: BigDecimal.ZERO
+                } ?: group.first()
+            }
+        }*/
 
     val dedupedInstances = remember(tokens, balances) {
         tokens
             .groupBy { it.tokenId to it.chain.lowercase() } // ✅ Correct granularity
             .mapNotNull { (_, group) ->
                 val best = group.maxByOrNull { token ->
-                    getTokenBalanceFromInstance(token, (balances as? UiState.Success)?.data ?: emptyList())
+                    getTokenBalanceFromInstance(
+                        token,
+                        (balances as? UiState.Success)?.data ?: emptyList()
+                    )
                         ?: BigDecimal.ZERO
                 }
-                Log.d("Deduped", "🧠Picked ${best?.symbol} on ${best?.chain} with balance=${getTokenBalanceFromInstance(best!!, (balances as? UiState.Success)?.data ?: emptyList())}")
+                Log.d(
+                    "Deduped",
+                    "🧠Picked ${best?.symbol} on ${best?.chain} with balance=${
+                        getTokenBalanceFromInstance(
+                            best!!,
+                            (balances as? UiState.Success)?.data ?: emptyList()
+                        )
+                    }"
+                )
                 best
             }
     }
-
 
 
     val sheetTokenState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
@@ -643,51 +655,91 @@ fun HomeScreen(
                                     val nativeBalanceList =
                                         (nativeBalances as? UiState.Success)?.data ?: emptyList()
 
+
                                     val slugToTokenIdMap = metas.associateBy { it.slug } // optional
                                     val tokenIdToPriceMap =
                                         quotesMap.mapValues { it.value.quote["USD"]?.price ?: 0.0 }
 
+                                    Log.d("priceali", "price is ${priceResult}  ")
 
                                     //val filteredMetas = cmcTokenViewModel.filterActivatedMetadata(metas,activeTokenEntities)
 
-                               /*     val filteredMetas = metas.filter { meta ->
-                                        meta.contractAddress.any { contract ->
-                                            val contractChain = contract.platform.coin.slug.lowercase()
-                                            Log.d("ChainSlugChecks", "Checking: tokenId=${meta.id}, chain=$contractChain, contract=${contract.contractAddress}")
-                                            Log.d("ChainSlugChecks", "→ Is in activeKeys? ${activeTokenKeys.contains(ActiveTokenKey(meta.id, contractChain))}")
-                                            activeTokenKeys.contains(ActiveTokenKey(meta.id, contractChain))
-                                        }
-                                    }*/
-                                   // Log.d("ChainSlugChecks", "ActiveKeys: $activeTokenKeys")
+                                    /*     val filteredMetas = metas.filter { meta ->
+                                             meta.contractAddress.any { contract ->
+                                                 val contractChain = contract.platform.coin.slug.lowercase()
+                                                 Log.d("ChainSlugChecks", "Checking: tokenId=${meta.id}, chain=$contractChain, contract=${contract.contractAddress}")
+                                                 Log.d("ChainSlugChecks", "→ Is in activeKeys? ${activeTokenKeys.contains(ActiveTokenKey(meta.id, contractChain))}")
+                                                 activeTokenKeys.contains(ActiveTokenKey(meta.id, contractChain))
+                                             }
+                                         }*/
+                                    // Log.d("ChainSlugChecks", "ActiveKeys: $activeTokenKeys")
 
-                                    Log.d("ChainSlugChecks","filtered META is  1: $tokens")
+                                    Log.d("ChainSlugChecks", "filtered META is  1: $tokens")
                                     Log.d("ChainSlugChecks", "Original metas count: ${metas.size}")
-                                    metas.forEach { Log.d("ChainSlugChecks", "meta id=${it.id}, symbol=${it.symbol}") }
+                                    metas.forEach {
+                                        Log.d(
+                                            "ChainSlugChecks",
+                                            "meta id=${it.id}, symbol=${it.symbol}"
+                                        )
+                                    }
 
                                     dedupedInstances.forEach {
-                                        Log.d("FinalTokens", "🧩Token: ${it.symbol} (${it.tokenId}) on ${it.chain} → ${it.contractAddress}")
+                                        Log.d(
+                                            "FinalTokens",
+                                            "🧩Token: ${it.symbol} (${it.tokenId}) on ${it.chain} → ${it.contractAddress}"
+                                        )
                                     }
                                     Log.d("DebugToken", "⚠️ Raw tokens = ${tokens.size}")
 
 
+
                                     items(dedupedInstances) { token ->
-                                        val balanceValue: BigDecimal? = when (val result = balances) {
-                                            is UiState.Success -> getTokenBalanceFromInstance(token, result.data)
-                                            else -> null
+
+                                        val balanceValue: BigDecimal? =
+                                            when (val result = balances) {
+                                                is UiState.Success -> getTokenBalanceFromInstance(
+                                                    token,
+                                                    result.data
+                                                )
+
+                                                else -> null
+                                            }
+                                        Log.d("ChainSlugChecks", "filtered META is  2: $tokens")
+                                        Log.d(
+                                            "ChainSlugChecks",
+                                            "balance value is  2: $balanceValue"
+                                        )
+
+                                        val totalUsdBalance = dedupedInstances.sumOf { token ->
+                                            val balance = when (val result = balances) {
+                                                is UiState.Success -> getTokenBalanceFromInstance(
+                                                    token,
+                                                    result.data
+                                                )
+
+                                                else -> null
+                                            } ?: BigDecimal.ZERO
+
+                                            val price = quotesMap[token.tokenMeta.id.toString()]
+                                                ?.quote
+                                                ?.get("USD")
+                                                ?.price
+                                                ?: 0.0
+                                            balance.multiply(BigDecimal(price)).toDouble()
                                         }
-                                        Log.d("ChainSlugChecks","filtered META is  2: $tokens")
-                                        Log.d("ChainSlugChecks","balance value is  2: $balanceValue")
+                                        totalUsdBalanceFormatted.value =
+                                            "$" + DecimalFormat("#,##0.00").format(totalUsdBalance)
 
-                                        val priceUsd = quotesMap[token.tokenMeta.id.toString()]
-                                            ?.quote
-                                            ?.get("USD")
-                                            ?.price
-                                            ?: 0.0
-
-                                        Log.d("ChainSlugChecks", "Meta is: ${token.contractAddress}")
+                                        Log.d(
+                                            "ChainSlugChecks",
+                                            "Meta is: ${token.contractAddress}"
+                                        )
 
                                         val balanceOfNative =
-                                            getNativeBalanceForMetaSmart(token.tokenMeta, nativeBalanceList)
+                                            getNativeBalanceForMetaSmart(
+                                                token.tokenMeta,
+                                                nativeBalanceList
+                                            )
 
 
                                         Log.d(
@@ -695,9 +747,15 @@ fun HomeScreen(
                                             "Platform slug: ${token.tokenMeta.platform?.slug}"
                                         )
                                         Log.d("ChainSlugCheck", "meta name: ${token.name}")
-                                        Log.d("ChainSlugCheck", "meta slug: ${token.tokenMeta.slug}")
+                                        Log.d(
+                                            "ChainSlugCheck",
+                                            "meta slug: ${token.tokenMeta.slug}"
+                                        )
                                         Log.d("ChainSlugCheck", "meta symbol: ${token.symbol}")
-                                        Log.d("ChainSlugCheck", "meta category: ${token.tokenMeta.category}")
+                                        Log.d(
+                                            "ChainSlugCheck",
+                                            "meta category: ${token.tokenMeta.category}"
+                                        )
 
                                         Log.d(
                                             "native",
@@ -714,11 +772,19 @@ fun HomeScreen(
                                         )
 
                                         val tokenBalance = (balances as? UiState.Success)?.data
-                                        Log.d("TokenMatch", "Resulting token balance for ${token.symbol} is: $tokenBalance")
+                                        Log.d(
+                                            "TokenMatch",
+                                            "Resulting token balance for ${token.symbol} is: $tokenBalance"
+                                        )
 
-                                        Log.d("token","the token balances are :$tokenBalance")
+                                        Log.d("token", "the token balances are :$tokenBalance")
 
 
+                                        val priceUsd = quotesMap[token.tokenMeta.id.toString()]
+                                            ?.quote
+                                            ?.get("USD")
+                                            ?.price
+                                            ?: 0.0
 
                                         TokenRow(
                                             item = token,
@@ -729,22 +795,23 @@ fun HomeScreen(
 
                                     Log.d("BalanceDebug", "nativeBalanceList: $nativeBalanceList")
 
-                                    val totalUsdBalance = nativeBalanceList.sumOf { native ->
-                                        val tokenMeta = metas.find {
-                                            it.platform?.slug.equals(
-                                                native.chainName,
-                                                ignoreCase = true
-                                            )
-                                        }
-                                        val price = tokenMeta?.let {
-                                            quotesMap[it.id.toString()]?.quote?.get("USD")?.price
-                                        } ?: 0.0
-                                        native.balance.multiply(price.toBigDecimal())
-                                    }
-
-                                    totalUsdBalanceFormatted.value =
-                                        "$" + totalUsdBalance.setScale(2, RoundingMode.HALF_UP)
-                                            .toPlainString()
+                                    //todo check this total balance
+                                    /*     val totalUsdBalance = nativeBalanceList.sumOf { native ->
+                                             val tokenMeta = metas.find {
+                                                 it.platform?.slug.equals(
+                                                     native.chainName,
+                                                     ignoreCase = true
+                                                 )
+                                             }
+                                             val price = tokenMeta?.let {
+                                                 quotesMap[it.id.toString()]?.quote?.get("USD")?.price
+                                             } ?: 0.0
+                                             native.balance.multiply(price.toBigDecimal())
+                                         }*/
+                                    /*
+                                                                        totalUsdBalanceFormatted.value =
+                                                                            "$" + totalUsdBalance.setScale(2, RoundingMode.HALF_UP)
+                                                                                .toPlainString()*/
 
                                 }
 
@@ -954,7 +1021,6 @@ fun TokenToggleSheet(
         }
     }
 }
-
 @Composable
 fun TokenRow(
     item: ResolvedTokenInstance,
@@ -962,7 +1028,11 @@ fun TokenRow(
     balance: BigDecimal?
 ) {
     val formatter = remember { DecimalFormat("#0.####") }
+    val currencyFormatter = remember { DecimalFormat("#,##0.00") }
+
     val displayBalance = balance?.stripTrailingZeros()?.toPlainString() ?: "0"
+    val valueUsd = balance?.multiply(BigDecimal(priceUsd)) ?: BigDecimal.ZERO
+    val formattedValueUsd = currencyFormatter.format(valueUsd)
 
     val mainChain = item.chain.ifBlank { "Unknown" }
     val contract = item.contractAddress
@@ -977,32 +1047,64 @@ fun TokenRow(
             .padding(8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
+        // Logo
         AsyncImage(
             model = item.logo,
             contentDescription = item.symbol,
             modifier = Modifier
-                .size(32.dp)
-                .padding(2.dp)
+                .size(40.dp)
                 .clip(RoundedCornerShape(8.dp))
+                .align(Alignment.CenterVertically)
         )
-        Spacer(Modifier.width(8.dp))
+
+        Spacer(Modifier.width(12.dp))
+
+        // Token Info Column — dynamic height, wraps as needed
         Column(
             modifier = Modifier
-                .weight(0.5f)
-                .padding(4.dp),
+                .weight(1f)
+                .align(Alignment.CenterVertically).
+            padding(top = 8.dp),
+            verticalArrangement = Arrangement.spacedBy(2.dp)
+        ) {
+            Text(
+                text = item.symbol.uppercase(),
+                style = RepointTypography.titleMedium,
+                maxLines = 1
+            )
+            Text(
+                text = item.name,
+                style = RepointTypography.labelSmall,
+                color = richBlack,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis
+            )
+            Text(
+                text = "Chain: $mainChain",
+                style = RepointTypography.labelSmall,
+                color = richBlack,
+                maxLines = 1
+            )
+            Text(
+                text = "Contract: $contract",
+                style = RepointTypography.labelSmall,
+                color = grayHound,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
+
+        // Balance & USD
+        Column(
+            modifier = Modifier
+                .align(Alignment.CenterVertically)
+                .padding(start = 8.dp, top = 2.dp),
+            horizontalAlignment = Alignment.End,
             verticalArrangement = Arrangement.Center
         ) {
-            Text(item.symbol.uppercase(), style = RepointTypography.titleMedium)
-            Text(item.name, style = RepointTypography.labelSmall, color = richBlack)
-            Text("Chain: $mainChain", style = RepointTypography.labelSmall, color = richBlack)
-            Text("Contract: $contract", style = RepointTypography.labelSmall, color = grayHound)
-        }
-        Column(horizontalAlignment = Alignment.End, modifier = Modifier.padding(4.dp)) {
             Text("Balance: $displayBalance", style = RepointTypography.labelSmall)
-            Text(
-                text = "$${formatter.format(priceUsd)}",
-                style = RepointTypography.titleSmall
-            )
+            Text("Price: $${formatter.format(priceUsd)}", style = RepointTypography.titleSmall)
+            Text("≈ $formattedValueUsd", style = RepointTypography.titleSmall , fontWeight = FontWeight.W600)
         }
     }
 }
@@ -1062,12 +1164,12 @@ fun ActivatedTokensList(
                         ?.get("USD")
                         ?.price
                         ?: 0.0
-/*
-                    TokenRow(
-                        item = meta,
-                        priceUsd = priceUsd,
-                        balance = token
-                    )*/
+                    /*
+                                        TokenRow(
+                                            item = meta,
+                                            priceUsd = priceUsd,
+                                            balance = token
+                                        )*/
                 }
             }
         }
@@ -1374,7 +1476,6 @@ fun getDecimals(meta: TokenMetaData): Int {
         else -> 18 // fallback
     }
 }
-
 
 
 fun getTokenBalanceFromInstance(
