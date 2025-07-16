@@ -15,16 +15,22 @@ val chainInfoMap = mapOf(
     10 to "0x4200000000000000000000000000000000000006" //Optimism
 )
 
+val chainIdToChainNames = mapOf(
+    1 to listOf("eth", "ethereum"),
+    56 to listOf("bnb", "bsc", "binance-smart-chain"),
+    137 to listOf("polygon", "matic", "pol")
+)
+
+// Or use a single canonical name:
 val moralisChainMap: Map<Int, String> = mapOf(
-    1 to "eth",
-    56 to "bsc",
+    1 to "ethereum",
+    56 to "bnb",
     137 to "polygon",
     43114 to "avalanche",
     250 to "fantom",
     42161 to "arbitrum",
     10 to "optimism"
 )
-
 // Manual override for known native coins
 val symbolToChain = mapOf(
     "ETH" to "eth",
@@ -53,4 +59,20 @@ fun getNativeBalanceForMetaSmart(
                 it.chainName.equals(slug, true)
     }?.balance
 }
+
+
+
+fun normalizeSlug(slug: String): String {
+    return when (slug.lowercase()) {
+        "polygon", "matic", "polygon-ecosystem-token", "pol (prev. matic)" -> "polygon"
+        "eth", "ethereum" -> "ethereum"
+        "bnb", "binance-smart-chain", "binance smart chain", "bsc" -> "bnb"
+        "arbitrum" -> "arbitrum"
+        "optimism" -> "optimism"
+        "avalanche", "avax" -> "avalanche"
+        "fantom", "ftm" -> "fantom"
+        else -> slug.lowercase()
+    }
+}
+
 

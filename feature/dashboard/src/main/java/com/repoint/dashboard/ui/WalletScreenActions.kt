@@ -11,7 +11,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -100,13 +99,13 @@ import com.repoint.models.sharedmodels.remote.TokenQuotesResponse
 import com.repoint.models.sharedmodels.remote.TokensBalance
 import com.repoint.models.sharedmodels.remote.getNativeBalanceForMetaSmart
 import com.repoint.models.sharedmodels.remote.moralisChainMap
+import com.repoint.models.sharedmodels.remote.normalizeSlug
 import com.repoint.models.sharedmodels.rpc.AlchemyTokenBalance
 import com.repoint.models.sharedmodels.ui.ApiResult
 import com.repoint.models.sharedmodels.ui.UiState
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.launch
 import java.math.BigDecimal
-import java.math.RoundingMode
 import java.text.DecimalFormat
 
 
@@ -171,7 +170,6 @@ fun HomeScreen(
     //tokens
     val tokens by cmcTokenViewModel.filteredMetas.collectAsState()
 
-    val activeTokenKeys by cmcTokenViewModel.activeTokenKeyFlow.collectAsState()
 
 
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
@@ -347,6 +345,13 @@ fun HomeScreen(
 
                 //TODO generic the wallet
                 chainWallets = walletViewModel.getAllChainWallets(activeWalletId!!)
+                val addressByCoinType = chainWallets.associateBy { it.coinType }
+                val addressBySlug = chainWallets.associateBy {
+                    normalizeSlug(it.networkName)  // or it.slug if available
+                }
+                Log.d("token","the address ByCoin Type is : $addressByCoinType")
+                Log.d("token","the address BySlug  is : $addressBySlug")
+
                 //   spManager.setActiveWallet(masterWallets[0].masterWalletId)
 
 
@@ -370,68 +375,12 @@ fun HomeScreen(
                         "token",
                         "active adress is : $activeAddress , selected wallet is : $selectedWallet , masterId is : ${selectedWallet?.masterWalletId}"
                     )
-                    // tokenList = tokenViewModel.getTokenBalance(address = address, chain = "polygon")
-
-                    //val enabledChains = networkViewModel.getEnabledMoralisChains(selectedWalletId)
-
-                    /*  tokenViewModel.getAllAvailableTokensFromMoralisOnly(
-                          walletAddress = activeAddress!!,
-                          masterWalletId = selectedWalletId,
-                          enabledChains = enabledChains
-                      ){ tokens ->
-                          tokenList = NativesBalance(
-                              cursor = "",
-                              page = 1,
-                              pageSize = tokens.size,
-                              result = tokens
-                          )
-
-                      }*/
-
                     web3ViewModel.fetchNativeWalletBalance(
                         walletAddress = activeAddress!!,
                         chainId = 1
                     )
 
                     Log.d("balanceEther", "balance is this   $balanceEther")
-
-
-                    //todo check this
-                    // tokenViewModel.getTokenBalancesByWallet(walletAddress = activeAddress!!, chain = "eth")
-
-                    /*    tokenViewModel.getAllChainTokenBalances(
-                            walletAddress = activeAddress!!,
-                            masterWalletId = selectedWallet!!.masterWalletId,
-                            chains = allChains
-                        ) { allBalances ->
-                            // ✅ Deduplicate by lowercased address AND balance presence
-                            val distinctBalances = allBalances
-                                .groupBy { (chain, token) -> "${token.tokenAddress.lowercase()}-$chain" }
-                                .map { (_, tokenPairs) ->
-                                    tokenPairs.maxByOrNull { (_, token) ->
-                                        val hasPrice = if (token.usdPrice > 0) 100 else 0
-                                        val hasBalance = if (token.balance != "0" && token.balance != "0.0") 10 else 0
-                                        hasPrice + hasBalance
-                                    }!!.second // pick TokensBalance only
-                                }
-                            Log.d("token-filter", "Tokens after deduplication: ${distinctBalances.map { it.symbol to it.usdPrice }}")
-
-
-                            tokenList = NativesBalance(
-                                cursor = "",
-                                page = 1,
-                                pageSize = allBalances.size,
-                                result = distinctBalances
-                            )
-                        }*/
-
-
-                    // selectedWallet?.let { networkViewModel.initializeWithWallet(it.masterWalletId) }
-
-                    // tokensOf = tokenViewModel.getAllActivatedTokenBalances(activeAddress, "polygon")
-                    //tokensOf = tokenViewModel.getMergedActivatedTokenBalances(address,"polygon")
-                    //ether = web3ViewModel.fetchNativeWalletBalance(activeAddress!!)
-
                     Log.d("token", "Chain Wallets: $chainWallets")
                     Log.d("assets", "active Address used: $activeAddress")
                     Log.d("token", "Token list: $tokenList")
@@ -442,19 +391,9 @@ fun HomeScreen(
             }
 
         }
-
-
-
         Log.d("token", "tokens of is $tokensOf")
-        //  ether = web3ViewModel.fetchNativeWalletBalance(wallets[0].address)
         Log.d("token", "token list are : $tokenList")
         Log.d("token", "ether is : $ether")
-
-        /*// isLoading = false
-        if (uiState !is UiState.Loading) {
-            delay(1500)
-            isRefreshing = false
-        }*/
     }
 
 
@@ -540,7 +479,7 @@ fun HomeScreen(
                                     ActionsRow(
                                         navController,
                                         wallet = selectedWallet,
-                                        tokenList,
+                                        dedupedInstances,
                                         activeAddress!!
                                     )
                                 }
@@ -1181,7 +1120,7 @@ fun ActivatedTokensList(
 fun ActionsRow(
     navController: NavController,
     wallet: MasterWallet?,
-    tokenList: TokenInfoMetadataResponse?,
+    activeTokens: List<ResolvedTokenInstance>?,
     activeAddress: String
 ) {
 
@@ -1204,11 +1143,12 @@ fun ActionsRow(
                 /*     val gson = Gson()
                      val type = object : TypeToken<List<TokensBalance>>() {}.type
                      val jsonString = gson.toJson(tokenList?.result,type)*/
-                val tokenListSafe = ArrayList(tokenList?.data?.values ?: emptyList())
+               // val tokenListSafe = ArrayList(tokenList?.data?.values ?: emptyList())
+                val tokenMetas = ArrayList(activeTokens?.map { it.tokenMeta })
 
                 navController.currentBackStackEntry?.savedStateHandle?.set(
                     "tokenBalances",
-                    tokenListSafe
+                    tokenMetas
                 )
                 navController.navigate("chooseToken/${true}")
 
@@ -1223,6 +1163,12 @@ fun ActionsRow(
                 //receive choose token // Todo modify receive
                 val encodedAddress = Uri.encode(wallet?.masterWalletId)
                 //navController.navigate("qrCode/$encodedAddress")
+                val tokenMetas = ArrayList(activeTokens?.map { it.tokenMeta })
+
+                navController.currentBackStackEntry?.savedStateHandle?.set(
+                    "tokenBalances",
+                    tokenMetas
+                )
                 navController.navigate("chooseToken/${false}")
             },
             modifier = Modifier.weight(1f)
@@ -1445,25 +1391,39 @@ fun ListScreen(items: List<TokensBalance>?) {
     }
 
 }
-
 fun matchBalance(
     tokenMeta: TokenMetaData,
-    alchemyBalances: List<AlchemyTokenBalance>,
-    currentChain: String // e.g., "polygon"
+    balances: List<AlchemyTokenBalance>,
+    currentChain: String
 ): BigDecimal? {
-    val contract = tokenMeta.contractAddress.firstOrNull {
-        it.platform.coin.slug.equals(currentChain, ignoreCase = true)
-    } ?: return null
+    val slug = currentChain.lowercase()
+    val matchedContracts = tokenMeta.contractAddress.filter {
+        val normalizedChain = normalizeSlug(currentChain)
+        Log.d("BalanceMatch", "Matching ${tokenMeta.symbol} on chain: $currentChain (normalized: $normalizedChain)")
 
-    val contractAddress = contract.contractAddress.lowercase()
-
-    val match = alchemyBalances.find {
-        it.contractAddress.equals(contractAddress, ignoreCase = true)
-                && it.chainSlug.equals(currentChain, ignoreCase = true)
+        val contractChain = normalizeSlug(it.platform.coin.slug)
+        Log.d("BalanceMatch", "Checking contract ${it.contractAddress} on ${it.platform.coin.slug} (normalized: $contractChain)")
+        contractChain == normalizedChain
     }
 
-    return match?.tokenBalance?.removePrefix("0x")?.toBigIntegerOrNull(16)
-        ?.toBigDecimal()?.movePointLeft(getDecimals(tokenMeta))
+    if (matchedContracts.isEmpty()) {
+        Log.w("BalanceMatch", "❌ No contract for ${tokenMeta.name} on $slug")
+        return null
+    }
+
+    for (contract in matchedContracts) {
+        val matchedBalance = balances.firstOrNull {
+            it.contractAddress.equals(contract.contractAddress, ignoreCase = true) &&
+                    it.chainSlug.equals(slug, ignoreCase = true)
+        }
+        if (matchedBalance != null) {
+            Log.d("BalanceMatch", "✅ Matched ${tokenMeta.symbol} with balance=${matchedBalance.tokenBalance}")
+            return matchedBalance.tokenBalance?.toBigDecimalOrNull()
+        }
+    }
+
+    Log.w("BalanceMatch", "❌ No balance matched for ${tokenMeta.symbol} on $slug")
+    return null
 }
 
 
@@ -1493,17 +1453,6 @@ fun getTokenBalanceFromInstance(
 
     Log.d("🔁 BalanceMatch", "Looking for: $address on $slug → balance=$balance")
     return balance
-}
-
-
-fun normalizeSlug(slug: String): String {
-    return when (slug.lowercase()) {
-        "polygon-ecosystem-token", "polygon" -> "polygon"
-        "bnb-smart-chain", "bnb" -> "bnb"
-        "ethereum" -> "ethereum"
-        "arbitrum" -> "arbitrum"
-        else -> slug.lowercase()
-    }
 }
 
 

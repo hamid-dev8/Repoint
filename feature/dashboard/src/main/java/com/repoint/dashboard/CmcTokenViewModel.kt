@@ -5,7 +5,6 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.repoint.basics.logic.mapPlatformToAlchemyChain
 import com.repoint.dashboard.ui.getDecimals
-import com.repoint.dashboard.ui.normalizeSlug
 import com.repoint.models.sharedmodels.local.ActiveTokenKey
 import com.repoint.models.sharedmodels.local.CmcTokenEntity
 import com.repoint.models.sharedmodels.local.LocalActiveNetworks
@@ -13,19 +12,19 @@ import com.repoint.models.sharedmodels.local.MatchedTokenMeta
 import com.repoint.models.sharedmodels.local.ResolvedTokenInstance
 import com.repoint.models.sharedmodels.local.TokenPerChainUiModel
 import com.repoint.models.sharedmodels.remote.CmcAllTokens
-import com.repoint.models.sharedmodels.remote.CmcPlatforms
 import com.repoint.models.sharedmodels.remote.CmcStatus
 import com.repoint.models.sharedmodels.remote.TokenInfoMetadataResponse
 import com.repoint.models.sharedmodels.remote.TokenMetaData
 import com.repoint.models.sharedmodels.remote.TokenQuotesResponse
+import com.repoint.models.sharedmodels.remote.normalizeSlug
 import com.repoint.models.sharedmodels.rpc.AlchemyChain
-import com.repoint.models.sharedmodels.rpc.AlchemyTokenBalance
 import com.repoint.models.sharedmodels.ui.ApiResult
 import com.repoint.models.sharedmodels.ui.UiState
 import com.repoint.network.util.resolveChainFromPlatform
 import com.repoint.sources.datarepo.datasource.CmcDataSource
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -35,11 +34,11 @@ import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import java.math.BigDecimal
 import java.util.Locale
 import javax.inject.Inject
 
@@ -198,6 +197,20 @@ class CmcTokenViewModel @Inject constructor(
         }
     }
 
+    fun getTokenMetaFlow(tokenId: Int): Flow<TokenMetaData?> {
+        return tokenMetasFlow
+            .onEach { Log.d("SlugMatch", "🔍 Searching tokenId=$tokenId in ${it.map { t -> t.id }}") }
+            .map { list -> list.firstOrNull { it.id == tokenId } }
+    }
+
+    fun loadTokenMetaById(tokenId: Int) {
+        viewModelScope.launch {
+            val result = repository.fetchTokenMetadata(ids = listOf(tokenId))
+            if (result is ApiResult.Success) {
+                _infoResult.value = result
+            }
+        }
+    }
 
     fun getFilteredMetas(
         allMetas: List<TokenMetaData>,

@@ -33,6 +33,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
@@ -50,13 +51,18 @@ import com.repoint.basics.atoms.LoaderAnimation
 import com.repoint.basics.atoms.RepointAppBar
 import com.repoint.basics.atoms.RepointCommonButton
 import com.repoint.basics.logic.SendRoutes
+import com.repoint.basics.logic.coinTypeFromSlug
+import com.repoint.dashboard.AlchemyViewModel
+import com.repoint.dashboard.CmcTokenViewModel
 import com.repoint.dashboard.TokenViewModel
 import com.repoint.dashboard.Web3ViewModel
 import com.repoint.dependencies.accountmanager.SpManager
 import com.repoint.dependencies.theme.PurpleGrey80
 import com.repoint.dependencies.theme.RepointTypography
 import com.repoint.dependencies.theme.richBlack
+import com.repoint.models.sharedmodels.remote.TokenMetaData
 import com.repoint.models.sharedmodels.ui.TxState
+import com.repoint.models.sharedmodels.ui.UiState
 import kotlinx.coroutines.launch
 import org.web3j.crypto.Credentials
 import java.math.BigInteger
@@ -65,25 +71,32 @@ import java.math.RoundingMode
 
 @Composable
 fun SendTokenScreen(
-    walletAddress: String,
-    tokenBalance: String,
-    coinType: Int,
-    contractAddress: String,
-    chainId: Int,
+    walletAddress : String,
+    balance : String,
+    coinType : Int,
+    contractAddress : String,
+    chainId : Int,
     tokenName : String,
+    tokenId: Int,
+    masterWalletId : String,
     navController: NavController,
     web3ViewModel: Web3ViewModel = hiltViewModel<Web3ViewModel>(),
     walletViewModel: WalletViewModel = hiltViewModel<WalletViewModel>(),
+    alchemyViewModel: AlchemyViewModel = hiltViewModel<AlchemyViewModel>(),
+    cmcTokenViewModel : CmcTokenViewModel = hiltViewModel(),
     tokenViewModel: TokenViewModel = hiltViewModel(),
     userViewModel: UserViewModel = hiltViewModel<UserViewModel>()
 ) {
 
 
-    Log.d("transaction", "wallet Address is : $walletAddress and  token balance is : $tokenBalance")
+   // Log.d("transaction", "wallet Address is : $walletAddress and  token balance is : $tokenBalance")
     var recipientAddress by remember { mutableStateOf("") }
     var amount by remember { mutableStateOf("") }
     val context = LocalContext.current
     val gasPriceInGwei by web3ViewModel.gasPrice.collectAsState() // ✅ Observe StateFlow properly
+
+
+
 
     val coroutineScope = rememberCoroutineScope()
 
@@ -91,8 +104,8 @@ fun SendTokenScreen(
     val userIdFlow = spManager.getUserIdFlow().collectAsState(initial = null)
     var credentials by remember { mutableStateOf<Credentials?>(null) }
     val masterWalletId by spManager.getActiveWalletId().collectAsState(initial = null)
-
-    val nativePrice by tokenViewModel.nativeTokenPriceUsd.collectAsState()
+    //todo
+    val nativeBalanceState by alchemyViewModel.nativeBalance.collectAsState()
 
     var isSending by remember { mutableStateOf(false) }
     var txHash by remember { mutableStateOf<String?>(null) }
@@ -100,16 +113,104 @@ fun SendTokenScreen(
 
     val txState by web3ViewModel.txState.collectAsState()
 
+    val tokenMeta = cmcTokenViewModel.getTokenMetaFlow(tokenId).collectAsState(initial = null).value
+    tokenMeta?.contractAddress?.forEach {
+        Log.d("tokenMetaCheck", "Known contract: ${it.contractAddress}, slug: ${it.platform.coin.slug}")
+    }
+    val balancesState by alchemyViewModel.tokenBalances.collectAsState()
+    val alchemyList = (balancesState as? UiState.Success)?.data.orEmpty()
+    Log.d("SlugMatch", "⚙️ Attempting getSlugFor with: tokenMeta=${tokenMeta}, contract=$contractAddress")
+    Log.d("SlugMatch", "🎯 tokenMeta.value = ${tokenMeta}")
+
+    val chainSlug = tokenMeta?.getSlugFor(contractAddress)
+    val myBalance = if (tokenMeta != null && chainSlug != null) {
+        matchBalance(
+            tokenMeta = tokenMeta,
+            balances = alchemyList,
+            currentChain = chainSlug
+        )
+    } else null
+    Log.d("sendScreen", "📦 Available balances:")
+    (balancesState as? UiState.Success)?.data?.forEach {
+        Log.d("sendScreen", "Balance Token: ${it.name}, Addr: ${it.contractAddress}, Chain: ${it.chainSlug}, RawBalance: ${it.tokenBalance} or : $myBalance")
+    }
+
+    Log.d("sendScreen", "🧩 Target contract: $contractAddress")
+    Log.d("sendScreen", "🔗 Using slug: ${tokenMeta?.getSlugFor(contractAddress)}")
+
+    val balances = tokenMeta?.let {
+        val matched = matchBalance(
+        tokenMeta = it,
+        balances = (balancesState as? UiState.Success)?.data.orEmpty(),
+        currentChain = tokenMeta!!.getSlugFor(contractAddress).toString()
+    )
+
+        Log.d("SendScreen","the match balance is : $matched")
+    }
+
+    LaunchedEffect(tokenId) {
+        if (cmcTokenViewModel.tokenMetasFlow.value.none { it.id == tokenId }) {
+            cmcTokenViewModel.loadTokenMetaById(tokenId)
+        }
+    }
+    LaunchedEffect(masterWalletId, walletAddress) {
+        masterWalletId?.let { alchemyViewModel.loadTokenBalances(it, walletAddress) }
+    }
+    Log.d("sendScreen","the values that send from chooseTokenScreen are : wallet address is $walletAddress ," +
+            "the balance is $balance + $balances the coinType is $coinType contract address and chain id : $contractAddress + $chainId" +
+            "token name and token id : $tokenName + $tokenId" +
+            "master wallet id : $masterWalletId" )
+/*    val walletAddress by produceState<String?>(initialValue = null, coinType) {
+        value = coinType?.let {
+            masterWalletId?.let { it1 -> walletViewModel.getChainWallet(it1, it)?.address }
+        }
+    }*/
+/*    LaunchedEffect(walletAddress, masterWalletId) {
+        if (!walletAddress.isNullOrBlank() && masterWalletId?.isNotBlank()) {
+            masterWalletId?.let { alchemyViewModel.loadTokenBalances(it, walletAddress!!) }
+            Log.d("SendToken","the Address is : $walletAddress")
+            Log.d("SendToken","the MASTERWALLET ID is : $masterWalletId")
+        }
+    }*/
+
+    val balanceState by alchemyViewModel.tokenBalances.collectAsState()
+
+    val currentSlug = remember(tokenMeta, contractAddress) {
+        tokenMeta?.getSlugFor(contractAddress) ?: ""
+    }
+
+    val resolvedBalance = remember(tokenMeta, balancesState, currentSlug) {
+        if (tokenMeta != null && balancesState is UiState.Success) {
+            matchBalance(
+                tokenMeta = tokenMeta,
+                balances = (balancesState as UiState.Success).data,
+                currentChain = currentSlug
+            )
+        } else null
+    }
+
+    Log.d("SendScreen","balance  State is $balanceState")
+    Log.d("SendScreen","resolveBalance  is $resolvedBalance")
+/*    val matchedBalance = remember(balanceState, tokenId, chainId) {
+        val tokenMeta = cmcTokenViewModel.meta(tokenId) // you may need to inject this
+        tokenMeta?.let {
+            matchBalance(it, (balanceState as? UiState.Success)?.data ?: emptyList(), tokenChain)
+        }
+    }*/
     //
-    LaunchedEffect(walletAddress) {
+    LaunchedEffect(Unit) {
         val userId = userViewModel.fetchUser()
         Log.d("transaction", "user id is : $userId")
         //  val privateKey = userIdFlow.value?.let { walletViewModel.getAllMasterWallets(it)[0]. }
         Log.d("transaction", "user id flow is : ${userIdFlow.value}")
+
+       // val coinType = coinTypeFromSlug(chainId)
+      //  val walletAddress = masterWalletId?.let { walletViewModel.getChainWallet(it, coinType)?.address }
         Log.d("transaction", "coinType is : $coinType")
 
         web3ViewModel.fetchGasPrice(chainId.toLong())
-        tokenViewModel.getNativeTokenPrice(chainId)
+
+  //      tokenViewModel.getNativeTokenPrice(chainId)
 
         val chainWallet =
             masterWalletId?.let { walletViewModel.getChainWallet(masterWalletId = it, coinType) }
@@ -166,12 +267,14 @@ fun SendTokenScreen(
             }
         }
     )
-    val estimatedGasFee = remember(gasPriceInGwei, nativePrice) {
+    val estimatedGasFee = remember(gasPriceInGwei, nativeBalanceState) {
+        val nativePrice = (nativeBalanceState as? UiState.Success)?.data
+
         if (gasPriceInGwei != null && nativePrice != null) {
-            tokenViewModel.calculateGasFeeUsd(
+            alchemyViewModel.calculateGasFeeUsd(
                 gasLimit = BigInteger.valueOf(21999), // Use your actual gasLimit if available
                 gasPriceGwei = gasPriceInGwei!!,
-                nativeTokenUsdPrice = nativePrice!!
+                nativeTokenUsdPrice = nativePrice.toFloat()
             ).setScale(4, RoundingMode.HALF_UP).toPlainString()
         } else null
     }
@@ -284,7 +387,7 @@ fun SendTokenScreen(
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                             trailingIcon = {
                                 TextButton(onClick = {
-                                    amount = tokenBalance
+                                    amount = balance
                                 }) {
                                     Text("Max")
                                 }
@@ -292,7 +395,7 @@ fun SendTokenScreen(
                         )
 
                         Text(
-                            text = "Available $tokenName : $tokenBalance",
+                            text = "Available $tokenName : $balance",
                             style = RepointTypography.bodySmall,
                             color = PurpleGrey80
                         )
@@ -364,9 +467,27 @@ fun SendLoadingScreen() {
     }
 }
 
+
 fun isValidWalletAddress(address: String): Boolean {
     // Example: Validate Ethereum Wallet Address (42 characters, starts with '0x')
     val ethWalletRegex = Regex("^0x[a-fA-F0-9]{40}$")
 
     return ethWalletRegex.matches(address)
+}
+fun TokenMetaData.getSlugFor(contractAddress: String): String? {
+    Log.w("SlugMatch", "contract Address  is :  $contractAddress")
+
+    val match = this.contractAddress.find {
+        it.contractAddress.equals(contractAddress, ignoreCase = true)
+    }
+    Log.w("SlugMatch", "match is :  $match")
+
+    if (match == null) {
+        Log.w("SlugMatch", "❌ Could not find matching contract for $contractAddress in token ${this.symbol}")
+        this.contractAddress.forEach {
+            Log.d("SlugMatch", "➕ Candidate: ${it.contractAddress}")
+        }
+    }
+
+    return match?.platform?.coin?.slug
 }

@@ -360,15 +360,7 @@ class TokenViewModel @Inject constructor(
         }
     }
 
-    fun calculateGasFeeUsd(
-        gasLimit: BigInteger,
-        gasPriceGwei: BigDecimal,
-        nativeTokenUsdPrice: Float
-    ): BigDecimal {
-        val gasPriceEth = gasPriceGwei.divide(BigDecimal(1_000_000_000), 18, RoundingMode.HALF_UP)
-        val gasCostEth = gasPriceEth.multiply(BigDecimal(gasLimit))
-        return gasCostEth.multiply((nativeTokenUsdPrice).toBigDecimal())
-    }
+
 
     fun mapBalanceByWalletToTokensBalance(item: BalanceByWallet): TokensBalance {
         return TokensBalance(

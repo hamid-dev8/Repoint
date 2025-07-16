@@ -376,14 +376,23 @@ fun RepointNavigation(activity: FragmentActivity) {
             )
         }
 
-        composable(
-            "sendToken/{walletAddress}/{tokenBalance}/{coinType}/{contractAddress}/{chainId}/{tokenName}",
-            arguments = listOf(navArgument("walletAddress") { type = NavType.StringType },
+
+        /*listOf(navArgument("walletAddress") { type = NavType.StringType },
                 navArgument("tokenBalance") { type = NavType.StringType },
                 navArgument("coinType") { type = NavType.IntType },
                 navArgument("contractAddress") { type = NavType.StringType },
                 navArgument("chainId") { type = NavType.IntType },
-                navArgument("tokenName") { type = NavType.StringType }
+                navArgument("tokenName") { type = NavType.StringType }*/
+        composable(
+            "sendToken/{walletAddress}/{balance}/{coinType}/{contractAddress}/{chainId}/{tokenName}/{tokenId}/{masterWalletId}",
+            arguments = listOf(navArgument("walletAddress") { type = NavType.StringType },
+                navArgument("balance") { type = NavType.StringType },
+                navArgument("coinType"){type = NavType.IntType},
+                navArgument("contractAddress"){type = NavType.StringType},
+                navArgument("chainId"){type = NavType.IntType},
+                navArgument("tokenName"){type = NavType.StringType},
+                navArgument("tokenId"){type = NavType.IntType},
+                navArgument("masterWalletId"){type = NavType.StringType}
             ), enterTransition = {
                 fadeIn(
                     animationSpec = tween(
@@ -406,19 +415,24 @@ fun RepointNavigation(activity: FragmentActivity) {
             }
         ) { backStackEntry ->
             val walletAddress = backStackEntry.arguments?.getString("walletAddress") ?: ""
-            val tokenBalance = backStackEntry.arguments?.getString("tokenBalance") ?: "0"
+            val balance = backStackEntry.arguments?.getString("balance") ?: ""
             val coinType = backStackEntry.arguments?.getInt("coinType") ?: -1
             val contractAddress = backStackEntry.arguments?.getString("contractAddress") ?: ""
             val chainId = backStackEntry.arguments?.getInt("chainId") ?: -1
-            val tokenName = backStackEntry.arguments?.getString("tokenName") ?: ""
+            val tokenName = backStackEntry.arguments?.getString("tokenName") ?: "0"
+            val tokenId = backStackEntry.arguments?.getInt("tokenId") ?: -1
+            val masterWalletId = backStackEntry.arguments?.getString("masterWalletId") ?: ""
+
 
             SendTokenScreen(
                 walletAddress,
-                tokenBalance,
+                balance,
                 coinType,
                 contractAddress,
                 chainId,
                 tokenName,
+                tokenId,
+                masterWalletId,
                 navController
             )
         }

@@ -17,6 +17,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import java.math.BigDecimal
 import java.math.BigInteger
+import java.math.RoundingMode
 import javax.inject.Inject
 
 @HiltViewModel
@@ -36,15 +37,19 @@ class AlchemyViewModel @Inject constructor(
 
     fun loadTokenBalances(masterWalletId: String, walletAddress: String) {
         viewModelScope.launch {
-            _tokenBalances.value = UiState.Loading
+            Log.d("AlchemyVM", "Loading balances for wallet: $walletAddress")
 
-            val tokenIds = loadContractsList(masterWalletId)
-            if (tokenIds.isEmpty()) {
+            _tokenBalances.value = UiState.Loading
+            // Log the contracts being queried
+            val contracts = loadContractsList(masterWalletId)
+            Log.d("AlchemyVM", "Querying contracts: $contracts")
+
+            if (contracts.isEmpty()) {
                 _tokenBalances.value = UiState.Success(emptyList())
                 return@launch
             }
 
-            val cmcInfoResult = cmcRepository.fetchTokenMetadata(ids = tokenIds)
+            val cmcInfoResult = cmcRepository.fetchTokenMetadata(ids = contracts)
             if (cmcInfoResult !is ApiResult.Success) {
                 _tokenBalances.value = UiState.Error("Failed to fetch token metadata")
                 return@launch
@@ -62,10 +67,22 @@ class AlchemyViewModel @Inject constructor(
                 is ApiResult.Success -> UiState.Success(result.data)
                 is ApiResult.Error -> UiState.Error(result.exception.message ?: "Unknown error")
             }
+           // Log.d("AlchemyRequest", "Sending balances request for $walletAddress with contracts = $tokenContracts")
+
+            Log.d("Alchemy", "✅ Loaded balances for $walletAddress: ${_tokenBalances.value}")
+
         }
     }
 
-
+    fun calculateGasFeeUsd(
+        gasLimit: BigInteger,
+        gasPriceGwei: BigDecimal,
+        nativeTokenUsdPrice: Float
+    ): BigDecimal {
+        val gasPriceEth = gasPriceGwei.divide(BigDecimal(1_000_000_000), 18, RoundingMode.HALF_UP)
+        val gasCostEth = gasPriceEth.multiply(BigDecimal(gasLimit))
+        return gasCostEth.multiply((nativeTokenUsdPrice).toBigDecimal())
+    }
 
     private val _nativeBalance = MutableStateFlow<UiState<BigDecimal>>(UiState.Loading)
     val nativeBalance: StateFlow<UiState<BigDecimal>> = _nativeBalance
