@@ -2,6 +2,7 @@ package com.repoint.sources.datarepo
 
 import android.util.Log
 import com.repoint.basics.logic.TokenERC20
+import com.repoint.models.sharedmodels.rpc.GasPriceTier
 import com.repoint.network.di.Web3Provider
 import com.repoint.sources.datarepo.datasource.Web3DataSource
 import kotlinx.coroutines.Dispatchers
@@ -127,6 +128,7 @@ class Web3jWalletRepositoryImp @Inject constructor(private val web3Provider: Web
 
         val web3j = web3Provider.getWeb3j(chainId = networkChainId.toInt())
         val senderAddress = credentials.address
+        Log.d("sendToken", "🧮 sender Address is : $senderAddress")
 
         try {
             //step 1 : prepare values
@@ -312,6 +314,9 @@ class Web3jWalletRepositoryImp @Inject constructor(private val web3Provider: Web
             throw e
         }
     }
+
+
+
 
     fun encodeERC20Transfer(recipient: String, amountInWei: BigInteger): String {
         val transferFunction = Function(

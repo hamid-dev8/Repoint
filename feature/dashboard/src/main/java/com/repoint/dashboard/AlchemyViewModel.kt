@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.repoint.models.sharedmodels.local.LocalActiveNetworks
 import com.repoint.models.sharedmodels.rpc.AlchemyChain
 import com.repoint.models.sharedmodels.rpc.AlchemyTokenBalance
+import com.repoint.models.sharedmodels.rpc.GasPriceTier
 import com.repoint.models.sharedmodels.ui.ApiResult
 import com.repoint.models.sharedmodels.ui.UiState
 import com.repoint.network.di.AlchemyClientFactory
@@ -27,12 +28,15 @@ class AlchemyViewModel @Inject constructor(
 ) : ViewModel() {
 
 
-    @Inject lateinit var alchemyClientFactory: AlchemyClientFactory
+    @Inject
+    lateinit var alchemyClientFactory: AlchemyClientFactory
     private val _tokenBalances =
         MutableStateFlow<UiState<List<AlchemyTokenBalance>>>(UiState.Loading)
     val tokenBalances: StateFlow<UiState<List<AlchemyTokenBalance>>> = _tokenBalances
 
 
+    private val _gasPriceTier = MutableStateFlow<UiState<GasPriceTier>>(UiState.Loading)
+    val gasPriceTier: StateFlow<UiState<GasPriceTier>> = _gasPriceTier
 
 
     fun loadTokenBalances(masterWalletId: String, walletAddress: String) {
@@ -67,12 +71,52 @@ class AlchemyViewModel @Inject constructor(
                 is ApiResult.Success -> UiState.Success(result.data)
                 is ApiResult.Error -> UiState.Error(result.exception.message ?: "Unknown error")
             }
-           // Log.d("AlchemyRequest", "Sending balances request for $walletAddress with contracts = $tokenContracts")
+            // Log.d("AlchemyRequest", "Sending balances request for $walletAddress with contracts = $tokenContracts")
 
             Log.d("Alchemy", "✅ Loaded balances for $walletAddress: ${_tokenBalances.value}")
 
         }
     }
+
+    private val _nativeUsdPrice = MutableStateFlow<UiState<Double>>(UiState.Loading)
+    val nativeUsdPrice: StateFlow<UiState<Double>> = _nativeUsdPrice
+
+    fun loadNativeUsdPrice(chainId: Int) {
+        viewModelScope.launch {
+            _nativeUsdPrice.value = UiState.Loading
+            val symbol = when (chainId) {
+                1 -> "ETH"
+                137 -> "POL"
+                56 -> "BNB"
+                else -> null
+            } ?: return@launch
+
+            when (val result = cmcRepository.getNativeTokenPriceBySymbol(symbol)) {
+                is ApiResult.Success -> {
+                    Log.d("CMC-USD", "Price for $symbol = ${result.data}")
+                    _nativeUsdPrice.value = UiState.Success(result.data)
+                }
+
+                is ApiResult.Error -> {
+                    Log.e("CMC-USD", "Failed to fetch price for $symbol: ${result.exception.message}")
+                    _nativeUsdPrice.value =
+                        UiState.Error(result.exception.message ?: "Failed")
+                }
+            }
+        }
+    }
+
+    fun fetchGasPriceTiers(chainId: Long) {
+        viewModelScope.launch {
+            _gasPriceTier.value = UiState.Loading
+            when (val result = alchemyRepository.getGasPriceTiers(chainId)) {
+                is ApiResult.Success -> _gasPriceTier.value = UiState.Success(result.data)
+                is ApiResult.Error -> _gasPriceTier.value =
+                    UiState.Error(result.exception.message ?: "Unknown error")
+            }
+        }
+    }
+
 
     fun calculateGasFeeUsd(
         gasLimit: BigInteger,

@@ -59,6 +59,7 @@ dependencies {
     implementation(project(":core:models"))
     //zxing
     implementation(libs.zxing.android.embedded)
+    //implementation(libs.rrohaill.shimmer.loading)
 
 
     //coil

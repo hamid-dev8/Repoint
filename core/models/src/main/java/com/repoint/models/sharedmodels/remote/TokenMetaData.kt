@@ -1,7 +1,10 @@
 package com.repoint.models.sharedmodels.remote
 
+import android.os.Parcelable
 import com.google.gson.annotations.SerializedName
+import kotlinx.parcelize.Parcelize
 
+@Parcelize
 data class TokenMetaData(
     val id: Int,
     val name: String,
@@ -25,4 +28,4 @@ data class TokenMetaData(
     @SerializedName("self_reported_tags")val selfReportedTags : List<String>?,
     @SerializedName("self_reported_market_cap")val selfReportedMarketCap : Double?,
     @SerializedName("infinite_supply")val infiniteSupply : Boolean
-    )
+    ) : Parcelable

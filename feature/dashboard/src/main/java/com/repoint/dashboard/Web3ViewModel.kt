@@ -6,6 +6,7 @@ import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.repoint.models.sharedmodels.rpc.AlchemyChainNativeBalance
+import com.repoint.models.sharedmodels.rpc.GasPriceTier
 import com.repoint.models.sharedmodels.ui.TxState
 import com.repoint.models.sharedmodels.ui.UiState
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -109,16 +110,14 @@ class Web3ViewModel @Inject constructor(
                     contractAddress = contractAddress,
                     networkChainId
                 )
-            Log.d(
-                "transaction",
-                "\uD83E\uDDE0 Sending Transaction : ${transactionReceipt?.transactionHash}"
-            )
+            Log.d("transaction", "🧾 Sending Transaction : ${transactionReceipt?.transactionHash ?: "NO_HASH"}")
+
 
 
             if (transactionReceipt == null) {
                 Log.e("transaction", "❌ Transaction receipt polling failed or timed out")
             }
-            if (transactionReceipt?.isStatusOK!!) {
+            if (transactionReceipt != null && transactionReceipt.isStatusOK) {
                 Log.d(
                     "transaction",
                     "✅ Transaction Successful: ${transactionReceipt.transactionHash}"
@@ -256,8 +255,18 @@ class Web3ViewModel @Inject constructor(
             _allChainBalances.value = UiState.Success(resultList)
         }
     }
-
-
+/*
+    fun fetchGasPriceTiers(chainId: Long) {
+        viewModelScope.launch {
+            _gasPriceTier.value = UiState.Loading
+            try {
+                val result = repository.getGasPriceTiers(chainId)
+                _gasPriceTier.value = UiState.Success(result)
+            } catch (e: Exception) {
+                _gasPriceTier.value = UiState.Error(e.message ?: "Failed to fetch tiers")
+            }
+        }
+    }*/
 
     fun formatNativeBalance(wei: BigInteger): BigDecimal {
         return wei.toBigDecimal().divide(BigDecimal("1e18"))

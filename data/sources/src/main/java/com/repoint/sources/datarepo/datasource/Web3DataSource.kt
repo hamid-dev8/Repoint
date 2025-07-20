@@ -1,5 +1,6 @@
 package com.repoint.sources.datarepo.datasource
 
+import com.repoint.models.sharedmodels.rpc.GasPriceTier
 import org.web3j.crypto.Credentials
 import org.web3j.protocol.core.methods.response.EthSendTransaction
 import org.web3j.protocol.core.methods.response.TransactionReceipt

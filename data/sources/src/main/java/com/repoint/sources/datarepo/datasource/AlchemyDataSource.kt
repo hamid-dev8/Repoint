@@ -5,6 +5,8 @@ import com.repoint.models.sharedmodels.remote.TokenMetaData
 import com.repoint.models.sharedmodels.rpc.AlchemyChain
 import com.repoint.models.sharedmodels.rpc.AlchemyTokenBalance
 import com.repoint.models.sharedmodels.rpc.AlchemyTokenBalanceResponse
+import com.repoint.models.sharedmodels.rpc.FeeHistoryResult
+import com.repoint.models.sharedmodels.rpc.GasPriceTier
 import com.repoint.models.sharedmodels.ui.ApiResult
 import com.repoint.network.util.NetworkApiService
 
@@ -14,7 +16,11 @@ interface AlchemyDataSource
     suspend fun getMultiChainTokenBalances(walletAddress: String,tokenMetaMap : Map<String,TokenMetaData>, alchemyClientFactory : (AlchemyChain) -> NetworkApiService) : ApiResult<List<AlchemyTokenBalance>>
     suspend fun getNativeBalance(walletAddress: String): ApiResult<String>
 
+    suspend fun getFeeHistory(chainId : Long) : ApiResult<FeeHistoryResult>
+    suspend fun getGasPriceTiers(chainId : Long) : ApiResult<GasPriceTier>
+
     //db
     suspend fun getTokenContracts(walletAddress: String) : List<Int>
     suspend fun debugAllActives() : List<LocalActiveNetworks>
+
 }

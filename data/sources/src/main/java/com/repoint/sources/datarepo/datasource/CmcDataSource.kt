@@ -28,13 +28,13 @@ interface CmcDataSource {
     //get the sorted /map
 
     suspend fun fetchTokenMapBySort(
-        sort : String
-    ) : ApiResult<CmcMapData>
+        sort: String
+    ): ApiResult<CmcMapData>
 
     //get map token  by symbol
     suspend fun fetchTokenMapBySymbol(
-        symbol : String
-    ) : ApiResult<List<CmcAllTokens>>
+        symbol: String
+    ): ApiResult<List<CmcAllTokens>>
 
     // Fetch metadata info for a chunk of token IDs
     suspend fun fetchTokenMetadata(
@@ -42,12 +42,17 @@ interface CmcDataSource {
     ): ApiResult<TokenInfoMetadataResponse>
 
     suspend fun fetchTokenMetadataBySlug(
-        slug : String
-    ) : ApiResult<TokenInfoMetadataResponse>
+        slug: String
+    ): ApiResult<TokenInfoMetadataResponse>
 
     suspend fun fetchTokenPrices(
         ids: List<Int>
     ): ApiResult<TokenQuotesResponse>
+
+    suspend fun getNativeTokenPriceBySymbol(
+        symbol: String
+    ): ApiResult<Double>
+
 
     //db
     suspend fun getCachedTokens(): List<CmcTokenEntity>
@@ -59,12 +64,12 @@ interface CmcDataSource {
     //active tokens in db
     suspend fun insertActiveToken(activeNetworks: LocalActiveNetworks)
     suspend fun getActiveTokenIds(walletId: String): Flow<List<Int>>
-    suspend fun getActiveTokenKeys(walletId: String) : Flow<List<ActiveTokenKey>>
-    suspend fun getActiveTokenEntities(walletId: String) : Flow<List<LocalActiveNetworks>>
-    suspend fun deleteActiveNetworks(tokenId: Int, walletId: String,chainName : String)
+    suspend fun getActiveTokenKeys(walletId: String): Flow<List<ActiveTokenKey>>
+    suspend fun getActiveTokenEntities(walletId: String): Flow<List<LocalActiveNetworks>>
+    suspend fun deleteActiveNetworks(tokenId: Int, walletId: String, chainName: String)
 
     //time of db
-    suspend fun getTokenCount() : Int
-    suspend fun getLastUpdatedTime() : Long?
-    suspend fun getDbTokensPaged(offset : Int,limit : Int) : List<CmcTokenEntity>
+    suspend fun getTokenCount(): Int
+    suspend fun getLastUpdatedTime(): Long?
+    suspend fun getDbTokensPaged(offset: Int, limit: Int): List<CmcTokenEntity>
 }

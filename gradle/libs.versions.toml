@@ -51,6 +51,8 @@ rlp = "4.9.0"
 room = "2.6.0"
 media3Exoplayer = "1.5.1"
 runtimeAndroid = "1.7.6"
+shimmerLoading = "1.0.2"
+shimmerLoadingVersion = "1.0.2"
 slf4jSimple = "2.0.9"
 utils = "4.12.3"
 web3ApiClient = "1.0.0"
@@ -129,6 +131,8 @@ retrofit = { module = "com.squareup.retrofit2:retrofit", version.ref = "retrofit
 androidx-media3-exoplayer = { group = "androidx.media3", name = "media3-exoplayer", version.ref = "media3Exoplayer" }
 androidx-runtime-android = { group = "androidx.compose.runtime", name = "runtime-android", version.ref = "runtimeAndroid" }
 rlp = { module = "org.web3j:rlp", version.ref = "coreVersion" }
+rrohaill-shimmer-loading = { module = "com.github.rrohaill:Shimmer-loading", version.ref = "shimmerLoadingVersion" }
+shimmer-loading = { module = "io.github.rrohaill:shimmer-loading", version.ref = "shimmerLoading" }
 slf4j-simple = { module = "org.slf4j:slf4j-simple", version.ref = "slf4jSimple" }
 utils = { module = "org.web3j:utils", version.ref = "coreVersion" }
 web3-api-client = { module = "io.moralis:web3-api-client", version.ref = "web3ApiClient" }

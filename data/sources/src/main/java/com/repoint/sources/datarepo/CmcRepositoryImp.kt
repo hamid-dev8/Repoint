@@ -59,6 +59,18 @@ class CmcRepositoryImp @Inject constructor(
         }
     }
 
+    override suspend fun getNativeTokenPriceBySymbol(symbol: String): ApiResult<Double> {
+        return safeApiCall {
+            val response = api.getNativePrice(symbol)  // ✅ Retrofit call
+
+            val price = response.data[symbol]
+                ?.quote?.get("USD")
+                ?.price
+
+            price ?: throw Exception("Failed to extract USD price for symbol: $symbol")
+        }
+    }
+
     override suspend fun getCachedTokens(): List<CmcTokenEntity> {
         return cmcDao.getAllTokens()
     }

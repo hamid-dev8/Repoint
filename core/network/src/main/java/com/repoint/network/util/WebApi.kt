@@ -1,5 +1,6 @@
 package com.repoint.network.util
 
+import com.google.gson.JsonObject
 import com.repoint.models.sharedmodels.remote.BalanceByWallet
 import com.repoint.models.sharedmodels.remote.CmcMapData
 import com.repoint.models.sharedmodels.remote.History
@@ -9,6 +10,7 @@ import com.repoint.models.sharedmodels.remote.TokenPriceRequestBody
 import com.repoint.models.sharedmodels.remote.TokenPriceResponse
 import com.repoint.models.sharedmodels.remote.TokenPriceResponseItem
 import com.repoint.models.sharedmodels.remote.TokenQuotesResponse
+import retrofit2.Response
 import retrofit2.http.Body
 import retrofit2.http.GET
 import retrofit2.http.POST
@@ -50,6 +52,11 @@ interface WebApi {
         @Query("slug")slug : String
     ) : TokenInfoMetadataResponse
 
+    @GET("v1/cryptocurrency/quotes/latest")
+    suspend fun getNativePrice(
+        @Query("symbol") symbol: String,
+        @Query("convert") convert: String = "USD"
+    ): TokenQuotesResponse // parse manually
 
     @GET("v1/cryptocurrency/quotes/latest")
     suspend fun getTokenPrices(

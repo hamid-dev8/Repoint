@@ -105,6 +105,13 @@ fun ChooseTokenScreen(
 
 
     val balancesState by alchemyViewModel.tokenBalances.collectAsState()
+    val metaState by cmcTokenViewModel.tokenMetasFlow.collectAsState()
+    val priceState by alchemyViewModel.nativeUsdPrice.collectAsState() // if used
+
+    val isUiLoading = balancesState is UiState.Loading ||
+            metaState.isEmpty() ||
+            priceState is UiState.Loading
+
     val alchemyBalances = (balancesState as? UiState.Success)?.data ?: emptyList()
 
     val tokens by cmcTokenViewModel.filteredMetas.collectAsState()
@@ -184,10 +191,19 @@ fun ChooseTokenScreen(
     Log.d("ChooseToken","the currentWallet Address : $currentWalletAddress")
     LaunchedEffect(currentWalletAddress, masterWalletId) {
         if (!currentWalletAddress.isNullOrBlank() && !masterWalletId.isNullOrBlank()) {
-            val forcedAddress = "0x49977501faf5f4aa3b38241bea622acda017e867"
+            Log.d("ChooseToken", "🔄 Fetching balances for wallet=$currentWalletAddress")
+            cmcTokenViewModel.loadInitialTokens()
 
-            alchemyViewModel.loadTokenBalances(masterWalletId!!, forcedAddress!!)
-            Log.d("ChooseToken","the currentWalletAddress is something : $currentWalletAddress")
+
+            // Chain ID logic (replace with actual variable or logic if dynamic)
+            val chainId = when (currentSlug?.lowercase()) {
+                "ethereum" -> 1
+                "polygon" -> 137
+                "bnb", "bsc" -> 56
+                else -> 1 // fallback to Ethereum
+            }
+            alchemyViewModel.loadNativeUsdPrice(chainId)
+            alchemyViewModel.loadTokenBalances(masterWalletId!!, currentWalletAddress!!)
         }
     }
 
@@ -204,8 +220,13 @@ fun ChooseTokenScreen(
             chainWalletsState.value = wallets
 
 
+            Log.d("LoadingDebug", "tokenBalances: $balancesState")
+            Log.d("LoadingDebug", "tokenMetas: ${metaState.size}")
+            Log.d("LoadingDebug", "nativeUsdPrice: $priceState")
+
 
             cmcTokenViewModel.setCurrentWallet(masterWalletId!!)
+
             Log.d("chooseToken", "Fetching active tokens for wallet : $masterWalletId")
             //viewModel.fetchActiveTokens(masterWalletId!!)
         }
@@ -219,7 +240,7 @@ fun ChooseTokenScreen(
                 chainWalletsState.value.associateBy { normalizeSlug(it.networkName) }
             }
 
-            if (isLoading) {
+            if (isUiLoading) {
                 // 🔥 Show Loading Animation Centered
                 Box(
                     Modifier.fillMaxSize(),
@@ -272,7 +293,10 @@ fun ChooseTokenScreen(
                                 } else {
                                     items(filtered) { token ->
                                         val normalizedChain = normalizeSlug(token.chain)
-                                        val walletAddress = getAddressForChain(token.chain, chainWallets)
+                                        //todo this is SPECIFIC _CHAIN ADDRESS
+                                        //val walletAddress = getAddressForChain(token.chain, chainWallets)
+                                       val walletAddress =  chainWallets.firstOrNull { it.coinType == 60 }?.address
+
 
                                         //  val walletAddress = chainToAddress[normalizedChain]
 
@@ -455,7 +479,10 @@ fun ChooseTokenScreen(
                                 val addressBySluge = chainWallets.associateBy {
                                     normalizeSlug(it.networkName)
                                 }
-                                val walletAddressie = addressBySluge[normalizeSlug(token.first.chain)]?.address
+                                //todo THIS IS SPECIFIC CHAIN+
+                                //val walletAddressie = addressBySluge[normalizeSlug(token.first.chain)]?.address
+                                val walletAddressie = chainWallets.firstOrNull { it.coinType == 60 }?.address
+
 
                                 // ✅ Pass the correct wallet address
                               //  val selectedWalletAddress = walletAddressState.value

@@ -7,6 +7,9 @@ import com.repoint.models.sharedmodels.remote.TokenMetaData
 import com.repoint.models.sharedmodels.rpc.AlchemyChain
 import com.repoint.models.sharedmodels.rpc.AlchemyTokenBalance
 import com.repoint.models.sharedmodels.rpc.AlchemyTokenBalanceResponse
+import com.repoint.models.sharedmodels.rpc.FeeHistoryResult
+import com.repoint.models.sharedmodels.rpc.GasPriceTier
+import com.repoint.models.sharedmodels.ui.ApiException
 import com.repoint.models.sharedmodels.ui.ApiResult
 import com.repoint.network.util.resolveChainFromPlatform
 import com.repoint.network.util.NetworkApiService
@@ -178,6 +181,55 @@ class AlchemyRepositoryImp @Inject constructor(private val networkApi: NetworkAp
             response.result
         }
     }
+
+    override suspend fun getFeeHistory(chainId: Long): ApiResult<FeeHistoryResult> {
+        return safeApiCall {
+            val client = networkApi
+            val body = mapOf(
+                "jsonrpc" to "2.0",
+                "id" to 1,
+                "method" to "eth_feeHistory",
+                "params" to listOf(
+                    "0x5",
+                    "latest",
+                    listOf(10,50,90)
+                )
+            )
+            val response = client.getFeeHistory(body)
+            response.result
+        }
+    }
+    override suspend fun getGasPriceTiers(chainId: Long): ApiResult<GasPriceTier> {
+        return when (val result = getFeeHistory(chainId)) {
+            is ApiResult.Success -> {
+                val baseFeeHex = result.data.baseFeePerGas.lastOrNull()
+                val rewardHexes = result.data.reward.lastOrNull()
+
+                if (baseFeeHex == null || rewardHexes == null || rewardHexes.size < 3) {
+                    return ApiResult.Error(ApiException.Unauthorized())
+                }
+
+                val baseFee = baseFeeHex.removePrefix("0x").toBigIntegerOrNull(16) ?: BigInteger.ZERO
+                val slow = rewardHexes[0].removePrefix("0x").toBigIntegerOrNull(16) ?: BigInteger.ZERO
+                val average = rewardHexes[1].removePrefix("0x").toBigIntegerOrNull(16) ?: BigInteger.ZERO
+                val fast = rewardHexes[2].removePrefix("0x").toBigIntegerOrNull(16) ?: BigInteger.ZERO
+
+                fun toGwei(wei: BigInteger): BigDecimal =
+                    wei.toBigDecimal().divide(BigDecimal("1000000000"))
+
+                val tier = GasPriceTier(
+                    slow = toGwei(baseFee + slow),
+                    average = toGwei(baseFee + average),
+                    fast = toGwei(baseFee + fast)
+                )
+
+                ApiResult.Success(tier)
+            }
+
+            is ApiResult.Error -> ApiResult.Error(result.exception)
+        }
+    }
+
 
     override suspend fun getTokenContracts(walletAddress: String): List<Int> {
         return db.getActiveTokenContracts(walletAddress)

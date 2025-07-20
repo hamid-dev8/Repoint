@@ -57,6 +57,7 @@ import com.repoint.basics.atoms.RepointAppBar
 import com.repoint.basics.atoms.WarningBanner
 import com.repoint.basics.logic.saveBitmapToFile
 import com.repoint.basics.logic.shareImage
+import com.repoint.dashboard.CmcTokenViewModel
 import com.repoint.dependencies.theme.RepointTypography
 import com.repoint.dependencies.theme.ghostWhite
 import com.repoint.dependencies.theme.lightGray
@@ -72,8 +73,16 @@ fun WalletQrCodeScreen(
     walletAddress: String,
     masterWalletId: String,
     tokenId: Int?,
+    cmcTokenViewModel: CmcTokenViewModel = hiltViewModel(),
     networkName: String,
 ) {
+    val tokenMeta by cmcTokenViewModel.getTokenMetaFlow(tokenId!!).collectAsState(initial = null)
+
+    LaunchedEffect(tokenId) {
+        if (tokenId != null) cmcTokenViewModel.loadTokenMetaById(tokenId)
+        val contractSlug = tokenMeta?.contractAddress?.firstOrNull()?.platform?.coin?.slug
+    }
+
 
     RepointAppBar("Receive", exp = { _, _, _ ->
 
@@ -85,12 +94,13 @@ fun WalletQrCodeScreen(
         Log.d("receiveScreen", "token id is $tokenId")
        // val activeTokens by networkViewModel.activeTokens.collectAsState()
       //  val activeNetworks by networkViewModel.activeNetworks.collectAsState()
-    //    val selectedToken = activeTokens.firstOrNull { it.tokenId == tokenId }
+        //val selectedToken = activeTokens.firstOrNull { it.tokenId == tokenId }
 
         var tokenImageLoaded by remember { mutableStateOf(false) }
         var networkImageLoaded by remember { mutableStateOf(false) }
 
        // val uiState by networkViewModel.uiState.collectAsState()
+
 
         LaunchedEffect(masterWalletId) {
        //     networkViewModel.fetchActiveTokens(masterWalletId = masterWalletId)
@@ -99,12 +109,11 @@ fun WalletQrCodeScreen(
                 networkImageLoaded = true*/
         }
 
-      /*  when (uiState) {
-            is UiState.Loading -> {
+        when  {
+            tokenMeta == null -> {
                 LoaderAnimation()
             }
-
-            is UiState.Success -> {
+            else -> {
                 Box(
                     modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.TopCenter,
                 ) {
@@ -130,7 +139,7 @@ fun WalletQrCodeScreen(
                             ) {
 
 
-                                if (selectedToken != null) {
+                                if (tokenMeta != null) {
 
                                     if (masterWalletId.isBlank()) {
                                         Toast.makeText(
@@ -143,24 +152,24 @@ fun WalletQrCodeScreen(
                                     }
                                     Log.d(
                                         "receiveScreen",
-                                        "image Request : token : ${selectedToken.logoUrl.trim()} "
+                                        "image Request : token : ${tokenMeta?.logo?.trim()} "
                                     )
                                     Log.d(
                                         "receiveScreen",
-                                        "image Request : symbol : ${selectedToken.symbol.trim()} "
+                                        "image Request : symbol : ${tokenMeta?.symbol?.trim()} "
                                     )
                                    AsyncImage(
-                                       model = selectedToken.logoUrl,
-                                       contentDescription = selectedToken.symbol,
+                                       model = tokenMeta?.logo,
+                                       contentDescription = tokenMeta?.symbol,
                                        modifier = Modifier.padding(8.dp)
                                            .clip(RoundedCornerShape(22.dp))
                                            .background(pureWhite)
                                            .border(0.5.dp, lightGray, RoundedCornerShape(22.dp))
-                                           .padding(horizontal = 12.dp, vertical = 6.dp)
+                                           .padding(horizontal = 24.dp, vertical = 12.dp)
                                    )
 
                                     Text(
-                                        selectedToken.name,
+                                        tokenMeta?.name.toString(),
                                         style = RepointTypography.titleLarge,
                                         modifier = Modifier.padding(8.dp)
                                             .clip(RoundedCornerShape(22.dp))
@@ -245,17 +254,17 @@ fun WalletQrCodeScreen(
 
                 }
             }
-
+/*
             is UiState.Error -> {
                 ErrorScreen(
                     message = (uiState as UiState.Error).messages,
                     modifier = Modifier,
                     onRetry = {
                     })
-            }
+            }*/
 
 
-        }*/
+        }
     }, navController = navController)
 
 

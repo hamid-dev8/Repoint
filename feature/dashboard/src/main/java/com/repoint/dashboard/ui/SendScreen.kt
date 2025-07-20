@@ -11,6 +11,8 @@ import android.util.Log
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -39,6 +41,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
@@ -47,9 +50,11 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import com.repoint.account.UserViewModel
 import com.repoint.account.WalletViewModel
+import com.repoint.basics.atoms.DropdownMenuWithSelection
 import com.repoint.basics.atoms.LoaderAnimation
 import com.repoint.basics.atoms.RepointAppBar
 import com.repoint.basics.atoms.RepointCommonButton
+import com.repoint.basics.atoms.shimmerEffect
 import com.repoint.basics.logic.SendRoutes
 import com.repoint.basics.logic.coinTypeFromSlug
 import com.repoint.dashboard.AlchemyViewModel
@@ -59,12 +64,15 @@ import com.repoint.dashboard.Web3ViewModel
 import com.repoint.dependencies.accountmanager.SpManager
 import com.repoint.dependencies.theme.PurpleGrey80
 import com.repoint.dependencies.theme.RepointTypography
+import com.repoint.dependencies.theme.grayHound
+import com.repoint.dependencies.theme.lightGray
 import com.repoint.dependencies.theme.richBlack
 import com.repoint.models.sharedmodels.remote.TokenMetaData
 import com.repoint.models.sharedmodels.ui.TxState
 import com.repoint.models.sharedmodels.ui.UiState
 import kotlinx.coroutines.launch
 import org.web3j.crypto.Credentials
+import java.math.BigDecimal
 import java.math.BigInteger
 import java.math.RoundingMode
 
@@ -112,6 +120,11 @@ fun SendTokenScreen(
     var errorMessage by remember { mutableStateOf<String?>(null) }
 
     val txState by web3ViewModel.txState.collectAsState()
+    val gasTierState by alchemyViewModel.gasPriceTier.collectAsState()
+    var selectedTier by remember { mutableStateOf("Average") } // Default tier
+
+    val nativeUsdState by alchemyViewModel.nativeUsdPrice.collectAsState()
+    val usdPrice = (nativeUsdState as? UiState.Success)?.data
 
     val tokenMeta = cmcTokenViewModel.getTokenMetaFlow(tokenId).collectAsState(initial = null).value
     tokenMeta?.contractAddress?.forEach {
@@ -121,7 +134,19 @@ fun SendTokenScreen(
     val alchemyList = (balancesState as? UiState.Success)?.data.orEmpty()
     Log.d("SlugMatch", "⚙️ Attempting getSlugFor with: tokenMeta=${tokenMeta}, contract=$contractAddress")
     Log.d("SlugMatch", "🎯 tokenMeta.value = ${tokenMeta}")
-
+    val nativeTokenSymbol = remember(chainId) {
+        when (chainId) {
+            1 -> "ETH"
+            137 -> "MATIC"
+            56 -> "BNB"
+            else -> "NATIVE"
+        }
+    }
+    val isLoading = gasTierState is UiState.Loading || nativeUsdState is UiState.Loading
+    val shimmerOnce = remember { mutableStateOf(true) }
+    LaunchedEffect(isLoading) {
+        if (!isLoading) shimmerOnce.value = false
+    }
     val chainSlug = tokenMeta?.getSlugFor(contractAddress)
     val myBalance = if (tokenMeta != null && chainSlug != null) {
         matchBalance(
@@ -153,8 +178,18 @@ fun SendTokenScreen(
             cmcTokenViewModel.loadTokenMetaById(tokenId)
         }
     }
-    LaunchedEffect(masterWalletId, walletAddress) {
-        masterWalletId?.let { alchemyViewModel.loadTokenBalances(it, walletAddress) }
+    LaunchedEffect(chainId) {
+        alchemyViewModel.fetchGasPriceTiers(chainId.toLong())
+        alchemyViewModel.loadNativeUsdPrice(chainId)
+
+
+    }
+
+    LaunchedEffect(masterWalletId, walletAddress,contractAddress,chainId) {
+        if (!walletAddress.isNullOrBlank()) {
+            alchemyViewModel.loadNativeBalance(walletAddress)
+            masterWalletId?.let { alchemyViewModel.loadTokenBalances(it, walletAddress) }
+        }
     }
     Log.d("sendScreen","the values that send from chooseTokenScreen are : wallet address is $walletAddress ," +
             "the balance is $balance + $balances the coinType is $coinType contract address and chain id : $contractAddress + $chainId" +
@@ -267,16 +302,37 @@ fun SendTokenScreen(
             }
         }
     )
-    val estimatedGasFee = remember(gasPriceInGwei, nativeBalanceState) {
-        val nativePrice = (nativeBalanceState as? UiState.Success)?.data
+    Log.d("gasDebug", "nativeBalanceState = $nativeBalanceState")
+    val estimatedGasFee = run {
+        val nativePrice = (nativeUsdState as? UiState.Success)?.data
+        val tierData = (gasTierState as? UiState.Success)?.data
 
-        if (gasPriceInGwei != null && nativePrice != null) {
-            alchemyViewModel.calculateGasFeeUsd(
-                gasLimit = BigInteger.valueOf(21999), // Use your actual gasLimit if available
-                gasPriceGwei = gasPriceInGwei!!,
+        if (nativePrice != null && tierData != null) {
+            val selectedPriceGwei = when (selectedTier.lowercase()) {
+                "slow" -> tierData.slow
+                "fast" -> tierData.fast
+                else -> tierData.average
+            }
+
+            val gasFee = alchemyViewModel.calculateGasFeeUsd(
+                gasLimit = BigInteger.valueOf(21999),
+                gasPriceGwei = selectedPriceGwei,
                 nativeTokenUsdPrice = nativePrice.toFloat()
             ).setScale(4, RoundingMode.HALF_UP).toPlainString()
+
+            Log.d("GasFeeCalc", "Recomputed fee: $gasFee for $selectedTier")
+            gasFee
         } else null
+    }
+    val nativeGasAmount = run {
+        val tierData = (gasTierState as? UiState.Success)?.data
+        val gwei = when (selectedTier.lowercase()) {
+            "slow" -> tierData?.slow
+            "fast" -> tierData?.fast
+            else -> tierData?.average
+        }
+
+        gwei?.multiply(BigDecimal(21999))?.divide(BigDecimal(1_000_000_000), 9, RoundingMode.HALF_UP)?.toPlainString()
     }
 
     RepointAppBar("send", navController = navController, exp = {_,_,_ ->
@@ -316,7 +372,6 @@ fun SendTokenScreen(
                             .padding(16.dp),
                         verticalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
-
                         Text(text = "Send $tokenName", style = RepointTypography.titleMedium)
 
                         OutlinedTextField(
@@ -399,10 +454,51 @@ fun SendTokenScreen(
                             style = RepointTypography.bodySmall,
                             color = PurpleGrey80
                         )
+                        if (gasTierState is UiState.Success) {
+                            val tiers = listOf("Slow", "Average", "Fast")
 
-                        Text(text = estimatedGasFee?.let { "Estimated Gas Fee: $it USD" }
-                            ?: "Estimating fee...",
-                            style = RepointTypography.bodyMedium, color = richBlack)
+                            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clip(RoundedCornerShape(12.dp))
+                                        .background(grayHound)
+                                        .border(0.5.dp, lightGray, RoundedCornerShape(12.dp))
+                                        .padding(horizontal = 12.dp, vertical = 8.dp),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text("Gas Speed", style = RepointTypography.bodyMedium)
+                                    DropdownMenuWithSelection(
+                                        options = tiers,
+                                        selected = selectedTier,
+                                        onSelect = { selectedTier = it }
+                                    )
+                                }
+                                if  (isLoading){
+                                    Box(
+                                        modifier = Modifier.fillMaxWidth()
+                                            .height(18.dp)
+                                            .clip(RoundedCornerShape(8.dp))
+                                            .shimmerEffect()
+                                    )
+                                }else {
+                                    Text(
+                                        text = if (nativeGasAmount != null && estimatedGasFee != null) {
+                                            "Estimated Gas: $nativeGasAmount $nativeTokenSymbol ≈ $$estimatedGasFee USD"
+                                        } else {
+                                            "Estimating fee..."
+                                        },
+                                        style = RepointTypography.bodyMedium,
+                                        color = richBlack,
+                                        modifier = Modifier.fillMaxWidth().height(18.dp)
+                                    )
+                                }
+                            }
+
+                            Log.d("gasUI", "SelectedTier: $selectedTier | USD: $estimatedGasFee")
+                        }
+
                     }
 
                     RepointCommonButton(

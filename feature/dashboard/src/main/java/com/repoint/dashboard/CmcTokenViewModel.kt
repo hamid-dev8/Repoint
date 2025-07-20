@@ -74,6 +74,7 @@ class CmcTokenViewModel @Inject constructor(
 
     private val _activeNetworks = MutableStateFlow<LocalActiveNetworks?>(null)
 
+
     private val _activeTokenEntities = MutableStateFlow<List<LocalActiveNetworks>>(emptyList())
     val activeTokenEntities: StateFlow<List<LocalActiveNetworks>> = _activeTokenEntities.asStateFlow()
 

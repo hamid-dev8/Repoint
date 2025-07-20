@@ -1,5 +1,8 @@
 package com.repoint.models.sharedmodels.remote
 
+import android.os.Parcelable
 import com.google.gson.annotations.SerializedName
+import kotlinx.parcelize.Parcelize
 
-data class ContractAddress(@SerializedName("contract_address")val contractAddress: String,val platform : Platform)
+@Parcelize
+ data class ContractAddress(@SerializedName("contract_address")val contractAddress: String,val platform : Platform) : Parcelable
