@@ -21,11 +21,9 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.LocalTextStyle
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TextFieldColors
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -51,7 +49,6 @@ import androidx.fragment.app.FragmentActivity
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import com.repoint.account.BioViewModel
-import com.repoint.account.R
 import com.repoint.account.UserViewModel
 import com.repoint.account.WalletViewModel
 import com.repoint.basics.atoms.RepointAppBar
@@ -60,15 +57,12 @@ import com.repoint.dependencies.theme.aliceBlue
 import com.repoint.dependencies.theme.repointBlue
 import com.repoint.dependencies.theme.repointOrange
 import com.repoint.dependencies.theme.richBlack
-import com.repoint.models.sharedmodels.local.User
 import kotlinx.coroutines.launch
 
 
 @Composable
 @Preview
 fun SingleDigitRowPreview() {
-
-    //RepointNumPad()
 
 }
 
@@ -142,9 +136,6 @@ fun RepointNumPad(
     val context = LocalContext.current
 
     val digitCount = 6
-    val digitState = remember {
-        List(digitCount) { mutableStateOf("") }
-    }
     val digitStates = remember { mutableStateListOf(*Array(digitCount) { "" }) }
     var focusedIndex by remember { mutableIntStateOf(0) }
 
@@ -333,8 +324,6 @@ fun RepointNumPad(
                     Log.d("focus", "the user id  is somehow : ${user?.userId}")
                     user?.userId?.let { walletViewModel.linkUserToMasterWallet(walletId, it) }
                 }
-                //user?.let { walletViewModel.linkUserToWallet(walletId, userId = it.userId) }
-                //Log.d("focus", " user is $user ")
             })
         }
     })
@@ -416,33 +405,3 @@ fun CustomBasicAlertDialog(
     }
 }
 
-
-@Composable
-fun BiometricScreen(
-    activity: FragmentActivity,
-    onSuccess: () -> Unit,
-    onFailure: () -> Unit,
-    viewModel: BioViewModel = hiltViewModel(),
-
-    ) {
-    val context = LocalContext.current
-
-    LaunchedEffect(Unit) {
-        viewModel.checkBiometricAvailability()
-    }
-
-    val isBiometricAvailable by viewModel.isBiometricAvailable.collectAsState()
-
-    if (isBiometricAvailable) {
-        Button(onClick = {
-            Log.d("Biometric", "biometric activity is :$activity")
-            activity.let {
-                viewModel.authenticate(it, onSuccess, onFailure)
-            }
-        }) {
-            Text("Authenticate")
-        }
-    } else {
-        Text("Biometric authentication is not available")
-    }
-}

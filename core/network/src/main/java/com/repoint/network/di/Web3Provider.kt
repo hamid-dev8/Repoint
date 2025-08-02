@@ -1,5 +1,6 @@
 package com.repoint.network.di
 
+import android.util.Log
 import org.web3j.protocol.Web3j
 import org.web3j.protocol.http.HttpService
 import javax.inject.Inject
@@ -20,8 +21,14 @@ class Web3Provider @Inject constructor() {
     private val clients = mutableMapOf<Int, Web3j>()
 
     fun getWeb3j(chainId: Int): Web3j {
+        Log.d("Web3Chain", "🔧 Getting Web3j for chainId=$chainId")
+
         return clients.getOrPut(chainId) {
-            val url = nodes[chainId] ?: error("No node URL defined for chainId=$chainId")
+            val url = nodes[chainId] ?: error("❌ No node URL defined for chainId=$chainId")
+            Log.d("Web3Chain", "🌐 Using node URL: $url")
+
+            Log.d("Web3Chain", "✅ Built Web3j for $chainId")
+
             Web3j.build(HttpService(url))
         }
     }

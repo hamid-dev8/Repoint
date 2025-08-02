@@ -45,7 +45,6 @@ import com.repoint.basics.atoms.RepointAppBar
 import com.repoint.basics.atoms.RepointSearchBar
 import com.repoint.basics.logic.chainIdFromSlug
 import com.repoint.basics.logic.coinTypeFromSlug
-import com.repoint.basics.logic.getAddressForChain
 import com.repoint.dashboard.AlchemyViewModel
 import com.repoint.dashboard.CmcTokenViewModel
 import com.repoint.dashboard.Web3ViewModel
@@ -68,7 +67,6 @@ import kotlinx.coroutines.launch
 fun ChooseTokenScreen(
     navController: NavController,
     walletViewModel: WalletViewModel = hiltViewModel(),
-    web3ViewModel: Web3ViewModel = hiltViewModel(),
     alchemyViewModel: AlchemyViewModel = hiltViewModel(),
     cmcTokenViewModel: CmcTokenViewModel = hiltViewModel(),
     isSend: Boolean
@@ -77,8 +75,6 @@ fun ChooseTokenScreen(
 
     val context = LocalContext.current
     val spManager = SpManager(context)
-
-    val scope = rememberCoroutineScope()
 
     val masterWalletId by spManager.getActiveWalletId().collectAsState(null)
 
@@ -91,17 +87,8 @@ fun ChooseTokenScreen(
 
 
     val focusManager = LocalFocusManager.current
-    val keyboardController = LocalSoftwareKeyboardController.current
     val focusRequester = remember { FocusRequester() }
     var chainWallets by remember { mutableStateOf<List<ChainWallet>>(emptyList()) }
-
-    val isLoading = !tokenImageLoaded && !networkImageLoaded
-
-    val tokenBalances = remember {
-        navController.previousBackStackEntry
-            ?.savedStateHandle
-            ?.get<ArrayList<AlchemyTokenBalance>>("tokenBalances")
-    } ?: arrayListOf()
 
 
     val balancesState by alchemyViewModel.tokenBalances.collectAsState()
@@ -135,11 +122,6 @@ fun ChooseTokenScreen(
         Log.d("ChooseToken", "Resolved wallet address for chain: $currentWalletAddress")
     }
 
-    val activeTokenKeys by cmcTokenViewModel.activeTokenKeyFlow.collectAsState()
-    val allMetas: Map<String, TokenMetaData>
-
-
-    val activeWalletId by spManager.activeWalletIdFlow.collectAsState()
 
     val chainWalletsState = remember { mutableStateOf<List<ChainWallet>>(emptyList()) }
     val currentSlug = remember(searchQuery) {
@@ -149,44 +131,7 @@ fun ChooseTokenScreen(
         }?.chain?.lowercase()
     }
 
-    // Create a map of chain to wallet address
-    val chainToAddress = remember(chainWallets) {
-        val ethAddress = chainWallets.firstOrNull { it.coinType == 60 }?.address
-
-        // Map all Ethereum-compatible chains to the same address
-        val addressMap = mutableMapOf<String, String>()
-
-
-
-        if (ethAddress != null) {
-            // Polygon uses Ethereum address
-            addressMap["polygon"] = ethAddress
-            addressMap["ethereum"] = ethAddress
-            addressMap["arbitrum"] = ethAddress
-            addressMap["optimism"] = ethAddress
-
-            // Other chains use their own addresses
-            chainWallets.forEach { wallet ->
-                when (wallet.coinType) {
-                    56 -> { // BNB
-                        addressMap["bnb"] = wallet.address
-                        addressMap["bsc"] = wallet.address
-                    }
-                    // Add other chains as needed
-                }
-            }
-        }
-
-        addressMap
-    }
-
     Log.d("ChooseToken","the currentWallet chain : ${chainWalletsState.value}")
-
-/*    val currentWalletAddress = remember(currentSlug, chainWalletsState.value) {
-        chainWalletsState.value.firstOrNull {
-            normalizeSlug(it.networkName) == currentSlug
-        }?.address
-    }*/
 
     Log.d("ChooseToken","the currentWallet Address : $currentWalletAddress")
     LaunchedEffect(currentWalletAddress, masterWalletId) {
@@ -228,7 +173,6 @@ fun ChooseTokenScreen(
             cmcTokenViewModel.setCurrentWallet(masterWalletId!!)
 
             Log.d("chooseToken", "Fetching active tokens for wallet : $masterWalletId")
-            //viewModel.fetchActiveTokens(masterWalletId!!)
         }
 
     }
@@ -298,16 +242,10 @@ fun ChooseTokenScreen(
                                        val walletAddress =  chainWallets.firstOrNull { it.coinType == 60 }?.address
 
 
-                                        //  val walletAddress = chainToAddress[normalizedChain]
 
-                                     //   val walletAddress = addressBySlug[normalizeSlug(token.chain)]?.address
 
                                         if (walletAddress != null && masterWalletId != null) {
-      /*                                      // ✅ Load balances dynamically
-                                            LaunchedEffect(walletAddress) {
-                                                alchemyViewModel.loadTokenBalances(masterWalletId!!, walletAddress)
-                                                Log.d("ChooseToken","the balance state is : $balancesState")
-                                            }*/
+
                                             val perTokenCoinType = coinTypeFromSlug(token.chain)
                                             Log.d("ChooseToken", "▶ coinType for ${token.chain} = $perTokenCoinType")
 
@@ -318,11 +256,6 @@ fun ChooseTokenScreen(
                                             }
 
                                             // ✅ Pass the correct wallet address
-                                            val selectedWalletAddress = walletAddressState.value
-                                            val slug = token.chain.lowercase()
-                                            val selectedContract = token.tokenMeta.contractAddress.firstOrNull {
-                                                it.platform.coin.slug.equals(slug, ignoreCase = true)
-                                            }
                                                 ResolvedTokenRow(
                                                     token = token,
                                                     masterWalletId = masterWalletId!!,
@@ -330,7 +263,6 @@ fun ChooseTokenScreen(
                                                     balances = alchemyBalances,
                                                     walletAddress = walletAddress,
                                                     navController = navController,
-                                                    walletViewModel = walletViewModel,
                                                     coinType = perTokenCoinType
                                                 )
                                         } else {
@@ -339,25 +271,6 @@ fun ChooseTokenScreen(
                                     }
                                 }
                                 }
-                         /*       items(tokenMetas.filter {
-                                    it.symbol.contains(searchQuery, true) || it.name.contains(
-                                        searchQuery,
-                                        true
-                                    )
-                                }) { meta ->
-                                    masterWalletId?.let { walletId ->
-                                        scope.launch {
-                                            sendTokenMetaItem(
-                                                meta,
-                                                alchemyBalances,
-                                                walletViewModel,
-                                                walletId,
-                                                isSend,
-                                                navController
-                                            )
-                                        }
-                                    }
-                                }*/
                             }
                         },
                         onSearch = {
@@ -369,50 +282,6 @@ fun ChooseTokenScreen(
 
 
                     LazyColumn(modifier = Modifier.padding(16.dp)) {
-
-                        /*  if (activeTokens.isEmpty()) {
-                              item {
-                                  Text(
-                                      text = "No activated tokens found. Go to the Network screen and enable some.",
-                                      modifier = Modifier.padding(16.dp),
-                                      color = Color.Gray
-                                  )
-                              }
-                          }*/
-
-//                     /*   items(activeTokens.filter {
-//                            it.symbol.contains(searchQuery, ignoreCase = true) ||
-//                                    it.name.contains(searchQuery, ignoreCase = true)
-//                        }) { token ->
-//                            val networkForToken = cryptoNetworks?.find { it.id == token.networkId }
-//                            val defaultNetworkLogoUrl = "" // empty string or null, and in your AsyncImage you provide a placeholder drawable resource
-//                            val networkLogoUrl = networkForToken?.tokens?.firstOrNull()?.logoUrl ?: defaultNetworkLogoUrl
-//
-//
-//                            masterWalletId?.let {
-//                                sendTokenItem(token,viewModel,web3ViewModel,walletViewModel,
-//                                    it,isSend,networkLogoUrl,navController)
-//                            }
-//                        }*/
-           /*             items(tokenMetas.filter {
-                            it.symbol.contains(searchQuery, true) || it.name.contains(
-                                searchQuery,
-                                true
-                            )
-                        }) { meta ->
-                            masterWalletId?.let { walletId ->
-                                scope.launch {
-                                    sendTokenMetaItem(
-                                        meta,
-                                        alchemyBalances,
-                                        walletViewModel,
-                                        walletId,
-                                        isSend,
-                                        navController
-                                    )
-                                }
-                            }
-                        }*/
 
                         val filtered = tokens
                             .filter { it.symbol.contains(searchQuery, true) || it.name.contains(searchQuery, true) }
@@ -466,27 +335,12 @@ fun ChooseTokenScreen(
                             }
                         } else {
                             items(resolvedTokens) { token ->
-                                val walletAddress = addressBySlug[normalizeSlug(token.first.chain)]?.address
-                              /*  masterWalletId?.let {
-                                    if (walletAddress != null) {
-                                        alchemyViewModel.loadTokenBalances(
-                                            masterWalletId = it,
-                                            walletAddress = walletAddress
-                                        )
-                                    }
-                                }*/
                                 val perTokenCoinType = coinTypeFromSlug(token.first.chain)
-                                val addressBySluge = chainWallets.associateBy {
-                                    normalizeSlug(it.networkName)
-                                }
                                 //todo THIS IS SPECIFIC CHAIN+
-                                //val walletAddressie = addressBySluge[normalizeSlug(token.first.chain)]?.address
                                 val walletAddressie = chainWallets.firstOrNull { it.coinType == 60 }?.address
 
 
                                 // ✅ Pass the correct wallet address
-                              //  val selectedWalletAddress = walletAddressState.value
-
                                 Log.d("TokenDebug", "MasterWalletId: $masterWalletId")
                                 Log.d("TokenDebug", "CoinType for ${token.first.chain}: $perTokenCoinType")
                                 Log.d("TokenDebug", "Resolved wallet address: $walletAddressie")
@@ -500,7 +354,6 @@ fun ChooseTokenScreen(
                                                 balances = alchemyBalances,
                                                 walletAddress = walletAddressie,
                                                 navController = navController,
-                                                walletViewModel = walletViewModel,
                                                 coinType = perTokenCoinType
                                             )
                                         }
@@ -526,7 +379,6 @@ fun ResolvedTokenRow(
     walletAddress : String, // 🔥 now dynamic
     navController: NavController,
     coinType : Int = 60,
-    walletViewModel: WalletViewModel
 ) {
 
     val scope = rememberCoroutineScope()
@@ -603,198 +455,5 @@ fun ResolvedTokenRow(
             style = RepointTypography.labelSmall,
             color = Color.DarkGray
         )
-    }
-}
-
-@Composable
-fun sendTokenItem(
-    token: TokenEntity,
-    web3ViewModel: Web3ViewModel,
-    cmcViewModel: CmcTokenViewModel,
-    masterWalletId: String,
-    isSend: Boolean,
-    networkUrl: String?,
-    navController: NavController
-) {
-
-    val tokenId = token.tokenId
-    val matchedTokenMeta = cmcViewModel.tokenMetasFlow
-
-    val context = LocalContext.current
-    val scope = rememberCoroutineScope()
-
-    /*  val networkByToken by viewModel.specificNetworkByToken.collectAsState()
-      val networkForToken by viewModel.specificNetworkForToken.collectAsState()*/
-
-    //val activeTokens by viewModel.activeTokens.collectAsState()
-    var tokenImageLoaded by remember { mutableStateOf(false) }
-    var networkImageLoaded by remember { mutableStateOf(false) }
-
-    val tokenBalances = remember {
-        navController.previousBackStackEntry
-            ?.savedStateHandle
-            ?.get<ArrayList<TokensBalance>>("tokenBalances")
-    } ?: arrayListOf()
-
-
-    TokenItem(
-        token = token,
-        onClick = {
-            val tokenId = token.tokenId
-            // viewModel.fetchTokensWithNetwork(token.tokenId) // fetch TokenWithNetwork
-            Log.d("chooseToken", "tokenId is : $tokenId")
-            Log.d("chooseToken", "tokenEntity is : $token")
-
-            scope.launch {
-                /*   val network = viewModel.getNetworkById(token.networkId)
-                   viewModel.getNetworkForToken(tokenId)*/
-
-                /*    val chainId = network?.chainId
-                    val coinType = network?.coinType*/
-
-                /*  if (chainId == null){
-                      Log.e("chooseToken", "❌ Chain ID not found for tokenId: ${token.tokenId}")
-                      Toast.makeText(context, "Network info missing", Toast.LENGTH_SHORT).show()
-                      return@launch
-                  }else
-                  {
-                      web3ViewModel.fetchGasPrice(chainId.toLong())
-                  }*/
-
-
-                // val coinType = viewModel.tokenWithNetworks.value?.network?.coinType
-                //  Log.d("chooseToken", "coinType is : $coinType")
-
-                /*  if (coinType == null) {
-                      Log.e(
-                          "chooseToken",
-                          "Coin type is null for networkId: ${token.networkId}"
-                      )
-                      Toast.makeText(
-                          context,
-                          "Invalid token network",
-                          Toast.LENGTH_SHORT
-                      ).show()
-                      return@launch
-                  }*/
-
-                /*   val chainWallet = walletViewModel.getChainWallet(
-                       masterWalletId.toString(),
-                       coinType!!
-                   )*/
-                //      Log.d("chooseToken", "the chainWAllet is : $chainWallet")
-                Log.d(
-                    "chooseToken",
-                    "the masterWAllet id is : ${masterWalletId}"
-                )
-                //     val walletAddress = chainWallet?.address ?: ""
-                /*    val jsonString = navController.previousBackStackEntry
-                        ?.savedStateHandle
-                        ?.get<String>("tokenBalances")
-                    val gson = Gson()*/
-                if (tokenBalances.isEmpty()) {
-                    Log.e("ChooseToken", "tokenBalances is empty or missing!")
-                }
-
-                //         Log.d("chooseToken", "wallet address is : $walletAddress")
-                //navigate to the right screen
-                /*      if (isSend) {
-                          //TODO add token balance
-
-                          //val balance = walletViewModel.gettok
-                          val balance = tokenBalances?.find { it.tokenAddress.lowercase() == token.contractAddress.lowercase() }?.balanceFormatted  ?: "0"
-                          Log.d("chooseToken", "token is : $tokenBalances")
-                          Log.d("chooseToken", "token is : ${networkByToken?.nativeToken}")
-                          navController.navigate(
-                              "sendToken/${Uri.encode(walletAddress)}/${Uri.encode(balance)}/$coinType/${Uri.encode(token.contractAddress)}/$chainId/${Uri.encode(token.name)}"
-                          )                } else {
-                          Log.d("chooseToken", "network name is : ${networkByToken?.nativeToken}")
-                          Log.d("chooseToken", "wallet address is : $walletAddress")
-                          Log.d("chooseToken", "masterwallet iD is : $masterWalletId")
-                          Log.d("chooseToken", "token id is : $tokenId")
-                          navController.navigate("qrCode/$walletAddress/$masterWalletId/$tokenId/${networkByToken?.nativeToken}")
-                      }*/
-            }
-        },
-        networkUrl = networkUrl.toString(),
-        onTokenImageLoaded = { tokenImageLoaded = true },
-        onNetworkImageLoaded = { networkImageLoaded = true }
-    )
-}
-
-@Composable
-fun TokenItem(
-    token: TokenEntity, onClick: () -> Unit, networkUrl: String, onTokenImageLoaded: () -> Unit,
-    onNetworkImageLoaded: () -> Unit
-) {
-
-
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 4.dp, vertical = 12.dp)
-            .clip(RoundedCornerShape(22.dp))
-            .clickable { onClick() }
-            .border(0.5.dp, lightGray)
-            .background(grayHound, RoundedCornerShape(22.dp))
-            .padding(8.dp)
-    ) {
-/*        AsyncImage(
-            model = token.logoUrl,
-            contentDescription = token.name,
-            modifier = Modifier.size(48.dp),
-            contentScale = ContentScale.Fit
-        )*/
-
-        TokenWithNetworkDb(
-            token,
-            networkUrl,
-            onTokenImageLoaded = { onTokenImageLoaded() },
-            onNetworkImageLoaded = { onNetworkImageLoaded() })
-
-        Spacer(modifier = Modifier.width(8.dp))
-
-        Text(token.symbol, style = RepointTypography.titleSmall)
-        Spacer(modifier = Modifier.width(8.dp))
-        Text(
-            token.name, style = RepointTypography.labelSmall,
-            color = Color.Gray,
-            modifier = Modifier
-                .background(Color.White, RoundedCornerShape(12.dp))
-                .padding(horizontal = 8.dp, vertical = 8.dp)
-        )
-
-
-    }
-
-}
-
-suspend fun sendTokenMetaItem(
-    meta: TokenMetaData,
-    balances: List<AlchemyTokenBalance>,
-    walletViewModel: WalletViewModel,
-    masterWalletId: String,
-    isSend: Boolean,
-    navController: NavController
-) {
-    val contract = meta.contractAddress.firstOrNull() ?: return
-    val slug = contract.platform.coin.slug.lowercase()
-    val chainId = chainIdFromSlug(slug) ?: return
-    val coinType = coinTypeFromSlug(slug)
-    val walletAddress = walletViewModel.getChainWallet(masterWalletId, coinType)?.address ?: ""
-    val balance = matchBalance(meta, balances, slug)?.toPlainString() ?: "0"
-
-
-    if (isSend) {
-        navController.navigate(
-            "sendToken/${Uri.encode(walletAddress)}/${Uri.encode(balance)}/$coinType/${
-                Uri.encode(
-                    contract.contractAddress
-                )
-            }/$chainId/${Uri.encode(meta.name)}"
-        )
-    } else {
-        navController.navigate("qrCode/$walletAddress/$masterWalletId/${meta.id}/$slug")
     }
 }

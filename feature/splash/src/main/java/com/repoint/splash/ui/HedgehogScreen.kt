@@ -27,9 +27,6 @@ import com.repoint.dependencies.theme.RepointTypography
 @Composable
 @Preview
 fun PreviewHedgehog(){
-   /* Web3WalletScreen(onConfirm = {
-
-    })*/
 }
 
 

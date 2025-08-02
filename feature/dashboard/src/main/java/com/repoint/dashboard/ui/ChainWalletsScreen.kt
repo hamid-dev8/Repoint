@@ -54,10 +54,8 @@ fun ChainWalletsScreen(
 ) {
 
     val coroutineScope = rememberCoroutineScope()
-    var masterWallet by remember { mutableStateOf<List<MasterWallet>>(emptyList()) }
     var user by remember { mutableStateOf<User?>(null) }
     val reactiveMasterWallets by walletViewModel.masterWallets.collectAsState()
-    //val userId = remember(user) { user?.userId }
 
     LaunchedEffect(Unit,reactiveMasterWallets) {
         user = userViewModel.fetchUser()
@@ -67,7 +65,6 @@ fun ChainWalletsScreen(
         Log.d("wallets","user is $user")
         Log.d("wallets","user id is $userId")
         if (!userId.isNullOrEmpty()) {
-            //chainWallets = walletViewModel.getAllMasterWallets(masterWalletId!!)
               walletViewModel.loadMasterWallets(userId)
 
         }
@@ -85,7 +82,6 @@ fun ChainWalletsScreen(
                                 if (userId != null) {
                                     walletViewModel.renameMasterWallet(wallet.masterWalletId,newName,userId)
                                 }
-                                //masterWallet = walletViewModel.getAllMasterWallets(userId = userId!!)
                             }
                         }
                     },
@@ -108,7 +104,6 @@ fun ChainWalletsScreen(
                                     }
                                 }
 
-                              //  masterWallet = walletViewModel.getAllMasterWallets(userId!!)
                             }
                         }
                     })

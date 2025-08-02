@@ -10,7 +10,6 @@ import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.fragment.app.FragmentActivity
 import androidx.navigation.NavType
@@ -18,7 +17,6 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
-import coil3.Uri
 import com.google.gson.Gson
 import com.repoint.account.login.LoginScreen
 import com.repoint.account.signup.ui.AuthScreen
@@ -41,7 +39,6 @@ import com.repoint.dashboard.ui.SendTokenScreen
 import com.repoint.dashboard.ui.SettingsScreen
 import com.repoint.dashboard.ui.TransactionHistoryScreen
 import com.repoint.dashboard.ui.WalletQrCodeScreen
-import com.repoint.models.sharedmodels.remote.NativesBalance
 import com.repoint.splash.ui.SplashScreenRepoint
 import com.repoint.splash.ui.Web3WalletScreen
 
@@ -376,13 +373,6 @@ fun RepointNavigation(activity: FragmentActivity) {
             )
         }
 
-
-        /*listOf(navArgument("walletAddress") { type = NavType.StringType },
-                navArgument("tokenBalance") { type = NavType.StringType },
-                navArgument("coinType") { type = NavType.IntType },
-                navArgument("contractAddress") { type = NavType.StringType },
-                navArgument("chainId") { type = NavType.IntType },
-                navArgument("tokenName") { type = NavType.StringType }*/
         composable(
             "sendToken/{walletAddress}/{balance}/{coinType}/{contractAddress}/{chainId}/{tokenName}/{tokenId}/{masterWalletId}",
             arguments = listOf(navArgument("walletAddress") { type = NavType.StringType },
@@ -432,7 +422,6 @@ fun RepointNavigation(activity: FragmentActivity) {
                 chainId,
                 tokenName,
                 tokenId,
-                masterWalletId,
                 navController
             )
         }
@@ -458,8 +447,8 @@ fun RepointNavigation(activity: FragmentActivity) {
 
 
         composable(
-            "history/{balance}/{walletAddress}",
-            arguments = listOf(navArgument("balance") { type = NavType.FloatType },
+            "history/{walletAddress}",
+            arguments = listOf(
                 navArgument("walletAddress") { type = NavType.StringType }
             ),
             enterTransition = {
@@ -483,12 +472,9 @@ fun RepointNavigation(activity: FragmentActivity) {
                 )
             }
         ) { backstackEntry ->
-            val balance = backstackEntry.arguments?.getFloat("balance") ?: 0.0f
             val walletAddress = backstackEntry.arguments?.getString("walletAddress") ?: ""
-            // val nativeBalance = gson.fromJson(balance,NativesBalance::class.java) // Convert back to object
             TransactionHistoryScreen(
                 navController,
-                balance = balance,
                 walletAddress = walletAddress
             )
         }

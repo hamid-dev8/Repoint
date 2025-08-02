@@ -5,6 +5,8 @@ import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.repoint.basics.logic.getContractAddressFor
+import com.repoint.models.sharedmodels.remote.TokenMetaData
 import com.repoint.models.sharedmodels.rpc.AlchemyChainNativeBalance
 import com.repoint.models.sharedmodels.rpc.GasPriceTier
 import com.repoint.models.sharedmodels.ui.TxState
@@ -46,16 +48,6 @@ class Web3ViewModel @Inject constructor(
 
     private val _connectionStatus = MutableStateFlow<Boolean?>(null)
     val connectionStatus: StateFlow<Boolean?> get() = _connectionStatus
-
-
-
-    init {
-        /*viewModelScope.launch {
-            val chainId = repository.getChainId()
-            fetchGasPrice(chainId)
-        }*/
-    }
-
 
      fun testConnectionToWeb3(chainId: Long) {
         viewModelScope.launch {
@@ -171,12 +163,21 @@ class Web3ViewModel @Inject constructor(
         credentials: Credentials,
         amount: BigDecimal,
         recipientAddress: String,
+        tokenMeta : TokenMetaData,
         contractAddress: String?,
-        chainId: Long
+        chainId: Long,
+        chainSlug : String
     ): String? = withContext(Dispatchers.IO) {
+
+        val resolvedContractAddress = tokenMeta.getContractAddressFor(chainSlug)
+        val isNative = isNativeToken(resolvedContractAddress)
+        Log.d("tx", "🧩 resolvedContractAddress = $resolvedContractAddress")
+        Log.d("tx", "🧩 is native or not = $isNative")
+
+
         _txState.value = TxState.Loading
         try {
-            val txHash = if (isNativeToken(contractAddress)) {
+            val txHash = if (isNative) {
                 val tx = sendNativeToken(credentials, recipientAddress, amount, chainId)
                 tx?.transactionHash
             }
@@ -185,7 +186,7 @@ class Web3ViewModel @Inject constructor(
                     credentials = credentials,
                     amount = amount,
                     recipientAddress = recipientAddress,
-                    contractAddress = contractAddress!!,
+                    contractAddress = resolvedContractAddress!!,
                     networkChainId = chainId
                 )
                 receipt?.transactionHash
@@ -255,23 +256,5 @@ class Web3ViewModel @Inject constructor(
             _allChainBalances.value = UiState.Success(resultList)
         }
     }
-/*
-    fun fetchGasPriceTiers(chainId: Long) {
-        viewModelScope.launch {
-            _gasPriceTier.value = UiState.Loading
-            try {
-                val result = repository.getGasPriceTiers(chainId)
-                _gasPriceTier.value = UiState.Success(result)
-            } catch (e: Exception) {
-                _gasPriceTier.value = UiState.Error(e.message ?: "Failed to fetch tiers")
-            }
-        }
-    }*/
-
-    fun formatNativeBalance(wei: BigInteger): BigDecimal {
-        return wei.toBigDecimal().divide(BigDecimal("1e18"))
-    }
-
-
 
 }

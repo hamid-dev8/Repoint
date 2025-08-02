@@ -9,12 +9,14 @@ import com.repoint.models.sharedmodels.rpc.FeeHistoryResult
 import com.repoint.models.sharedmodels.rpc.GasPriceTier
 import com.repoint.models.sharedmodels.ui.ApiResult
 import com.repoint.network.util.NetworkApiService
+import java.math.BigInteger
 
 interface AlchemyDataSource
 {
     suspend fun getTokenBalances(walletAddress : String,contracts : List<String>)  : ApiResult<AlchemyTokenBalanceResponse>
     suspend fun getMultiChainTokenBalances(walletAddress: String,tokenMetaMap : Map<String,TokenMetaData>, alchemyClientFactory : (AlchemyChain) -> NetworkApiService) : ApiResult<List<AlchemyTokenBalance>>
     suspend fun getNativeBalance(walletAddress: String): ApiResult<String>
+    suspend fun getNativeBalanceForChain(walletAddress: String , chainId: Int) :ApiResult<BigInteger>
 
     suspend fun getFeeHistory(chainId : Long) : ApiResult<FeeHistoryResult>
     suspend fun getGasPriceTiers(chainId : Long) : ApiResult<GasPriceTier>

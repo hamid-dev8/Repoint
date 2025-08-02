@@ -22,7 +22,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.util.fastForEachIndexed
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import com.repoint.account.UserViewModel
@@ -35,7 +34,6 @@ import com.repoint.basics.atoms.WalletCreationStepProgress
 import com.repoint.dependencies.accountmanager.SpManager
 import com.repoint.dependencies.theme.RepointTypography
 import kotlinx.coroutines.launch
-import kotlin.random.Random
 
 
 @SuppressLint("UnrememberedGetBackStackEntry")
@@ -68,8 +66,6 @@ fun ConfirmPhrases(
     var isUserCorrect by remember { mutableStateOf(false) }
 
     val coroutineScope = rememberCoroutineScope()
-
-    val walletCreated = walletViewModel.walletCreated.value
 
     val wallet = walletViewModel.getTempWallet()
 
@@ -135,10 +131,7 @@ fun ConfirmPhrases(
                             val nextIndex = walletViewModel.generateNextWalletIndex(user?.userId)
                             Log.d("confirm","next index is : ${walletViewModel.generateNextWalletIndex(user?.userId)}")
                             Log.d("confirm","user id is : ${user?.userId}")
-                            /*val finalName = walletViewModel.tempMasterWallet!!.name.ifBlank {
-                                walletViewModel.generateDefaultWalletName(nextIndex)
-                            }
-*/
+
                             val enteredName = defaultName.value.trim()
                             val finalName = if (enteredName.isNotBlank()) {
                                 enteredName // custom name, no index

@@ -59,7 +59,6 @@ fun ShowPhrase(
     phrases  : String,
     navController: NavController,
     onConfirm: (String?) -> Unit,
-    userViewModel: UserViewModel = hiltViewModel()
 ) {
     val context = LocalContext.current
     val clipboardManager = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
@@ -80,7 +79,6 @@ fun ShowPhrase(
 
             LaunchedEffect(phrases) {
 
-                //masterWallet = viewModel.getMasterWallet(masterWalletId)
                 Log.d("phrase","phrase is : $phrases")
             }
 

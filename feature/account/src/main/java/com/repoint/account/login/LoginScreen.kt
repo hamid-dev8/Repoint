@@ -124,35 +124,42 @@ fun LoginScreen(
 
                         val user = userViewModel.fetchUser()
 
-                        if (walletViewModel.tempMasterWallet != null) {
+
                             val nextIndex = walletViewModel.generateNextWalletIndex(user?.userId)
-                            Log.d(
-                                "confirm",
-                                "next index is : ${walletViewModel.generateNextWalletIndex(user?.userId)}"
-                            )
-                            Log.d("confirm", "user id is : ${user?.userId}")
-                            val finalName = if (walletNameInput.trim().isNotBlank()) {
+                            val finalName = if (walletNameInput.trim().isNotBlank()){
                                 walletNameInput.trim()
-                            } else {
+                            }
+                            else {
                                 walletViewModel.generateDefaultWalletName(nextIndex)
                             }
-
-
-                            walletViewModel.tempMasterWallet =
-                                walletViewModel.tempMasterWallet!!.copy(
-                                    name = finalName,
-                                    walletIndex = nextIndex,
-                                    userId = user?.userId
-                                )
-                        }
 
                         val phrase = walletViewModel.generatedImportedWalletInMemory(
                             secretInput,
                             walletNameInput
                         )
-                        val phraseString = phrase.joinToString(" ")
-                        //walletViewModel.importWallet(phraseString,walletNameInput)
+
+                        walletViewModel.tempMasterWallet =
+                            walletViewModel.tempMasterWallet!!.copy(
+                                name = finalName,
+                                walletIndex = nextIndex,
+                                userId = user?.userId
+                            )
+
                         walletViewModel.confirmAndSaveWallet()
+
+                        Log.d(
+                                "confirm",
+                                "next index is : ${walletViewModel.generateNextWalletIndex(user?.userId)}"
+                            )
+                            Log.d("confirm", "user id is : ${user?.userId}")
+
+
+
+
+
+
+                        val phraseString = phrase.joinToString(" ")
+
 
 
 
@@ -187,8 +194,6 @@ fun LoginScreen(
                                 Toast.LENGTH_SHORT
                             ).show()
                         }
-                        ///val walletId = viewModel.importWallet(secretInput, walletNameInput)
-                        // Log.d("import", "wallet is set and its id is = $wallet")
                     }
                 }
             )

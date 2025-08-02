@@ -3,6 +3,7 @@ package com.repoint.dashboard
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.repoint.basics.logic.chainIdFromSlug
 import com.repoint.models.sharedmodels.local.LocalActiveNetworks
 import com.repoint.models.sharedmodels.rpc.AlchemyChain
 import com.repoint.models.sharedmodels.rpc.AlchemyTokenBalance
@@ -13,6 +14,7 @@ import com.repoint.network.di.AlchemyClientFactory
 import com.repoint.sources.datarepo.datasource.AlchemyDataSource
 import com.repoint.sources.datarepo.datasource.CmcDataSource
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -157,6 +159,39 @@ class AlchemyViewModel @Inject constructor(
         }
     }
 
+    private val _nativeBalanceByChain = MutableStateFlow<UiState<BigDecimal>>(UiState.Loading)
+    val nativeBalanceByChain: StateFlow<UiState<BigDecimal>> = _nativeBalanceByChain
+
+    fun loadNativeBalanceForChain(walletAddress: String , chainId : Int){
+        Log.d("BalanceFlow", "Calling getNativeBalanceForChain on $walletAddress @ $chainId")
+
+        viewModelScope.launch {
+            _nativeBalanceByChain.value = UiState.Loading
+            val result = alchemyRepository.getNativeBalanceForChain(walletAddress, chainId)
+            when (result) {
+                is ApiResult.Success -> {
+                    val ether = result.data.toBigDecimal().divide(BigDecimal("1e18"))
+                    _nativeBalanceByChain.value = UiState.Success(ether)
+                }
+                is ApiResult.Error -> {
+                    _nativeBalanceByChain.value =
+                        UiState.Error(result.exception.message ?: "Unknown error")
+                }
+            }
+
+
+        }
+
+    }
+
+    fun reloadWalletData(onDone: () -> Unit,walletAddress: String,masterWalletId: String) {
+        viewModelScope.launch {
+            loadNativeBalance(walletAddress)
+            loadTokenBalances(masterWalletId, walletAddress)
+            delay(1000) // optional smooth delay
+            onDone()
+        }
+    }
 
     private suspend fun loadContractsList(walletAddress: String): List<Int> {
         return alchemyRepository.getTokenContracts(walletAddress)

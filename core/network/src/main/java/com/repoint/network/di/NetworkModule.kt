@@ -17,6 +17,7 @@ import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import java.security.cert.X509Certificate
 import java.util.concurrent.TimeUnit
+import javax.inject.Named
 import javax.inject.Singleton
 import javax.net.ssl.SSLContext
 import javax.net.ssl.TrustManager
@@ -176,6 +177,46 @@ object NetworkModule {
 
     fun getAlchemyBaseUrl(chain: AlchemyChain): String {
         return "${chain.baseUrl}$ALCHEMY_API_KEY/"
+    }
+
+    private fun alchemyBaseUrl(chainId: Int): String = when (chainId) {
+        1 -> "https://eth-mainnet.g.alchemy.com/v2/$ALCHEMY_API_KEY/"
+        137 -> "https://polygon-mainnet.g.alchemy.com/v2/$ALCHEMY_API_KEY/"
+        56 -> "https://bsc-mainnet.g.alchemy.com/v2/$ALCHEMY_API_KEY/" // or another provider
+        else -> error("Unsupported chain ID")
+    }
+
+    @Provides
+    @Named("alchemy_eth")
+    fun provideAlchemyEthRetrofit(@NetworkOkHttp okHttpClient: OkHttpClient): NetworkApiService {
+        return Retrofit.Builder()
+            .baseUrl(alchemyBaseUrl(1))
+            .client(okHttpClient)
+            .addConverterFactory(GsonConverterFactory.create())
+            .build()
+            .create(NetworkApiService::class.java)
+    }
+
+    @Provides
+    @Named("alchemy_polygon")
+    fun provideAlchemyPolygonRetrofit(@NetworkOkHttp okHttpClient: OkHttpClient): NetworkApiService {
+        return Retrofit.Builder()
+            .baseUrl(alchemyBaseUrl(137))
+            .client(okHttpClient)
+            .addConverterFactory(GsonConverterFactory.create())
+            .build()
+            .create(NetworkApiService::class.java)
+    }
+
+    @Provides
+    @Named("alchemy_bnb")
+    fun provideAlchemyBnbRetrofit(@NetworkOkHttp okHttpClient: OkHttpClient): NetworkApiService {
+        return Retrofit.Builder()
+            .baseUrl(alchemyBaseUrl(56))
+            .client(okHttpClient)
+            .addConverterFactory(GsonConverterFactory.create())
+            .build()
+            .create(NetworkApiService::class.java)
     }
 
   /*  @Provides

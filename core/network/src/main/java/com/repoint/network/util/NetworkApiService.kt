@@ -3,8 +3,8 @@ package com.repoint.network.util
 import com.repoint.models.sharedmodels.remote.NetworkSummary
 import com.repoint.models.sharedmodels.rpc.AlchemyNativeBalanceResponse
 import com.repoint.models.sharedmodels.rpc.AlchemyTokenBalanceResponse
+import com.repoint.models.sharedmodels.rpc.AlchemyTransferResponse
 import com.repoint.models.sharedmodels.rpc.FeeHistoryResponse
-import retrofit2.Response
 import retrofit2.http.Body
 import retrofit2.http.POST
 
@@ -28,4 +28,7 @@ interface NetworkApiService
 
     @POST(".")
     suspend fun getFeeHistory(@Body body : Map<String,@JvmSuppressWildcards Any>) : FeeHistoryResponse
+
+    @POST(".")
+    suspend fun getAssetTransfers(@Body body: Map<String,@JvmSuppressWildcards Any>) : AlchemyTransferResponse
 }

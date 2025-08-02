@@ -42,6 +42,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
@@ -51,6 +52,7 @@ import androidx.navigation.NavController
 import com.repoint.account.UserViewModel
 import com.repoint.account.WalletViewModel
 import com.repoint.basics.atoms.DropdownMenuWithSelection
+import com.repoint.basics.atoms.GasTierDropdown
 import com.repoint.basics.atoms.LoaderAnimation
 import com.repoint.basics.atoms.RepointAppBar
 import com.repoint.basics.atoms.RepointCommonButton
@@ -62,11 +64,15 @@ import com.repoint.dashboard.CmcTokenViewModel
 import com.repoint.dashboard.TokenViewModel
 import com.repoint.dashboard.Web3ViewModel
 import com.repoint.dependencies.accountmanager.SpManager
+import com.repoint.dependencies.theme.FernGreen
 import com.repoint.dependencies.theme.PurpleGrey80
 import com.repoint.dependencies.theme.RepointTypography
+import com.repoint.dependencies.theme.RoseWood
+import com.repoint.dependencies.theme.darkGray
 import com.repoint.dependencies.theme.grayHound
 import com.repoint.dependencies.theme.lightGray
 import com.repoint.dependencies.theme.richBlack
+import com.repoint.dependencies.theme.transparentColor
 import com.repoint.models.sharedmodels.remote.TokenMetaData
 import com.repoint.models.sharedmodels.ui.TxState
 import com.repoint.models.sharedmodels.ui.UiState
@@ -79,32 +85,25 @@ import java.math.RoundingMode
 
 @Composable
 fun SendTokenScreen(
-    walletAddress : String,
-    balance : String,
-    coinType : Int,
-    contractAddress : String,
-    chainId : Int,
-    tokenName : String,
+    walletAddress: String,
+    balance: String,
+    coinType: Int,
+    contractAddress: String,
+    chainId: Int,
+    tokenName: String,
     tokenId: Int,
-    masterWalletId : String,
     navController: NavController,
     web3ViewModel: Web3ViewModel = hiltViewModel<Web3ViewModel>(),
     walletViewModel: WalletViewModel = hiltViewModel<WalletViewModel>(),
     alchemyViewModel: AlchemyViewModel = hiltViewModel<AlchemyViewModel>(),
-    cmcTokenViewModel : CmcTokenViewModel = hiltViewModel(),
-    tokenViewModel: TokenViewModel = hiltViewModel(),
+    cmcTokenViewModel: CmcTokenViewModel = hiltViewModel(),
     userViewModel: UserViewModel = hiltViewModel<UserViewModel>()
 ) {
 
 
-   // Log.d("transaction", "wallet Address is : $walletAddress and  token balance is : $tokenBalance")
     var recipientAddress by remember { mutableStateOf("") }
     var amount by remember { mutableStateOf("") }
     val context = LocalContext.current
-    val gasPriceInGwei by web3ViewModel.gasPrice.collectAsState() // ✅ Observe StateFlow properly
-
-
-
 
     val coroutineScope = rememberCoroutineScope()
 
@@ -114,6 +113,7 @@ fun SendTokenScreen(
     val masterWalletId by spManager.getActiveWalletId().collectAsState(initial = null)
     //todo
     val nativeBalanceState by alchemyViewModel.nativeBalance.collectAsState()
+    val nativeBalanceForChain by alchemyViewModel.nativeBalanceByChain.collectAsState()
 
     var isSending by remember { mutableStateOf(false) }
     var txHash by remember { mutableStateOf<String?>(null) }
@@ -124,15 +124,20 @@ fun SendTokenScreen(
     var selectedTier by remember { mutableStateOf("Average") } // Default tier
 
     val nativeUsdState by alchemyViewModel.nativeUsdPrice.collectAsState()
-    val usdPrice = (nativeUsdState as? UiState.Success)?.data
 
     val tokenMeta = cmcTokenViewModel.getTokenMetaFlow(tokenId).collectAsState(initial = null).value
     tokenMeta?.contractAddress?.forEach {
-        Log.d("tokenMetaCheck", "Known contract: ${it.contractAddress}, slug: ${it.platform.coin.slug}")
+        Log.d(
+            "tokenMetaCheck",
+            "Known contract: ${it.contractAddress}, slug: ${it.platform.coin.slug}"
+        )
     }
     val balancesState by alchemyViewModel.tokenBalances.collectAsState()
     val alchemyList = (balancesState as? UiState.Success)?.data.orEmpty()
-    Log.d("SlugMatch", "⚙️ Attempting getSlugFor with: tokenMeta=${tokenMeta}, contract=$contractAddress")
+    Log.d(
+        "SlugMatch",
+        "⚙️ Attempting getSlugFor with: tokenMeta=${tokenMeta}, contract=$contractAddress"
+    )
     Log.d("SlugMatch", "🎯 tokenMeta.value = ${tokenMeta}")
     val nativeTokenSymbol = remember(chainId) {
         when (chainId) {
@@ -150,14 +155,15 @@ fun SendTokenScreen(
     val chainSlug = tokenMeta?.getSlugFor(contractAddress)
     val myBalance = if (tokenMeta != null && chainSlug != null) {
         matchBalance(
-            tokenMeta = tokenMeta,
-            balances = alchemyList,
-            currentChain = chainSlug
+            tokenMeta = tokenMeta, balances = alchemyList, currentChain = chainSlug
         )
     } else null
     Log.d("sendScreen", "📦 Available balances:")
     (balancesState as? UiState.Success)?.data?.forEach {
-        Log.d("sendScreen", "Balance Token: ${it.name}, Addr: ${it.contractAddress}, Chain: ${it.chainSlug}, RawBalance: ${it.tokenBalance} or : $myBalance")
+        Log.d(
+            "sendScreen",
+            "Balance Token: ${it.name}, Addr: ${it.contractAddress}, Chain: ${it.chainSlug}, RawBalance: ${it.tokenBalance} or : $myBalance"
+        )
     }
 
     Log.d("sendScreen", "🧩 Target contract: $contractAddress")
@@ -165,12 +171,12 @@ fun SendTokenScreen(
 
     val balances = tokenMeta?.let {
         val matched = matchBalance(
-        tokenMeta = it,
-        balances = (balancesState as? UiState.Success)?.data.orEmpty(),
-        currentChain = tokenMeta!!.getSlugFor(contractAddress).toString()
-    )
+            tokenMeta = it,
+            balances = (balancesState as? UiState.Success)?.data.orEmpty(),
+            currentChain = tokenMeta!!.getSlugFor(contractAddress).toString()
+        )
 
-        Log.d("SendScreen","the match balance is : $matched")
+        Log.d("SendScreen", "the match balance is : $matched")
     }
 
     LaunchedEffect(tokenId) {
@@ -185,28 +191,17 @@ fun SendTokenScreen(
 
     }
 
-    LaunchedEffect(masterWalletId, walletAddress,contractAddress,chainId) {
+    LaunchedEffect(masterWalletId, walletAddress, contractAddress, chainId) {
         if (!walletAddress.isNullOrBlank()) {
-            alchemyViewModel.loadNativeBalance(walletAddress)
+            // alchemyViewModel.loadNativeBalance(walletAddress)
+            alchemyViewModel.loadNativeBalanceForChain(walletAddress, chainId)
             masterWalletId?.let { alchemyViewModel.loadTokenBalances(it, walletAddress) }
         }
     }
-    Log.d("sendScreen","the values that send from chooseTokenScreen are : wallet address is $walletAddress ," +
-            "the balance is $balance + $balances the coinType is $coinType contract address and chain id : $contractAddress + $chainId" +
-            "token name and token id : $tokenName + $tokenId" +
-            "master wallet id : $masterWalletId" )
-/*    val walletAddress by produceState<String?>(initialValue = null, coinType) {
-        value = coinType?.let {
-            masterWalletId?.let { it1 -> walletViewModel.getChainWallet(it1, it)?.address }
-        }
-    }*/
-/*    LaunchedEffect(walletAddress, masterWalletId) {
-        if (!walletAddress.isNullOrBlank() && masterWalletId?.isNotBlank()) {
-            masterWalletId?.let { alchemyViewModel.loadTokenBalances(it, walletAddress!!) }
-            Log.d("SendToken","the Address is : $walletAddress")
-            Log.d("SendToken","the MASTERWALLET ID is : $masterWalletId")
-        }
-    }*/
+    Log.d(
+        "sendScreen",
+        "the values that send from chooseTokenScreen are : wallet address is $walletAddress ," + "the balance is $balance + $balances the coinType is $coinType contract address and chain id : $contractAddress + $chainId" + "token name and token id : $tokenName + $tokenId" + "master wallet id : $masterWalletId"
+    )
 
     val balanceState by alchemyViewModel.tokenBalances.collectAsState()
 
@@ -224,34 +219,21 @@ fun SendTokenScreen(
         } else null
     }
 
-    Log.d("SendScreen","balance  State is $balanceState")
-    Log.d("SendScreen","resolveBalance  is $resolvedBalance")
-/*    val matchedBalance = remember(balanceState, tokenId, chainId) {
-        val tokenMeta = cmcTokenViewModel.meta(tokenId) // you may need to inject this
-        tokenMeta?.let {
-            matchBalance(it, (balanceState as? UiState.Success)?.data ?: emptyList(), tokenChain)
-        }
-    }*/
-    //
+    Log.d("SendScreen", "balance  State is $balanceState")
+    Log.d("SendScreen", "resolveBalance  is $resolvedBalance")
+
     LaunchedEffect(Unit) {
         val userId = userViewModel.fetchUser()
         Log.d("transaction", "user id is : $userId")
-        //  val privateKey = userIdFlow.value?.let { walletViewModel.getAllMasterWallets(it)[0]. }
         Log.d("transaction", "user id flow is : ${userIdFlow.value}")
 
-       // val coinType = coinTypeFromSlug(chainId)
-      //  val walletAddress = masterWalletId?.let { walletViewModel.getChainWallet(it, coinType)?.address }
         Log.d("transaction", "coinType is : $coinType")
 
         web3ViewModel.fetchGasPrice(chainId.toLong())
 
-  //      tokenViewModel.getNativeTokenPrice(chainId)
-
         val chainWallet =
             masterWalletId?.let { walletViewModel.getChainWallet(masterWalletId = it, coinType) }
         val privateKey = chainWallet?.privateKey
-       /* val decimalKey = privateKey?.let { BigInteger(it) }
-        val hexKey = decimalKey?.toString(16)*/
         if (!privateKey.isNullOrEmpty()) {
             credentials = Credentials.create(privateKey)
             //todo remove this later on release
@@ -263,18 +245,22 @@ fun SendTokenScreen(
         }
 
         //newApproach todo
-        when(txState){
+        when (txState) {
             is TxState.Success -> {
                 val txHash = (txState as TxState.Success).txHash
-                Toast.makeText(context,"Transaction sent : $txHash",Toast.LENGTH_SHORT).show()
+                Toast.makeText(context, "Transaction sent : $txHash", Toast.LENGTH_SHORT).show()
             }
+
             is TxState.Error -> {
-                Toast.makeText(context,"Transaction failed : ${(txState as TxState.Error).message}",Toast.LENGTH_SHORT).show()
+                Toast.makeText(
+                    context,
+                    "Transaction failed : ${(txState as TxState.Error).message}",
+                    Toast.LENGTH_SHORT
+                ).show()
             }
+
             else -> Unit
         }
-
-        //    Log.d("transaction", "crendentials is : $credentials and private key is  : $privateKey")
     }
 
     val isButtonEnabled = recipientAddress.isNotBlank() && amount.isNotBlank()
@@ -290,18 +276,17 @@ fun SendTokenScreen(
     }
 
     // Permission Request Launcher
-    val permissionLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.RequestPermission(),
-        onResult = { isGranted ->
-            if (isGranted) {
-                // Start QR Scanner after permission granted
-                val intent = Intent(context, QrScannerActivity::class.java)
-                qrScannerLauncher.launch(intent)
-            } else {
-                Toast.makeText(context, "Camera permission is required", Toast.LENGTH_SHORT).show()
-            }
-        }
-    )
+    val permissionLauncher =
+        rememberLauncherForActivityResult(contract = ActivityResultContracts.RequestPermission(),
+            onResult = { isGranted ->
+                if (isGranted) {
+                    val intent = Intent(context, QrScannerActivity::class.java)
+                    qrScannerLauncher.launch(intent)
+                } else {
+                    Toast.makeText(context, "Camera permission is required", Toast.LENGTH_SHORT)
+                        .show()
+                }
+            })
     Log.d("gasDebug", "nativeBalanceState = $nativeBalanceState")
     val estimatedGasFee = run {
         val nativePrice = (nativeUsdState as? UiState.Success)?.data
@@ -332,10 +317,11 @@ fun SendTokenScreen(
             else -> tierData?.average
         }
 
-        gwei?.multiply(BigDecimal(21999))?.divide(BigDecimal(1_000_000_000), 9, RoundingMode.HALF_UP)?.toPlainString()
+        gwei?.multiply(BigDecimal(21999))
+            ?.divide(BigDecimal(1_000_000_000), 9, RoundingMode.HALF_UP)?.toPlainString()
     }
 
-    RepointAppBar("send", navController = navController, exp = {_,_,_ ->
+    RepointAppBar("send", navController = navController, exp = { _, _, _ ->
         Box(
             modifier = Modifier
                 .fillMaxSize()
@@ -354,17 +340,18 @@ fun SendTokenScreen(
                         }
                     }
                 }
+
                 errorMessage != null -> {
                     LaunchedEffect(errorMessage) {
                         navController.currentBackStackEntry?.savedStateHandle?.set(
-                            "error",
-                            errorMessage
+                            "error", errorMessage
                         )
                         navController.navigate(SendRoutes.ROUTE_SEND_ERROR) {
                             popUpTo("sendToken") { inclusive = true }
                         }
                     }
                 }
+
                 else -> {
                     Column(
                         modifier = Modifier
@@ -374,8 +361,7 @@ fun SendTokenScreen(
                     ) {
                         Text(text = "Send $tokenName", style = RepointTypography.titleMedium)
 
-                        OutlinedTextField(
-                            value = recipientAddress,
+                        OutlinedTextField(value = recipientAddress,
                             onValueChange = { recipientAddress = it },
                             label = { Text("recipient address") },
                             trailingIcon = {
@@ -405,8 +391,7 @@ fun SendTokenScreen(
                                     IconButton(onClick = {
                                         when {
                                             ContextCompat.checkSelfPermission(
-                                                context,
-                                                Manifest.permission.CAMERA
+                                                context, Manifest.permission.CAMERA
                                             ) == PackageManager.PERMISSION_GRANTED -> {
                                                 // Permission already granted, launch QR Scanner
                                                 val intent =
@@ -426,12 +411,12 @@ fun SendTokenScreen(
                                         )
                                     }
                                 }
-                            }, modifier = Modifier.fillMaxWidth(),
+                            },
+                            modifier = Modifier.fillMaxWidth(),
                             shape = RoundedCornerShape(8.dp)
                         )
 
-                        OutlinedTextField(
-                            value = amount,
+                        OutlinedTextField(value = amount,
                             onValueChange = { input ->
                                 // Allow only digits and at most one decimal point
                                 if (input.matches(Regex("^\\d*\\.?\\d*\$"))) {
@@ -446,7 +431,8 @@ fun SendTokenScreen(
                                 }) {
                                     Text("Max")
                                 }
-                            }, modifier = Modifier.fillMaxWidth()
+                            },
+                            modifier = Modifier.fillMaxWidth()
                         )
 
                         Text(
@@ -469,20 +455,19 @@ fun SendTokenScreen(
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
                                     Text("Gas Speed", style = RepointTypography.bodyMedium)
-                                    DropdownMenuWithSelection(
-                                        options = tiers,
+                                    GasTierDropdown(options = tiers,
                                         selected = selectedTier,
-                                        onSelect = { selectedTier = it }
-                                    )
+                                        onSelect = { selectedTier = it })
                                 }
-                                if  (isLoading){
+                                if (isLoading) {
                                     Box(
-                                        modifier = Modifier.fillMaxWidth()
+                                        modifier = Modifier
+                                            .fillMaxWidth()
                                             .height(18.dp)
                                             .clip(RoundedCornerShape(8.dp))
                                             .shimmerEffect()
                                     )
-                                }else {
+                                } else {
                                     Text(
                                         text = if (nativeGasAmount != null && estimatedGasFee != null) {
                                             "Estimated Gas: $nativeGasAmount $nativeTokenSymbol ≈ $$estimatedGasFee USD"
@@ -491,8 +476,54 @@ fun SendTokenScreen(
                                         },
                                         style = RepointTypography.bodyMedium,
                                         color = richBlack,
-                                        modifier = Modifier.fillMaxWidth().height(18.dp)
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .height(18.dp)
                                     )
+                                }
+
+
+                                when (nativeBalanceForChain) {
+                                    is UiState.Loading -> {
+                                        Text("Fetching balance...")
+                                    }
+
+                                    is UiState.Success -> {
+                                        val nativeBalance =
+                                            (nativeBalanceForChain as UiState.Success<BigDecimal>).data
+                                        val fee =
+                                            estimatedGasFee?.toBigDecimalOrNull() ?: BigDecimal.ZERO
+// Normalize decimals to avoid crashes or false comparisons
+                                        val normalizedBalance =
+                                            nativeBalance.setScale(18, RoundingMode.DOWN)
+                                        val normalizedFee = fee.setScale(18, RoundingMode.UP)
+
+                                        Log.d("BalanceCheck", "native: $normalizedBalance vs gas: $normalizedFee")
+
+
+                                            if (normalizedBalance < normalizedFee) {
+                                                Text("⚠️ Not enough native tokens to cover gas fee",style = RepointTypography.titleMedium, color = RoseWood)
+                                            } else {
+                                                Text("Balance is sufficient for gas", style = RepointTypography.titleMedium, color = FernGreen)
+                                                Text(
+                                                    "Available balance: ${nativeBalance.toPlainString()} $chainSlug",
+                                                    style = RepointTypography.titleMedium,
+                                                    color = darkGray
+                                                )
+                                            }
+                                    }
+
+                                    is UiState.Error -> {
+                                        Log.d(
+                                            "gasUI",
+                                            "error is: $errorMessage | USD: $estimatedGasFee"
+                                        )
+                                        Text(
+                                            "Balance unavailable",
+                                            style = RepointTypography.titleMedium,
+                                            color = RoseWood
+                                        )
+                                    }
                                 }
                             }
 
@@ -514,9 +545,11 @@ fun SendTokenScreen(
                                         web3ViewModel.sendTokenDynamic(
                                             credentials = it,
                                             recipientAddress = recipientAddress,
+                                            tokenMeta = tokenMeta!!,
                                             amount = amount.toBigDecimal(),
                                             contractAddress = contractAddress,
-                                            chainId = chainId.toLong()
+                                            chainId = chainId.toLong(),
+                                            chainSlug = chainSlug!!
                                         )
                                     }
                                     Log.d(
@@ -527,6 +560,14 @@ fun SendTokenScreen(
                                         "transaction",
                                         "transaction is going to start with to ADddress : $recipientAddress"
                                     )
+                                    Log.d(
+                                        "transaction",
+                                        "transaction is going to start with tokenMeta of : $tokenMeta"
+                                    )
+                                    Log.d(
+                                        "transaction",
+                                        "transaction is going to start with chainSlug of : $chainSlug"
+                                    )
                                     isSending = false
                                     if (result != null) {
                                         txHash = result
@@ -535,9 +576,7 @@ fun SendTokenScreen(
                                     }
                                 }
                             } else Toast.makeText(
-                                context,
-                                "fields are empty or Not Correct",
-                                Toast.LENGTH_SHORT
+                                context, "fields are empty or Not Correct", Toast.LENGTH_SHORT
                             ).show()
 
                         },
@@ -570,6 +609,7 @@ fun isValidWalletAddress(address: String): Boolean {
 
     return ethWalletRegex.matches(address)
 }
+
 fun TokenMetaData.getSlugFor(contractAddress: String): String? {
     Log.w("SlugMatch", "contract Address  is :  $contractAddress")
 
@@ -579,7 +619,10 @@ fun TokenMetaData.getSlugFor(contractAddress: String): String? {
     Log.w("SlugMatch", "match is :  $match")
 
     if (match == null) {
-        Log.w("SlugMatch", "❌ Could not find matching contract for $contractAddress in token ${this.symbol}")
+        Log.w(
+            "SlugMatch",
+            "❌ Could not find matching contract for $contractAddress in token ${this.symbol}"
+        )
         this.contractAddress.forEach {
             Log.d("SlugMatch", "➕ Candidate: ${it.contractAddress}")
         }

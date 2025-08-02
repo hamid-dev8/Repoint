@@ -12,6 +12,7 @@ import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.repoint.dependencies.theme.RepointTypography
+import com.valentinilk.shimmer.shimmer
 
 @Composable
 fun StyledBalanceText(balance: String, isHiddenBalance: Boolean) {

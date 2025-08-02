@@ -1,10 +1,6 @@
 package com.repoint.splash.ui
 
 import android.util.Log
-import android.widget.Toast
-import androidx.biometric.BiometricManager
-import androidx.biometric.BiometricManager.Authenticators.BIOMETRIC_STRONG
-import androidx.biometric.BiometricPrompt
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -26,15 +22,12 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.core.app.ActivityCompat.finishAffinity
-import androidx.core.content.ContextCompat
-import androidx.fragment.app.FragmentActivity
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.repoint.account.WalletViewModel
 import com.repoint.dashboard.CmcTokenViewModel
 import com.repoint.dashboard.Web3ViewModel
-import com.repoint.dependencies.theme.ghostWhite
 import com.repoint.dependencies.accountmanager.SpManager
+import com.repoint.dependencies.theme.ghostWhite
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -44,11 +37,7 @@ import kotlinx.coroutines.launch
 @Preview(showBackground = true)
 @Composable
 private fun PreviewSplashScreen() {
-    /*SplashScreenRepoint(onTimeout = {
 
-    } , onStay = {
-
-    })*/
 }
 
 @Composable
@@ -77,8 +66,6 @@ fun SplashScreenRepoint(onStay: () -> Unit, onProceed: () -> Unit, onAuthRequest
         }
 
          Log.d("Test","connection to web3 status : $isConnectedToWeb3")
-
-
 
         val actual = web3ViewModel.getChainId(1)
         Log.d("Test", "Chain ID returned = $actual")

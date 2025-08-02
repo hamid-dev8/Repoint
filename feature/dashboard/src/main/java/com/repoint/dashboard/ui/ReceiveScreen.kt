@@ -5,8 +5,6 @@ import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
 import android.graphics.Bitmap
-import android.graphics.Canvas
-import android.graphics.Rect
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
@@ -24,7 +22,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Share
@@ -40,17 +37,14 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import coil3.compose.AsyncImage
 import com.repoint.basics.atoms.BigBitmap
-import com.repoint.basics.atoms.ErrorScreen
 import com.repoint.basics.atoms.IconWithText
 import com.repoint.basics.atoms.LoaderAnimation
 import com.repoint.basics.atoms.RepointAppBar
@@ -59,13 +53,9 @@ import com.repoint.basics.logic.saveBitmapToFile
 import com.repoint.basics.logic.shareImage
 import com.repoint.dashboard.CmcTokenViewModel
 import com.repoint.dependencies.theme.RepointTypography
-import com.repoint.dependencies.theme.ghostWhite
 import com.repoint.dependencies.theme.lightGray
 import com.repoint.dependencies.theme.pureWhite
-import com.repoint.models.sharedmodels.ui.UiState
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.firstOrNull
-import kotlinx.coroutines.launch
 
 @Composable
 fun WalletQrCodeScreen(
@@ -92,21 +82,11 @@ fun WalletQrCodeScreen(
             context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
 
         Log.d("receiveScreen", "token id is $tokenId")
-       // val activeTokens by networkViewModel.activeTokens.collectAsState()
-      //  val activeNetworks by networkViewModel.activeNetworks.collectAsState()
-        //val selectedToken = activeTokens.firstOrNull { it.tokenId == tokenId }
 
-        var tokenImageLoaded by remember { mutableStateOf(false) }
-        var networkImageLoaded by remember { mutableStateOf(false) }
-
-       // val uiState by networkViewModel.uiState.collectAsState()
 
 
         LaunchedEffect(masterWalletId) {
-       //     networkViewModel.fetchActiveTokens(masterWalletId = masterWalletId)
             delay(1000)
-            /*    tokenImageLoaded = true
-                networkImageLoaded = true*/
         }
 
         when  {
@@ -158,15 +138,15 @@ fun WalletQrCodeScreen(
                                         "receiveScreen",
                                         "image Request : symbol : ${tokenMeta?.symbol?.trim()} "
                                     )
-                                   AsyncImage(
-                                       model = tokenMeta?.logo,
-                                       contentDescription = tokenMeta?.symbol,
-                                       modifier = Modifier.padding(8.dp)
-                                           .clip(RoundedCornerShape(22.dp))
-                                           .background(pureWhite)
-                                           .border(0.5.dp, lightGray, RoundedCornerShape(22.dp))
-                                           .padding(horizontal = 24.dp, vertical = 12.dp)
-                                   )
+                                    AsyncImage(
+                                        model = tokenMeta?.logo,
+                                        contentDescription = tokenMeta?.symbol,
+                                        modifier = Modifier.padding(8.dp)
+                                            .clip(RoundedCornerShape(22.dp))
+                                            .background(pureWhite)
+                                            .border(0.5.dp, lightGray, RoundedCornerShape(22.dp))
+                                            .padding(horizontal = 24.dp, vertical = 12.dp)
+                                    )
 
                                     Text(
                                         tokenMeta?.name.toString(),
@@ -254,16 +234,6 @@ fun WalletQrCodeScreen(
 
                 }
             }
-/*
-            is UiState.Error -> {
-                ErrorScreen(
-                    message = (uiState as UiState.Error).messages,
-                    modifier = Modifier,
-                    onRetry = {
-                    })
-            }*/
-
-
         }
     }, navController = navController)
 

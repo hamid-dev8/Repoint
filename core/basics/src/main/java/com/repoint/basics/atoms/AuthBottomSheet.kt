@@ -1,5 +1,10 @@
 package com.repoint.basics.atoms
 
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -14,6 +19,9 @@ import androidx.compose.material.icons.rounded.Download
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextAlign
@@ -22,6 +30,8 @@ import com.repoint.basics.R
 import com.repoint.dependencies.theme.RepointTypography
 import com.repoint.dependencies.theme.repointBlue
 import com.repoint.dependencies.theme.repointOrange
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 
 @Composable
@@ -33,7 +43,8 @@ fun AuthBottomSheetContent(
     Column(
         Modifier
             .fillMaxWidth()
-            .padding(16.dp)) {
+            .padding(16.dp)
+    ) {
 
         Spacer(Modifier.height(16.dp))
         AuthButtonsSheet(onCreateWallet, onImportWallet)
@@ -47,14 +58,21 @@ fun AuthBottomSheetContent(
 @Composable
 fun AuthButtonsSheet(onCreateWallet: () -> Unit, onImportWallet: () -> Unit) {
 
+    val scope = rememberCoroutineScope()
+
     Column(verticalArrangement = Arrangement.SpaceEvenly) {
 
 
-        BigPng(com.repoint.dependencies.R.drawable.add_wallet,Modifier.padding(2.dp),16f,10f)
+        BigPng(com.repoint.dependencies.R.drawable.add_wallet, Modifier.padding(2.dp), 16f, 10f)
 
         Spacer(modifier = Modifier.padding(bottom = 8.dp))
 
-        Text("Repoint wallet is Safe And Secure.Your Data will not Store anywhere", style = RepointTypography.bodyMedium, textAlign = TextAlign.Center, modifier = Modifier.padding(4.dp))
+        Text(
+            "Repoint wallet is Safe And Secure.Your Data will not Store anywhere",
+            style = RepointTypography.bodyMedium,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.padding(4.dp)
+        )
 
         Spacer(modifier = Modifier.padding(bottom = 8.dp))
 
@@ -64,18 +82,31 @@ fun AuthButtonsSheet(onCreateWallet: () -> Unit, onImportWallet: () -> Unit) {
             backgroundColor = repointOrange,
             icon = {
                 Icon(
-                   imageVector = Icons.Filled.Add,
+                    imageVector = Icons.Filled.Add,
                     contentDescription = "Add Icon",
                     tint = Color(0xFFFFA726)
                 )
-            }, onClick = onCreateWallet)
+            }, onClick = {
+                scope.launch {
+                    delay(150)
+                    onCreateWallet()
+                }
+            })
 
         Spacer(Modifier.height(12.dp))
 
-        WalletButton("Add existing Wallet", subText = "Import, restore or view-only", backgroundColor = repointBlue,
+        WalletButton("Add existing Wallet",
+            subText = "Import, restore or view-only",
+            backgroundColor = repointBlue,
             icon = {
-                Icon(imageVector = Icons.Filled.Download, contentDescription = "Download Icon", tint = Color(0xFF1565C0))
-            }, onClick = onImportWallet)
+                Icon(
+                    imageVector = Icons.Filled.Download,
+                    contentDescription = "Download Icon",
+                    tint = Color(0xFF1565C0)
+                )
+            },
+            onClick = onImportWallet
+        )
 
     }
 

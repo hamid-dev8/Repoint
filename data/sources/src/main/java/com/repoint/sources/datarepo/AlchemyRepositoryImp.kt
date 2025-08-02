@@ -11,16 +11,24 @@ import com.repoint.models.sharedmodels.rpc.FeeHistoryResult
 import com.repoint.models.sharedmodels.rpc.GasPriceTier
 import com.repoint.models.sharedmodels.ui.ApiException
 import com.repoint.models.sharedmodels.ui.ApiResult
+import com.repoint.network.di.Web3Provider
 import com.repoint.network.util.resolveChainFromPlatform
 import com.repoint.network.util.NetworkApiService
 import com.repoint.network.util.safeApiCall
 import com.repoint.sources.datarepo.datasource.AlchemyDataSource
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import org.web3j.protocol.core.DefaultBlockParameterName
 import java.math.BigDecimal
 import java.math.BigInteger
 import javax.inject.Inject
 
 class AlchemyRepositoryImp @Inject constructor(private val networkApi: NetworkApiService,private val db : CmcTokenDao) :
     AlchemyDataSource {
+
+
+    @Inject
+    lateinit var web3Provider: Web3Provider
 
     override suspend fun getTokenBalances(walletAddress: String,contracts : List<String>): ApiResult<AlchemyTokenBalanceResponse> {
         return safeApiCall {
@@ -36,6 +44,43 @@ class AlchemyRepositoryImp @Inject constructor(private val networkApi: NetworkAp
                 )
             )
             networkApi.getTokenBalances(body)
+        }
+    }
+
+    override suspend fun getNativeBalanceForChain(walletAddress: String, chainId: Int): ApiResult<BigInteger> = withContext(Dispatchers.IO) {
+        Log.d("Web3Chain", "🚀 Entering getNativeBalanceForChain for chainId=$chainId")
+
+         safeApiCall {
+            val web3 = try {
+                web3Provider.getWeb3j(chainId).also {
+                    Log.d("Web3Chain", "✅ Web3j instance created")
+                }
+            } catch (e: Exception) {
+                Log.e("Web3Chain", "❌ Error creating Web3j for $chainId", e)
+                throw e
+            }
+
+            val clientVersion = try {
+                web3.web3ClientVersion().send().web3ClientVersion.also {
+                    Log.d("Web3Chain", "👷 Connected to node: $it")
+                }
+            } catch (e: Exception) {
+                Log.e("Web3Chain", "❌ Failed getting client version for $chainId", e)
+                throw e
+            }
+
+            val balanceResp = try {
+                web3.ethGetBalance(walletAddress, DefaultBlockParameterName.LATEST).send()
+            } catch (e: Exception) {
+                Log.e("Web3Chain", "❌ Failed fetching balance from node", e)
+                throw e
+            }
+
+            val result = balanceResp.balance.also {
+                Log.d("Web3Chain", "💰 Balance (wei) = $it")
+            }
+
+            result
         }
     }
 
@@ -114,6 +159,7 @@ class AlchemyRepositoryImp @Inject constructor(private val networkApi: NetworkAp
 
         return@safeApiCall finalBalances
     }
+
     fun getTokenDecimals(meta: TokenMetaData): Int {
         return when (meta.symbol.uppercase()) {
             "USDT", "USDC" -> 6
@@ -121,51 +167,7 @@ class AlchemyRepositoryImp @Inject constructor(private val networkApi: NetworkAp
             else -> 18
         }
     }
-    fun parseAlchemyBalances(
-        rawResponse: AlchemyTokenBalanceResponse,
-        currentChain: String,
-        metaList: List<TokenMetaData> // ← optional, if using dynamic resolve
-    ): List<AlchemyTokenBalance> {
-        return rawResponse.result.tokenBalances.map { raw ->
-            val meta = resolveFromMeta(raw.contractAddress, currentChain, metaList)
 
-            meta?.logo?.let {
-                AlchemyTokenBalance(
-                    name = meta?.name ?: "Unknown",
-                    symbol = meta?.symbol ?: "???",
-                    logo = it,
-                    contractAddress = raw.contractAddress,
-                    tokenBalance = raw.tokenBalance?.let { it1 -> convertHexToDecimal(it1, decimals = 6).toPlainString() },
-                    chainSlug = currentChain
-                )
-            }!!
-        }
-    }
-    fun resolveFromMeta(contract: String, chain: String, metaList: List<TokenMetaData>): TokenMetaData? {
-        return metaList.firstOrNull { meta ->
-            meta.contractAddress.any {
-                it.contractAddress.equals(contract, ignoreCase = true) &&
-                        it.platform.coin.slug.equals(chain, ignoreCase = true)
-            }
-        }
-    }
-
-    fun resolveName(contract: String, chain: String, metaList: List<TokenMetaData>) =
-        resolveFromMeta(contract, chain, metaList)?.name ?: "Unknown"
-
-    fun resolveSymbol(contract: String, chain: String, metaList: List<TokenMetaData>) =
-        resolveFromMeta(contract, chain, metaList)?.symbol ?: "???"
-
-    fun resolveLogo(contract: String, chain: String, metaList: List<TokenMetaData>) =
-        resolveFromMeta(contract, chain, metaList)?.logo
-
-    fun convertHexToDecimal(hex: String, decimals: Int): BigDecimal {
-        return hex.removePrefix("0x")
-            .toBigIntegerOrNull(16)
-            ?.toBigDecimal()
-            ?.movePointLeft(decimals) // Adjust for token decimals (e.g., 6 or 18)
-            ?: BigDecimal.ZERO
-    }
 
     override suspend fun getNativeBalance(walletAddress: String): ApiResult<String> {
         return safeApiCall {

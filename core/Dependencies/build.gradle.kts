@@ -164,6 +164,10 @@ dependencies {
 
     //leak cannery
     debugApi(libs.leakcanary.android)
+
+    //shimmer
+    api(libs.compose.shimmer)
+
 }
 
 

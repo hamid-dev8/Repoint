@@ -10,6 +10,7 @@ import com.repoint.models.sharedmodels.local.BlockchainNetworkEntity
 import com.repoint.models.sharedmodels.local.TokenEntity
 import com.repoint.models.sharedmodels.remote.BlockchainNetwork
 import com.repoint.models.sharedmodels.remote.Token
+import com.repoint.models.sharedmodels.remote.TokenMetaData
 
 
 fun BlockchainNetworkEntity.toDomainModel(tokens : List<TokenEntity>): BlockchainNetwork {
@@ -47,3 +48,20 @@ fun Modifier.clickableWithRipple(onClick:() -> Unit) : Modifier{
         onClick = onClick
     )
 }
+
+/*fun TokenMetaData.getDecimalsFor(contractAddress: String): Int? {
+    return this.contractAddress.firstOrNull {
+        it.contractAddress.equals(contractAddress, ignoreCase = true)
+    }?.decimal
+}*/
+fun TokenMetaData.getContractAddressFor(chainSlug: String): String? {
+    // Manual override
+    if (this.symbol.equals("USDT", ignoreCase = true) && chainSlug == "polygon") {
+        return "0xc2132d05d31c914a87c6611c10748aeb04b58e8f"
+    }
+
+    return this.contractAddress.firstOrNull {
+        it.platform?.coin?.slug.equals(chainSlug, ignoreCase = true)
+    }?.contractAddress
+}
+

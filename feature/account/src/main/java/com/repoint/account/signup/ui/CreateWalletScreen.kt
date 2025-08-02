@@ -12,14 +12,10 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.ripple.rememberRipple
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.derivedStateOf
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -33,26 +29,21 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
-import com.repoint.account.UserViewModel
 import com.repoint.account.WalletViewModel
 import com.repoint.basics.atoms.BigPng
 import com.repoint.basics.atoms.RepointAppBar
 import com.repoint.basics.atoms.RepointCheckbox
 import com.repoint.basics.atoms.RepointCommonButton
-import com.repoint.dependencies.theme.RepointTypography
-import com.repoint.dependencies.theme.repointBlue
 import com.repoint.dependencies.accountmanager.SpManager
+import com.repoint.dependencies.theme.RepointTypography
 import com.repoint.dependencies.theme.pureWhite
+import com.repoint.dependencies.theme.repointBlue
 import kotlinx.coroutines.launch
 
 
 @Preview
 @Composable
 fun CreateWalletPreview() {
-    Surface(Modifier.fillMaxSize()) {
-        //WalletConfirmSurface()
-    }
-
 }
 
 @Composable
@@ -106,14 +97,6 @@ fun WalletConfirmSurface(
     val context = LocalContext.current
     val spManager = SpManager(context)
     val userId = spManager.activeWalletIdFlow.collectAsState()
-    // val isCreating by remember { derivedStateOf { walletCreated == null } }
-
-    /* LaunchedEffect(walletCreated) {
-         walletCreated?.let{
-             onConfirm(it)
-         }
-     }*/
-
 
 
     RepointAppBar("", navController = navController, exp = { _, _, _ ->
@@ -189,9 +172,6 @@ fun WalletConfirmSurface(
                 "Confirm",
                 modifier = Modifier.align(Alignment.BottomCenter),
                 onClick = {
-                    // viewModel.createUserWallet(walletName = "Wallet 1" , userId = null)
-                    //  viewModel.walletCreated.value?.let { onConfirm(it) }
-
                     coroutineScope.launch {
                         val phrase =
                             viewModel.generateWalletInMemory(walletName = "", userId = userId.value)

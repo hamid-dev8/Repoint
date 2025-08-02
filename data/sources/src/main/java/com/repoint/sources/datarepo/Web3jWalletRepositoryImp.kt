@@ -126,6 +126,7 @@ class Web3jWalletRepositoryImp @Inject constructor(private val web3Provider: Web
         networkChainId: Long
     ): TransactionReceipt? = withContext(Dispatchers.IO) {
 
+        Log.d("sendToken","the networkChainId is : $networkChainId")
         val web3j = web3Provider.getWeb3j(chainId = networkChainId.toInt())
         val senderAddress = credentials.address
         Log.d("sendToken", "🧮 sender Address is : $senderAddress")
@@ -160,6 +161,7 @@ class Web3jWalletRepositoryImp @Inject constructor(private val web3Provider: Web
                 gasPrice,
                 gasLimit,
                 contractAddress,
+                BigInteger.ZERO,
                 data
             )
             val transactionManager = RawTransactionManager(web3j, credentials, networkChainId)
@@ -317,30 +319,46 @@ class Web3jWalletRepositoryImp @Inject constructor(private val web3Provider: Web
 
 
 
+/*listOf(TypeReference.create(Bool::class.java))*/
+fun encodeERC20Transfer(recipient: String, amountInWei: BigInteger): String {
+    val transferFunction = Function(
+        "transfer",
+        listOf(Address(recipient.lowercase()), Uint256(amountInWei)),
+        emptyList() // ❗️Don't expect a Bool return — USDT on Polygon will break!
+    )
+    Log.d("transaction", "encoded transfer = ${FunctionEncoder.encode(transferFunction)}")
+    return FunctionEncoder.encode(transferFunction)
+}
 
-    fun encodeERC20Transfer(recipient: String, amountInWei: BigInteger): String {
-        val transferFunction = Function(
-            "transfer",
-            listOf(Address(recipient.lowercase()), Uint256(amountInWei)),
-            listOf(TypeReference.create(Bool::class.java))
-        )
-        Log.d(
-            "transaction",
-            "the encoded transfer function is ${FunctionEncoder.encode(transferFunction)}"
-        )
-        return FunctionEncoder.encode(transferFunction)
-    }
 
+    val knownTokenDecimals = mapOf(
+        // Gemini USDT on Polygon
+        "0x1e4a5963abfd975d8c9021ce480b42188849d41d".lowercase() to 6,
+        // USDT on Ethereum
+        "0xdac17f958d2ee523a2206206994597c13d831ec7".lowercase() to 6,
+        // USDC on Ethereum
+        "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48".lowercase() to 6
+        // Add more as needed
+    )
 
     suspend fun getTokenDecimalsSafely(
         tokenAddress: String,
         credentials: Credentials,
         chainId: Long
     ): Int = withContext(Dispatchers.IO) {
+
+        val normalizedAddress = tokenAddress.lowercase()
+        knownTokenDecimals[normalizedAddress]?.let {
+            Log.w("TokenDecimals", "⚠️ Using known decimals from map for $tokenAddress: $it")
+            return@withContext it
+        }
+
+        val addressLower = tokenAddress.lowercase()
+
         try {
             val web3j = web3Provider.getWeb3j(chainId = chainId.toInt())
             val gasPrice = web3j.ethGasPrice().send().gasPrice
-            val gasLimit = BigInteger.valueOf(100_000) //reasonable default for decimals...
+            val gasLimit = BigInteger.valueOf(100_000)
 
             val erc20 = TokenERC20.load(
                 tokenAddress,
@@ -349,13 +367,22 @@ class Web3jWalletRepositoryImp @Inject constructor(private val web3Provider: Web
                 gasPrice,
                 gasLimit
             )
+
             val decimals = erc20.decimals().send()
+
+            // 🔍 Detect empty result
+            if (decimals == null || decimals == BigInteger.ZERO) {
+                Log.w("TokenDecimals", "⚠️ Token $tokenAddress returned 0 or null decimals — checking known fallback")
+                return@withContext knownTokenDecimals[addressLower] ?: 18
+            }
+
             Log.d("TokenDecimals", "✅ Token $tokenAddress reports decimals = $decimals")
-            decimals.toInt()
+            return@withContext decimals.toInt()
         } catch (e: Exception) {
-            Log.e("TokenDecimals", "❌ Failed to get decimals for token: $tokenAddress — defaulting to 18", e)
-            18 // fallback // fallback default used by most tokens
+            Log.e("TokenDecimals", "❌ Failed to get decimals for $tokenAddress — fallback to map or default", e)
+            return@withContext knownTokenDecimals[addressLower] ?: 18
         }
     }
+
 
 }
