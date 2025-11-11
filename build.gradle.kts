@@ -28,3 +28,14 @@ buildscript {
         classpath("org.web3j:web3j-gradle-plugin:4.8.0")
     }
 }
+
+subprojects {
+    plugins.withId("org.jetbrains.kotlin.kapt") {
+        kapt {
+            arguments {
+                // This disables the buggy "lazy keys" feature on Windows
+                arg("dagger.fastInit", "DISABLED")
+            }
+        }
+    }
+}
