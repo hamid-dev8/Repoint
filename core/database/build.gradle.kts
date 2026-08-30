@@ -1,11 +1,8 @@
 plugins {
     alias(libs.plugins.android.library)
     alias(libs.plugins.kotlin.android)
-
-    kotlin("kapt")
-    alias(libs.plugins.ksp)
+    alias(libs.plugins.ksp) // KSP only
     alias(libs.plugins.hilt)
-
 }
 
 android {
@@ -24,54 +21,46 @@ android {
             isMinifyEnabled = false
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
-                "proguard-rules.pro",
-                file("'../core/Dependencies/proguard-rules.pro")
-
+                "proguard-rules.pro"
             )
         }
     }
+
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_11
-        targetCompatibility = JavaVersion.VERSION_11
-    }
-    kotlinOptions {
-        jvmTarget = "11"
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
     }
 
-    // ✅ Exclude conflicting META-INF files
+    kotlinOptions {
+        jvmTarget = "17"
+    }
+
     packaging {
-        resources.excludes.add("META-INF/LICENSE.md")
-        resources.excludes.add("META-INF/LICENSE-notice.md")
-        resources.excludes.add("META-INF/DEPENDENCIES")
-        resources.excludes.add("META-INF/LICENSE")
-        resources.excludes.add("META-INF/LICENSE.txt")
-        resources.excludes.add("META-INF/NOTICE")
-        resources.excludes.add("META-INF/NOTICE.txt")
+        resources.excludes.addAll(
+            listOf(
+                "META-INF/LICENSE.md",
+                "META-INF/LICENSE-notice.md",
+                "META-INF/DEPENDENCIES",
+                "META-INF/LICENSE",
+                "META-INF/LICENSE.txt",
+                "META-INF/NOTICE",
+                "META-INF/NOTICE.txt",
+                "META-INF/versions/9/OSGI-INF/MANIFEST.MF"
+            )
+        )
     }
 }
 
 dependencies {
-
     implementation(project(":core:Dependencies"))
     implementation(project(":core:models"))
 
-    //room
+    // Room
     implementation(libs.androidx.room.runtime)
-    // optional - Kotlin Extensions and Coroutines support for Room
     implementation(libs.androidx.room.ktx)
     ksp(libs.androidx.room.compiler)
 
-    //kapt(libs.androidx.room.compiler)
-
+    // Hilt
     implementation(libs.hilt.android)
-    //  kapt("com.google.dagger:hilt-android-compiler:2.51.1")
-    kapt (libs.hilt.compiler)
-}
-// For KSP
-ksp {
-    arg("option_name", "option_value")
-// other options...
-}
-kapt{
-    correctErrorTypes = true
+    ksp(libs.hilt.compiler) // Changed from kapt to ksp
 }

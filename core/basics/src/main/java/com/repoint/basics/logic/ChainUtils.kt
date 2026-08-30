@@ -7,10 +7,13 @@ import com.repoint.models.sharedmodels.remote.normalizeSlug
 import com.repoint.models.sharedmodels.rpc.AlchemyChain
 
 fun mapPlatformToAlchemyChain(contract: ContractAddress): AlchemyChain? {
+    val platform = contract.platform ?: return null
+    val platformSlug = platform.coin?.slug
+    val platformName = platform.name
     return AlchemyChain.entries.find { chain ->
-        chain.name.equals(contract.platform.coin.slug, ignoreCase = true) ||
-                chain.name.equals(contract.platform.name, ignoreCase = true) ||
-                chain.name.equals(contract.platform.coin.name, ignoreCase = true)
+        chain.name.equals(platformSlug, ignoreCase = true) ||
+                chain.name.equals(platformName, ignoreCase = true) ||
+                chain.name.equals(platform.coin?.name, ignoreCase = true)
     }
 }
 val slugToChainIdMap: Map<String, Int> = mapOf(

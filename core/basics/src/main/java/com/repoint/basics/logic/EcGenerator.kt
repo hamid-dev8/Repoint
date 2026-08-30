@@ -131,10 +131,32 @@ object EcGenerator {
     }
 
     fun isValidMnemonic(mnemonic: String): Boolean {
-        val binary = mnemonicToBinary(mnemonic, MnemonicUtils.getWords())
-        val (entropy, checksum) = binaryToEntropy(binary)
-        val calculatedChecksum = calculateChecksum(entropy)
-        return calculatedChecksum == checksum
+        val normalizedMnemonic = normalizeMnemonic(mnemonic)
+        if (normalizedMnemonic.isBlank()) return false
+
+        val words = normalizedMnemonic.split(Regex("\\s+"))
+        if (words.size !in listOf(12, 15, 18, 21, 24)) return false
+
+        return try {
+            MnemonicUtils.validateMnemonic(normalizedMnemonic)
+        } catch (e: Exception) {
+            false
+        }
+    }
+
+    fun getMnemonicSuggestions(prefix: String): List<String> {
+        val query = prefix.trim().lowercase()
+        if (query.isEmpty()) return emptyList()
+        return MnemonicUtils.getWords()
+            .filter { it.startsWith(query) }
+            .take(6)
+    }
+
+    private fun normalizeMnemonic(mnemonic: String): String {
+        return mnemonic.trim().split(Regex("\\s+"))
+            .filter { it.isNotEmpty() }
+            .joinToString(" ")
+            .lowercase()
     }
 
     private fun mnemonicToBinary(mnemonic: String, wordList: List<String>): String {

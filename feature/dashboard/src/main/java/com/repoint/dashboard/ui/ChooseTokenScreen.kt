@@ -292,8 +292,8 @@ fun ChooseTokenScreen(
                             val slug = token.chain.lowercase()
 
                             // گرفتن آدرس قرارداد مرتبط با شبکه انتخاب شده
-                            val selectedContract = token.tokenMeta.contractAddress.firstOrNull {
-                                it.platform.coin.slug.equals(slug, ignoreCase = true)
+                            val selectedContract = token.tokenMeta.contractAddress.orEmpty().firstOrNull {
+                                it.platform?.coin?.slug.equals(slug, ignoreCase = true)
                             }
 
                             if (selectedContract == null) {
@@ -401,7 +401,7 @@ fun ResolvedTokenRow(
                     val balance = matchBalance(token.tokenMeta, balances, token.chain)?.toPlainString() ?: "0"
 
                     Log.d("BalanceMatch", "Trying to match token: ${token.name} on chain=${token.chain}")
-                    Log.d("BalanceMatch", "→ Meta contracts: ${token.tokenMeta.contractAddress.map { it.contractAddress }}")
+                    Log.d("BalanceMatch", "→ Meta contracts: ${token.tokenMeta.contractAddress.orEmpty().map { it.contractAddress }}")
                     Log.d("BalanceMatch", "→ Alchemy balances: ${balances.map { it.contractAddress to it.chainSlug }}")
 
                     Log.d("ResolvedTokenRow","token meta is : ${token.tokenMeta}")

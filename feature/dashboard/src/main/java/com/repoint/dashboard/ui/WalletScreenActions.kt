@@ -1230,10 +1230,15 @@ fun ActionsRow(
     navController: NavController,
     wallet: MasterWallet?,
     activeTokens: List<ResolvedTokenInstance>?,
-    activeAddress: String
+    activeAddress: String,
+    walletConnectViewModel: com.repoint.dashboard.WalletConnectViewModel = hiltViewModel()
 ) {
 
     val context = LocalContext.current
+    val walletConnectUiState by walletConnectViewModel.uiState.collectAsState()
+    val isWcConnected = walletConnectUiState.activeSession != null ||
+        walletConnectUiState.status.startsWith("Connected to", ignoreCase = true)
+
     Row(
         horizontalArrangement = Arrangement.spacedBy(12.dp),
         modifier = Modifier
@@ -1291,8 +1296,9 @@ fun ActionsRow(
         )
         CircularCardWithIcon(
             icon = painterResource(R.drawable.bot),
-            text = "To Bot",
+            text = if (isWcConnected) "Bot Connected" else "To Bot",
             iconSize = 26.dp,
+            iconTint = if (isWcConnected) com.repoint.dependencies.theme.repointOrange else richBlack,
             onClick = {
                 /*    val encodedUrl = Uri.encode("https://repoint.app") // or your actual bot URL
                     navController.navigate("bot/$encodedUrl")*/
@@ -1509,17 +1515,18 @@ fun matchBalance(
     currentChain: String
 ): BigDecimal? {
     val slug = currentChain.lowercase()
-    val matchedContracts = tokenMeta.contractAddress.filter {
+    val matchedContracts = tokenMeta.contractAddress.orEmpty().filter { contract ->
         val normalizedChain = normalizeSlug(currentChain)
+        val platform = contract.platform
+        val contractChain = normalizeSlug(platform?.coin?.slug ?: platform?.name ?: "")
+
         Log.d(
             "BalanceMatch",
             "Matching ${tokenMeta.symbol} on chain: $currentChain (normalized: $normalizedChain)"
         )
-
-        val contractChain = normalizeSlug(it.platform.coin.slug)
         Log.d(
             "BalanceMatch",
-            "Checking contract ${it.contractAddress} on ${it.platform.coin.slug} (normalized: $contractChain)"
+            "Checking contract ${contract.contractAddress} on ${platform?.coin?.slug ?: platform?.name ?: "unknown"} (normalized: $contractChain)"
         )
         contractChain == normalizedChain
     }
@@ -1583,7 +1590,7 @@ fun netWorthSection(tokenList: List<TokensBalance>?): Float {
 }
 
 fun isNativeToken(meta: TokenMetaData): Boolean {
-    if (meta.contractAddress.isEmpty()) return true
+    if (meta.contractAddress.orEmpty().isEmpty()) return true
 
     //case 2 : Knownn native token Symbols
     // Case 2: Known native token symbols

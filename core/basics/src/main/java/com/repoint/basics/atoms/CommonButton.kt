@@ -21,6 +21,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.graphics.Shape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowForward
@@ -69,7 +70,10 @@ fun RepointCommonButton(
     onClick : () -> Unit,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
-    margin : Dp = 0.dp
+    margin : Dp = 0.dp,
+    shape: Shape = RoundedCornerShape(50.dp),
+    fullWidth: Boolean = true,
+    buttonHeight: Dp = 52.dp
 ) {
 
     val interactionSource = remember { MutableInteractionSource() }
@@ -84,27 +88,28 @@ fun RepointCommonButton(
         ),
         label = "button_scale"
     )
-        Button(
-            onClick = {
-               scope.launch {
-                   delay(150)
-                   onClick()
-               }
-            },
-            enabled = enabled,
-            shape = RoundedCornerShape(50.dp),
-            interactionSource = interactionSource,
-            modifier = modifier.graphicsLayer {
-                scaleX = scale
-                scaleY = scale
+    Button(
+        onClick = {
+           scope.launch {
+               delay(150)
+               onClick()
             }
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(50.dp))
-                .padding(horizontal = 14.dp, vertical = margin)
-                .height(52.dp),
-        ) {
-            Text(text = text, style = RepointTypography.bodyLarge)
-        }
+        },
+        enabled = enabled,
+        shape = shape,
+        interactionSource = interactionSource,
+        modifier = modifier
+            .graphicsLayer {
+               scaleX = scale
+               scaleY = scale
+            }
+            .then(if (fullWidth) Modifier.fillMaxWidth() else Modifier)
+            .clip(shape)
+            .padding(horizontal = 14.dp, vertical = margin)
+            .height(buttonHeight),
+    ) {
+        Text(text = text, style = RepointTypography.bodyLarge)
+    }
 
 }
 

@@ -13,6 +13,11 @@ import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
+import java.time.Instant
+import java.time.LocalDateTime
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
+import java.time.format.DateTimeParseException
 import javax.inject.Inject
 
 
@@ -67,7 +72,10 @@ class TxHistoryViewModel @Inject constructor(
                 }
             }
 
-            _txHistory.value = allTxs.sortedByDescending { it.timestamp }
+            _txHistory.value = allTxs.sortedWith(
+                compareByDescending<TxHistoryItem> { parseTxTimestamp(it.timestamp) }
+                    .thenByDescending { it.blockNum.toLongOrNull() ?: 0L }
+            )
             Log.d("TxHistoryVM", "🟢 Final merged tx count: ${_txHistory.value.size}")
             _isLoading.value = false
         }
@@ -80,7 +88,10 @@ class TxHistoryViewModel @Inject constructor(
             when (val result = repository.getTransactionHistory(walletAddress, pageKey = nextPageKey, chainId = chainId, direction = TxDirection.BOTH)) {
                 is ApiResult.Success -> {
                     val (newTxs, newPageKey) = result.data
-                    _txHistory.value = _txHistory.value + newTxs
+                    _txHistory.value = (_txHistory.value + newTxs).sortedWith(
+                        compareByDescending<TxHistoryItem> { parseTxTimestamp(it.timestamp) }
+                            .thenByDescending { it.blockNum.toLongOrNull() ?: 0L }
+                    )
                     nextPageKey = newPageKey
                 }
                 is ApiResult.Error -> { }
@@ -89,6 +100,22 @@ class TxHistoryViewModel @Inject constructor(
         }
     }
 
+    private fun parseTxTimestamp(value: String): Long {
+        if (value.isBlank() || value.equals("unknown", ignoreCase = true)) return 0L
 
+        return try {
+            value.toLong()
+        } catch (_: NumberFormatException) {
+            try {
+                Instant.parse(value).epochSecond
+            } catch (_: DateTimeParseException) {
+                try {
+                    LocalDateTime.parse(value, DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")).atZone(ZoneId.systemDefault()).toEpochSecond()
+                } catch (_: DateTimeParseException) {
+                    0L
+                }
+            }
+        }
+    }
 
 }

@@ -60,7 +60,7 @@ fun TokenMetaData.getContractAddressFor(chainSlug: String): String? {
         return "0xc2132d05d31c914a87c6611c10748aeb04b58e8f"
     }
 
-    return this.contractAddress.firstOrNull {
+    return this.contractAddress.orEmpty().firstOrNull {
         it.platform?.coin?.slug.equals(chainSlug, ignoreCase = true)
     }?.contractAddress
 }

@@ -93,8 +93,12 @@ class AlchemyRepositoryImp @Inject constructor(private val networkApi: NetworkAp
         val groupedByChain: Map<AlchemyChain, List<Pair<String, TokenMetaData>>> = tokenMetaMap
             .values
             .flatMap { meta ->
-                meta.contractAddress.mapNotNull { contract ->
-                    val chain = resolveChainFromPlatform(contract.platform.name) ?: return@mapNotNull null
+                meta.contractAddress.orEmpty().mapNotNull { contract ->
+                    val platform = contract.platform ?: return@mapNotNull null
+                    val platformName = platform.name.ifBlank { platform.coin?.slug ?: return@mapNotNull null }
+                    val chain = resolveChainFromPlatform(platformName)
+                        ?: resolveChainFromPlatform(platform.coin?.slug ?: platformName)
+                        ?: return@mapNotNull null
                     chain to (contract.contractAddress.lowercase() to meta)
                 }
             }

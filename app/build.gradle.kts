@@ -40,7 +40,7 @@ android {
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro",
-               file("'../core/Dependencies/proguard-rules.pro"),
+               file("../core/Dependencies/proguard-rules.pro"),
                 file("../core/basics/proguard-rules.pro"),
                 file("../core/database/proguard-rules.pro"),
                 file("../core/models/proguard-rules.pro"),
@@ -56,11 +56,11 @@ android {
         }
     }
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_11
-        targetCompatibility = JavaVersion.VERSION_11
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
     }
     kotlinOptions {
-        jvmTarget = "11"
+        jvmTarget = "17"
     }
     buildFeatures {
         compose = true
@@ -80,6 +80,7 @@ android {
         resources.excludes.add("META-INF/LICENSE.txt")
         resources.excludes.add("META-INF/NOTICE")
         resources.excludes.add("META-INF/NOTICE.txt")
+        resources.excludes.add("META-INF/versions/9/OSGI-INF/MANIFEST.MF")
     }
 }
 
@@ -90,6 +91,7 @@ dependencies {
     implementation(project(":feature"))
     implementation(project(":feature:account"))
     implementation(project(":feature:dashboard"))
+    implementation(project(":data:sources"))
     implementation(project(":feature:splash"))
 
     implementation(libs.hilt.android)

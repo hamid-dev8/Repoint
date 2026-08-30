@@ -13,6 +13,11 @@ import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
+import java.time.Instant
+import java.time.LocalDateTime
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
+import java.time.format.DateTimeParseException
 import javax.inject.Inject
 import javax.inject.Named
 
@@ -129,12 +134,36 @@ class AlchemyTxRepositoryImp @Inject constructor(
                         )
                     }
                 )
-            }.distinctBy { it.hash + it.timestamp }.sortedByDescending { it.timestamp }
+            }.distinctBy { it.hash + it.timestamp }
+                .sortedWith(
+                    compareByDescending<TxHistoryItem> { parseTxTimestamp(it.timestamp) }
+                        .thenByDescending { it.blockNum.toLongOrNull() ?: 0L }
+                )
 
             txs to null // pageKey support optional here
         }
     }
 
+}
+
+private fun parseTxTimestamp(value: String): Long {
+    if (value.isBlank() || value.equals("unknown", ignoreCase = true)) return 0L
+
+    return try {
+        value.toLong()
+    } catch (_: NumberFormatException) {
+        try {
+            Instant.parse(value).epochSecond
+        } catch (_: DateTimeParseException) {
+            try {
+                LocalDateTime.parse(value, DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"))
+                    .atZone(ZoneId.systemDefault())
+                    .toEpochSecond()
+            } catch (_: DateTimeParseException) {
+                0L
+            }
+        }
+    }
 }
 
 private fun sanitizeAssetName(asset: String?): String {

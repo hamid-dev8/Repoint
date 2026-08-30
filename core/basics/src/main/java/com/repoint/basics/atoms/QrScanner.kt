@@ -22,32 +22,50 @@ import com.google.mlkit.vision.barcode.BarcodeScanning
 import com.google.mlkit.vision.barcode.common.Barcode
 import com.google.mlkit.vision.common.InputImage
 import java.util.concurrent.Executors
+import java.util.concurrent.atomic.AtomicBoolean
 
 @Composable
 fun QrScannerScreen(onQrCodeScanned: (String) -> Unit) {
     val context = LocalContext.current
-    val cameraProviderFuture = remember { ProcessCameraProvider.getInstance(context) }
+    // AtomicBoolean ensures the callback fires only once even across frames
+    val scanned = remember { AtomicBoolean(false) }
 
     AndroidView(
         factory = { ctx ->
+            Log.d("QrScanner", "PreviewView factory called")
             PreviewView(ctx).apply {
                 scaleType = PreviewView.ScaleType.FILL_CENTER
-                post { startCamera(this, context, onQrCodeScanned) }
+                post {
+                    startCamera(this, context) { value ->
+                        if (scanned.compareAndSet(false, true)) {
+                            Log.d("QrScanner", "First QR scan accepted: $value")
+                            onQrCodeScanned(value)
+                        } else {
+                            Log.d("QrScanner", "Duplicate QR scan ignored: $value")
+                        }
+                    }
+                }
             }
         },
         modifier = Modifier.fillMaxSize()
     )
 }
 
-private fun startCamera(previewView: PreviewView, context: Context, onQrCodeScanned: (String) -> Unit) {
+private fun startCamera(
+    previewView: PreviewView,
+    context: Context,
+    onQrCodeScanned: (String) -> Unit
+) {
+    Log.d("QrScanner", "startCamera called")
     val cameraProviderFuture = ProcessCameraProvider.getInstance(context)
     val cameraExecutor = Executors.newSingleThreadExecutor()
 
     cameraProviderFuture.addListener({
+        Log.d("QrScanner", "CameraProvider ready")
         val cameraProvider = cameraProviderFuture.get()
 
         val preview = Preview.Builder().build().also {
-            it.setSurfaceProvider(previewView.surfaceProvider) // ✅ No more findViewById issue!
+            it.setSurfaceProvider(previewView.surfaceProvider)
         }
 
         val imageAnalyzer = ImageAnalysis.Builder()
@@ -64,8 +82,12 @@ private fun startCamera(previewView: PreviewView, context: Context, onQrCodeScan
         try {
             cameraProvider.unbindAll()
             cameraProvider.bindToLifecycle(
-                context as ComponentActivity, cameraSelector, preview, imageAnalyzer
+                context as ComponentActivity,
+                cameraSelector,
+                preview,
+                imageAnalyzer
             )
+            Log.d("QrScanner", "Camera bound to lifecycle successfully")
         } catch (exc: Exception) {
             Log.e("QrScanner", "Use case binding failed", exc)
         }
@@ -75,25 +97,27 @@ private fun startCamera(previewView: PreviewView, context: Context, onQrCodeScan
 @OptIn(ExperimentalGetImage::class)
 private fun processImage(imageProxy: ImageProxy, onQrCodeScanned: (String) -> Unit) {
     val mediaImage = imageProxy.image
-    if (mediaImage != null) {
-        val image = InputImage.fromMediaImage(mediaImage, imageProxy.imageInfo.rotationDegrees)
-        val scanner = BarcodeScanning.getClient()
-
-        scanner.process(image)
-            .addOnSuccessListener { barcodes ->
-                for (barcode in barcodes) {
-                    barcode.rawValue?.let { scannedValue ->
-                        if (barcode.format == Barcode.FORMAT_QR_CODE) {
-                            onQrCodeScanned(scannedValue)
-                        }
-                    }
-                }
-            }
-            .addOnFailureListener { e ->
-                Log.e("QrScanner", "QR Scan Failed: ${e.message}")
-            }
-            .addOnCompleteListener {
-                imageProxy.close()
-            }
+    if (mediaImage == null) {
+        Log.w("QrScanner", "processImage: mediaImage is null, closing proxy")
+        imageProxy.close()
+        return
     }
+
+    val image = InputImage.fromMediaImage(mediaImage, imageProxy.imageInfo.rotationDegrees)
+    val scanner = BarcodeScanning.getClient()
+
+    scanner.process(image)
+        .addOnSuccessListener { barcodes ->
+            val qr = barcodes.firstOrNull { it.format == Barcode.FORMAT_QR_CODE }
+            if (qr != null) {
+                Log.d("QrScanner", "QR barcode found: ${qr.rawValue}")
+                qr.rawValue?.let { onQrCodeScanned(it) }
+            }
+        }
+        .addOnFailureListener { e ->
+            Log.e("QrScanner", "QR scan frame failed: ${e.message}")
+        }
+        .addOnCompleteListener {
+            imageProxy.close()
+        }
 }

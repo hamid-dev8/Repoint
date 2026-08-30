@@ -129,7 +129,7 @@ fun SendTokenScreen(
     tokenMeta?.contractAddress?.forEach {
         Log.d(
             "tokenMetaCheck",
-            "Known contract: ${it.contractAddress}, slug: ${it.platform.coin.slug}"
+            "Known contract: ${it.contractAddress}, slug: ${it.platform?.coin?.slug ?: "unknown"}"
         )
     }
     val balancesState by alchemyViewModel.tokenBalances.collectAsState()
@@ -613,7 +613,8 @@ fun isValidWalletAddress(address: String): Boolean {
 fun TokenMetaData.getSlugFor(contractAddress: String): String? {
     Log.w("SlugMatch", "contract Address  is :  $contractAddress")
 
-    val match = this.contractAddress.find {
+    val contracts = this.contractAddress.orEmpty()
+    val match = contracts.find {
         it.contractAddress.equals(contractAddress, ignoreCase = true)
     }
     Log.w("SlugMatch", "match is :  $match")
@@ -623,10 +624,10 @@ fun TokenMetaData.getSlugFor(contractAddress: String): String? {
             "SlugMatch",
             "❌ Could not find matching contract for $contractAddress in token ${this.symbol}"
         )
-        this.contractAddress.forEach {
+        contracts.forEach {
             Log.d("SlugMatch", "➕ Candidate: ${it.contractAddress}")
         }
     }
 
-    return match?.platform?.coin?.slug
+    return match?.platform?.coin?.slug ?: match?.platform?.name
 }

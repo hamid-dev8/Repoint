@@ -309,16 +309,18 @@ fun DropDownList(
 
                             items.forEach { item ->
                                 Surface(
-                                    shape = RoundedCornerShape(16.dp),
-                                    tonalElevation = 2.dp,
+                                    shape = RoundedCornerShape(12.dp),
+                                    color = grayHound,
+                                    tonalElevation = 0.dp,
                                     modifier = Modifier
                                         .padding(horizontal = 8.dp, vertical = 2.dp)
                                         .fillMaxWidth()
                                 ) {
                                     DropdownMenuItem(
                                         modifier = Modifier
+                                            .fillMaxWidth()
                                             .background(grayHound)
-                                            .clip(RoundedCornerShape(4.dp)),
+                                            .clip(RoundedCornerShape(12.dp)),
                                         text = {
                                             Row(verticalAlignment = Alignment.CenterVertically) {
                                                 item.walletIndex?.let {
@@ -355,16 +357,18 @@ fun DropDownList(
                             HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
 
                             Surface(
-                                shape = RoundedCornerShape(16.dp),
-                                tonalElevation = 2.dp,
+                                shape = RoundedCornerShape(12.dp),
+                                color = grayHound,
+                                tonalElevation = 0.dp,
                                 modifier = Modifier
                                     .padding(horizontal = 8.dp, vertical = 2.dp)
                                     .fillMaxWidth()
                             ) {
                                 DropdownMenuItem(
-                                    modifier = modifier
+                                    modifier = Modifier
+                                        .fillMaxWidth()
                                         .background(grayHound)
-                                        .clip(RoundedCornerShape(4.dp)),
+                                        .clip(RoundedCornerShape(12.dp)),
                                     text = {
                                         Text(
                                             "➕ Add New Wallet",

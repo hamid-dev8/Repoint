@@ -23,7 +23,7 @@ data class TokenMetaData(
     @SerializedName("twitter_username")val twitterUsername : String,
     @SerializedName("is_hidden")val isHidden : Int,
     @SerializedName("date_launched")val dateLaunched : String?,
-    @SerializedName("contract_address")val contractAddress : List<ContractAddress>,
+    @SerializedName("contract_address") val contractAddress: List<ContractAddress>? = emptyList(),
     @SerializedName("self_reported_circulating_supply")val selfReportedCirculatingSupply : Double?,
     @SerializedName("self_reported_tags")val selfReportedTags : List<String>?,
     @SerializedName("self_reported_market_cap")val selfReportedMarketCap : Double?,

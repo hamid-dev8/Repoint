@@ -61,15 +61,23 @@ class WalletViewModel @Inject constructor(
         return masterWallet.phrase.split(" ")
     }
 
-    fun generatedImportedWalletInMemory(walletName: String, userId: String): List<String> {
+    fun generatedImportedWalletInMemory(mnemonic: String, walletName: String, userId: String? = null): List<String> {
+        val normalizedMnemonic = mnemonic.trim().replace(Regex("\\s+"), " ")
+        if (!EcGenerator.isValidMnemonic(normalizedMnemonic)) {
+            tempMasterWallet = null
+            tempChainWallet = emptyList()
+            return emptyList()
+        }
+
         val (masterWallet, chainWallets) = EcGenerator.importMasterAndChainWallets(
-            walletName,
+            normalizedMnemonic,
+            walletName.trim().ifEmpty { "Wallet" },
             userId
         )
         tempMasterWallet = masterWallet
         tempChainWallet = chainWallets
 
-        return masterWallet.phrase.split(" ")
+        return masterWallet.phrase.split(Regex("\\s+"))
     }
 
     fun getTempWallet(): MasterWallet? = tempMasterWallet

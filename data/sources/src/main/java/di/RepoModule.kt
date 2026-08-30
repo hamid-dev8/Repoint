@@ -10,6 +10,7 @@ import com.repoint.sources.datarepo.CmcRepositoryImp
 import com.repoint.sources.datarepo.HistoryRepositoryImp
 import com.repoint.sources.datarepo.NetworkRepositoryImp
 import com.repoint.sources.datarepo.UserRepositoryImp
+import com.repoint.sources.datarepo.WalletConnectManagerImp
 import com.repoint.sources.datarepo.WalletRepositoryImp
 import com.repoint.sources.datarepo.datasource.AlchemyDataSource
 import com.repoint.sources.datarepo.datasource.AlchemyTxDataSource
@@ -19,6 +20,7 @@ import com.repoint.sources.datarepo.datasource.CmcDataSource
 import com.repoint.sources.datarepo.datasource.NetworkDataSource
 import com.repoint.sources.datarepo.datasource.TokenDataSource
 import com.repoint.sources.datarepo.datasource.UserDataSource
+import com.repoint.sources.datarepo.datasource.WalletConnectManagerDataSource
 import com.repoint.sources.datarepo.datasource.Web3DataSource
 import dagger.Binds
 import dagger.Module
@@ -73,4 +75,7 @@ interface RepoModule {
     @Singleton
     fun bindAlchemyTxDataSource(imp : AlchemyTxRepositoryImp) : AlchemyTxDataSource
 
+    @Binds
+    @Singleton
+    fun bindWalletConnectManagerDataSource(imp : WalletConnectManagerImp) : WalletConnectManagerDataSource
 }

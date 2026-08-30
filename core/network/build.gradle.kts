@@ -31,11 +31,11 @@ android {
         }
     }
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_11
-        targetCompatibility = JavaVersion.VERSION_11
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
     }
     kotlinOptions {
-        jvmTarget = "11"
+        jvmTarget = "17"
     }
 
     // ✅ Exclude conflicting META-INF files
@@ -47,6 +47,7 @@ android {
         resources.excludes.add("META-INF/LICENSE.txt")
         resources.excludes.add("META-INF/NOTICE")
         resources.excludes.add("META-INF/NOTICE.txt")
+        resources.excludes.add("META-INF/versions/9/OSGI-INF/MANIFEST.MF")
     }
 }
 
@@ -88,6 +89,12 @@ dependencies {
     //  kapt("com.google.dagger:hilt-android-compiler:2.51.1")
     kapt (libs.hilt.compiler)
 
+
+    // wallet connect
+    api(platform(libs.reown.android.bom)) // manages the versions for all WalletConnect libraries
+    api(libs.reown.android.core) // the old we3wallet is now part of the walletKit/Sign SDKs
+    api(libs.walletkit) // The Sign SDK is the core for pairing and requests
+    //end of walletConnect SDK\
 }
 
 // For KSP

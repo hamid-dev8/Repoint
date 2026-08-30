@@ -14,9 +14,13 @@ android {
 
     defaultConfig {
         minSdk = 26
+        buildConfigField("String", "WALLETCONNECT_PROJECT_ID", "\"ae6a1b168640a2f79f8e008027614ce3\"")
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         consumerProguardFiles("consumer-rules.pro")
+    }
+    buildFeatures {
+        buildConfig = true
     }
 
     buildTypes {
@@ -31,11 +35,11 @@ android {
         }
     }
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_11
-        targetCompatibility = JavaVersion.VERSION_11
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
     }
     kotlinOptions {
-        jvmTarget = "11"
+        jvmTarget = "17"
     }
 
     // ✅ Exclude conflicting META-INF files
@@ -63,4 +67,9 @@ dependencies {
     kapt(libs.hilt.compiler)
     //kapt("com.google.dagger:hilt-android-compiler:2.51.1")
    // kapt ("com.google.dagger:hilt-compiler:2.51.1")
+
+    //walletConnect
+    implementation(platform(libs.reown.android.bom))
+    implementation(libs.reown.android.core)
+    implementation(libs.walletkit)
 }

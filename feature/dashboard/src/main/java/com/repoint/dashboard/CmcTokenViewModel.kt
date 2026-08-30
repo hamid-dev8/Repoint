@@ -218,8 +218,9 @@ class CmcTokenViewModel @Inject constructor(
         activeKeys: Set<ActiveTokenKey>
     ): List<ResolvedTokenInstance> {
         return allMetas.flatMap { meta ->
-            meta.contractAddress.mapNotNull { contract ->
-                val slug = normalizeSlug(contract.platform.coin.slug)
+            meta.contractAddress.orEmpty().mapNotNull { contract ->
+                val platform = contract.platform ?: return@mapNotNull null
+                val slug = normalizeSlug(platform.coin?.slug ?: platform.name)
                 val key = ActiveTokenKey(meta.id, slug)
 
                 if (key in activeKeys) {
@@ -375,11 +376,13 @@ class CmcTokenViewModel @Inject constructor(
 
     fun toPerChainUiModels(metaMap: Map<String, TokenMetaData>): List<TokenPerChainUiModel> {
         return metaMap.values.flatMap { meta ->
-            meta.contractAddress.mapNotNull { contract ->
-                val chain = resolveChainFromPlatform(contract.platform.name)
-                    ?: resolveChainFromPlatform(contract.platform.coin.slug)
+            meta.contractAddress.orEmpty().mapNotNull { contract ->
+                val platform = contract.platform ?: return@mapNotNull null
+                val platformSlug = platform.coin?.slug ?: platform.name
+                val chain = resolveChainFromPlatform(platform.name)
+                    ?: resolveChainFromPlatform(platformSlug)
                     ?: AlchemyChain.entries.find {
-                        it.name.equals(contract.platform.coin.slug, ignoreCase = true)
+                        it.name.equals(platformSlug, ignoreCase = true)
                     }
                     ?: return@mapNotNull null
                 TokenPerChainUiModel(
@@ -390,7 +393,7 @@ class CmcTokenViewModel @Inject constructor(
                     description = meta.description,
                     contractAddress = contract.contractAddress,
                     chainName = chain,
-                    chainDisplayName = contract.platform.name
+                    chainDisplayName = platform.name
                 )
             }
         }
@@ -546,6 +549,8 @@ class CmcTokenViewModel @Inject constructor(
         map: CmcAllTokens,
         meta: TokenMetaData
     ): CmcTokenEntity {
+        val firstContract = meta.contractAddress?.firstOrNull()
+
         return CmcTokenEntity(
             id = map.id,
             rank = map.rank,
@@ -559,7 +564,7 @@ class CmcTokenViewModel @Inject constructor(
             platformName = map.platform?.name,
             platformSymbol = map.platform?.symbol,
             platformSlug = map.platform?.slug,
-            tokenAddress = meta.contractAddress.firstOrNull()?.contractAddress,
+            tokenAddress = firstContract?.contractAddress,
             logo = meta.logo,
             description = meta.description,
             websiteUrl = meta.urls?.website?.firstOrNull(),

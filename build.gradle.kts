@@ -1,3 +1,4 @@
+
 // Top-level build file where you can add configuration options common to all sub-projects/modules.
 plugins {
 
@@ -13,9 +14,42 @@ plugins {
 
     //ksp
     alias(libs.plugins.ksp) apply false
-    kotlin("kapt") version "2.1.0"
+    //kotlin("kapt") version "2.1.0"
 
     // kotlin("jvm") version "2.0.0" apply false
+}
+subprojects {
+    // This block forces all subprojects to use the same, correct versions
+    // of Kotlin and KSP, overriding any bad transitive dependencies.
+    configurations.all {
+        resolutionStrategy {
+            eachDependency {
+                // Force the Kotlin version
+                if (requested.group == "org.jetbrains.kotlin") {
+                    useVersion("2.1.0")
+                    //reason = "Forcing all Kotlin libraries to 2.0.0"
+                }
+
+                // Force the KSP version
+                if (requested.group == "com.google.devtools.ksp") {
+                    useVersion("2.1.0-1.0.29")
+                    //reason = "Forcing all KSP libraries to 2.0.0-1.0.21"
+                }
+
+                //for okhttp
+                if (requested.group == "com.squareup.okhttp3") {
+                    useVersion("4.12.0")
+                }
+
+                if (requested.group == "com.reown" ||
+                    requested.name == "walletkit" ||
+                    requested.name == "android-core") {
+                    // Force 1.4.9 regardless of what version was requested
+                    useVersion("1.4.8")
+                }
+            }
+        }
+    }
 }
 
 buildscript {

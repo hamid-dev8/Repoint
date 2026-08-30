@@ -10,6 +10,11 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.launch
+import java.time.Instant
+import java.time.LocalDateTime
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
+import java.time.format.DateTimeParseException
 import javax.inject.Inject
 
 
@@ -31,7 +36,10 @@ class HistoryViewModel @Inject constructor(private val repository: HistoryDataSo
                     }
                 }.awaitAll().flatten()
 
-                _transactions.value = allTransactions.sortedByDescending { it.blockTimeStamp }
+                _transactions.value = allTransactions.sortedWith(
+                    compareByDescending<RepointTransactions> { parseTxTimestamp(it.blockTimeStamp) }
+                        .thenByDescending { it.blockNumber.toLongOrNull() ?: 0L }
+                )
             }
             catch (e : Exception){
                 _transactions.value = emptyList()
@@ -61,6 +69,26 @@ class HistoryViewModel @Inject constructor(private val repository: HistoryDataSo
             response.transactions // Assuming the API response has a 'result' field
         } catch (e: Exception) {
             emptyList() // Handle errors gracefully
+        }
+    }
+
+    private fun parseTxTimestamp(value: String): Long {
+        if (value.isBlank() || value.equals("unknown", ignoreCase = true)) return 0L
+
+        return try {
+            value.toLong()
+        } catch (_: NumberFormatException) {
+            try {
+                Instant.parse(value).epochSecond
+            } catch (_: DateTimeParseException) {
+                try {
+                    LocalDateTime.parse(value, DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"))
+                        .atZone(ZoneId.systemDefault())
+                        .toEpochSecond()
+                } catch (_: DateTimeParseException) {
+                    0L
+                }
+            }
         }
     }
 

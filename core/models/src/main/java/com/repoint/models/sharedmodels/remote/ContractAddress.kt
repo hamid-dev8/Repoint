@@ -5,4 +5,7 @@ import com.google.gson.annotations.SerializedName
 import kotlinx.parcelize.Parcelize
 
 @Parcelize
- data class ContractAddress(@SerializedName("contract_address")val contractAddress: String,val platform : Platform) : Parcelable
+data class ContractAddress(
+    @SerializedName("contract_address") val contractAddress: String,
+    val platform: Platform? = null
+) : Parcelable

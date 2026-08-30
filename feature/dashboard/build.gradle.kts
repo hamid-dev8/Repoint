@@ -31,11 +31,11 @@ android {
         }
     }
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_11
-        targetCompatibility = JavaVersion.VERSION_11
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
     }
     kotlinOptions {
-        jvmTarget = "11"
+        jvmTarget = "17"
     }
 
     buildFeatures {
@@ -63,8 +63,16 @@ dependencies {
     implementation(project(":core:models"))
     implementation(project(":core:network"))
     implementation(project(":feature:account"))
+    
+    //walletConnect
+   implementation(platform(libs.reown.android.bom))
+   implementation(libs.reown.android.core)
+   implementation(libs.walletkit)
+    //
+
+   implementation(libs.play.services.code.scanner)
    // implementation(project(":feature:splash"))
-    implementation(libs.androidx.runtime.livedata)
+   implementation(libs.androidx.runtime.livedata)
     implementation(project(":core:database"))
     implementation(project(":data:sources"))
     implementation(libs.androidx.media3.common.ktx)

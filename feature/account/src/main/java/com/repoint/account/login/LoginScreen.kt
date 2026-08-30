@@ -27,9 +27,11 @@ import com.repoint.account.WalletViewModel
 import com.repoint.basics.atoms.RepointAppBar
 import com.repoint.basics.atoms.RepointCommonButton
 import com.repoint.basics.atoms.SimpleEditText
+import com.repoint.basics.logic.EcGenerator
 import com.repoint.dependencies.accountmanager.SpManager
 import com.repoint.dependencies.theme.RepointTypography
 import kotlinx.coroutines.launch
+import org.web3j.crypto.MnemonicUtils
 
 
 @Preview
@@ -63,6 +65,18 @@ fun LoginScreen(
 
 
     val coroutineScope = rememberCoroutineScope()
+    val mnemonicSuggestions = remember(secretInput) {
+        val lastWord = secretInput.trim().split(Regex("\\s+"))
+            .lastOrNull()
+            ?.lowercase()
+            .orEmpty()
+
+        if (lastWord.isEmpty()) emptyList() else EcGenerator.getMnemonicSuggestions(lastWord)
+    }
+
+    val applySuggestion: (String) -> Unit = { nextValue ->
+        secretInput = nextValue
+    }
 
     RepointAppBar("Multi-CoinWallet", exp = { _, _, _ ->
         Box(Modifier.fillMaxSize()) {
@@ -78,9 +92,9 @@ fun LoginScreen(
                     isItpasteNeed = false,
                     userInput = walletNameInput,
                     onInputChange = { walletNameInput = it },
-                    onPaste = {
-
-                    })
+                    onPaste = {},
+                    suggestions = emptyList()
+                )
 
                 SimpleEditText(
                     "Secret phrase :",
@@ -101,8 +115,10 @@ fun LoginScreen(
                             Toast.makeText(context, "Clipboard is empty!", Toast.LENGTH_SHORT)
                                 .show()
                         }
-                    })
-
+                    },
+                    suggestions = mnemonicSuggestions,
+                    onSuggestionClick = applySuggestion
+                )
 
                 Log.d("import", " text is $secretInput")
 
@@ -111,8 +127,6 @@ fun LoginScreen(
                     Modifier.align(Alignment.CenterHorizontally),
                     style = RepointTypography.labelMedium
                 )
-
-
             }
 
             RepointCommonButton(
@@ -121,22 +135,36 @@ fun LoginScreen(
                     .padding(8.dp), onClick = {
 
                     coroutineScope.launch {
-
                         val user = userViewModel.fetchUser()
+                        val normalizedPhrase = secretInput.trim().replace(Regex("\\s+"), " ")
 
+                        if (normalizedPhrase.isBlank()) {
+                            Toast.makeText(context, "Please enter your recovery phrase.", Toast.LENGTH_SHORT).show()
+                            return@launch
+                        }
 
-                            val nextIndex = walletViewModel.generateNextWalletIndex(user?.userId)
-                            val finalName = if (walletNameInput.trim().isNotBlank()){
-                                walletNameInput.trim()
-                            }
-                            else {
-                                walletViewModel.generateDefaultWalletName(nextIndex)
-                            }
+                        if (!EcGenerator.isValidMnemonic(normalizedPhrase)) {
+                            Toast.makeText(context, "This wallet phrase is invalid.", Toast.LENGTH_SHORT).show()
+                            return@launch
+                        }
+
+                        val nextIndex = walletViewModel.generateNextWalletIndex(user?.userId)
+                        val finalName = if (walletNameInput.trim().isNotBlank()) {
+                            walletNameInput.trim()
+                        } else {
+                            walletViewModel.generateDefaultWalletName(nextIndex)
+                        }
 
                         val phrase = walletViewModel.generatedImportedWalletInMemory(
-                            secretInput,
-                            walletNameInput
+                            normalizedPhrase,
+                            finalName,
+                            user?.userId
                         )
+
+                        if (phrase.isEmpty()) {
+                            Toast.makeText(context, "Wallet is not valid.", Toast.LENGTH_SHORT).show()
+                            return@launch
+                        }
 
                         walletViewModel.tempMasterWallet =
                             walletViewModel.tempMasterWallet!!.copy(
@@ -145,35 +173,18 @@ fun LoginScreen(
                                 userId = user?.userId
                             )
 
-                        walletViewModel.confirmAndSaveWallet()
+                        val savedWalletId = walletViewModel.confirmAndSaveWallet()
 
-                        Log.d(
-                                "confirm",
-                                "next index is : ${walletViewModel.generateNextWalletIndex(user?.userId)}"
-                            )
-                            Log.d("confirm", "user id is : ${user?.userId}")
+                        Log.d("confirm", "next index is : ${walletViewModel.generateNextWalletIndex(user?.userId)}")
+                        Log.d("confirm", "user id is : ${user?.userId}")
 
-
-
-
-
-
-                        val phraseString = phrase.joinToString(" ")
-
-
-
-
-                        if (user != null && walletViewModel.tempMasterWallet?.masterWalletId != null) {
-                            Log.d("walletcreate", "phraseString with user is : $phraseString")
-                            Log.d("walletcreate", "wallet name with user is : $walletNameInput")
-                            Log.d(
-                                "walletcreate",
-                                "wallet with user is  : ${walletViewModel.tempMasterWallet}"
-                            )
-
+                        if (user != null && savedWalletId != null) {
+                            Log.d("walletcreate", "phraseString with user is : ${phrase.joinToString(" ")}")
+                            Log.d("walletcreate", "wallet name with user is : $finalName")
+                            Log.d("walletcreate", "wallet with user is  : ${walletViewModel.tempMasterWallet}")
 
                             walletViewModel.linkUserToMasterWallet(
-                                masterWalletId = walletViewModel.tempMasterWallet!!.masterWalletId,
+                                masterWalletId = savedWalletId,
                                 user.userId
                             )
 
@@ -183,14 +194,13 @@ fun LoginScreen(
                                 popUpTo("auth") { inclusive = true }
                             }
                         } else {
-                            Log.d("walletcreate", "phraseString is : $phraseString")
-                            //walletViewModel.importWallet(phraseString, walletName = walletNameInput)
-                            Log.d("walletcreate", "wallet name is : $walletNameInput")
+                            Log.d("walletcreate", "phraseString is : ${phrase.joinToString(" ")}")
+                            Log.d("walletcreate", "wallet name is : $finalName")
                             Log.d("walletcreate", "wallet is : ${walletViewModel.tempMasterWallet}")
                             walletViewModel.tempMasterWallet?.masterWalletId?.let { onConfirm(it) }
                             Toast.makeText(
                                 context,
-                                "its not a valid Wallet",
+                                "Wallet could not be restored.",
                                 Toast.LENGTH_SHORT
                             ).show()
                         }
