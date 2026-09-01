@@ -95,9 +95,7 @@ fun ChooseTokenScreen(
     val metaState by cmcTokenViewModel.tokenMetasFlow.collectAsState()
     val priceState by alchemyViewModel.nativeUsdPrice.collectAsState() // if used
 
-    val isUiLoading = balancesState is UiState.Loading ||
-            metaState.isEmpty() ||
-            priceState is UiState.Loading
+    val isUiLoading = balancesState is UiState.Loading || priceState is UiState.Loading
 
     val alchemyBalances = (balancesState as? UiState.Success)?.data ?: emptyList()
 
@@ -109,8 +107,9 @@ fun ChooseTokenScreen(
         } ?: tokens.firstOrNull()
     }
 
+    // 60 is for fallback if user has no selected tokens (0 tokens) so loading ends
     val coinType = remember(selectedToken) {
-        selectedToken?.chain?.let { coinTypeFromSlug(it) }
+        selectedToken?.chain?.let { coinTypeFromSlug(it) } ?: 60
     }
 
     val currentWalletAddress by produceState<String?>(initialValue = null, masterWalletId, coinType) {
@@ -124,11 +123,13 @@ fun ChooseTokenScreen(
 
 
     val chainWalletsState = remember { mutableStateOf<List<ChainWallet>>(emptyList()) }
+
+    // FIX: Provide a fallback slug so the chainId logic resolves to a valid number
     val currentSlug = remember(searchQuery) {
         // Optional logic to infer current chain based on top matching token
         tokens.firstOrNull {
             it.symbol.contains(searchQuery, true) || it.name.contains(searchQuery, true)
-        }?.chain?.lowercase()
+        }?.chain?.lowercase() ?: "ethereum"
     }
 
     Log.d("ChooseToken","the currentWallet chain : ${chainWalletsState.value}")
@@ -228,11 +229,23 @@ fun ChooseTokenScreen(
 
                                 if (filtered.isEmpty()) {
                                     item {
-                                        Text(
-                                            text = "No tokens found",
-                                            modifier = Modifier.padding(16.dp),
-                                            style = RepointTypography.bodyMedium
-                                        )
+                                        Box(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(32.dp),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            Text(
+                                                text = if (searchQuery.isBlank()) {
+                                                    "You haven't added any tokens yet."
+                                                } else {
+                                                    "No tokens found for \"$searchQuery\""
+                                                },
+                                                style = RepointTypography.bodyMedium,
+                                                color = Color.Gray,
+                                                textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                                            )
+                                        }
                                     }
                                 } else {
                                     items(filtered) { token ->
@@ -327,13 +340,25 @@ fun ChooseTokenScreen(
 
                         if (filtered.isEmpty()) {
                             item {
-                                Text(
-                                    text = "No tokens found",
-                                    modifier = Modifier.padding(16.dp),
-                                    style = RepointTypography.bodyMedium
-                                )
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(32.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(
+                                        text = if (searchQuery.isBlank()) {
+                                            "You haven't added any tokens yet."
+                                        } else {
+                                            "No tokens found for \"$searchQuery\""
+                                        },
+                                        style = RepointTypography.bodyMedium,
+                                        color = Color.Gray,
+                                        textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                                    )
+                                }
                             }
-                        } else {
+                        }else {
                             items(resolvedTokens) { token ->
                                 val perTokenCoinType = coinTypeFromSlug(token.first.chain)
                                 //todo THIS IS SPECIFIC CHAIN+

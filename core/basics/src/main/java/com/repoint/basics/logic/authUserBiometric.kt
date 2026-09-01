@@ -9,7 +9,7 @@ import androidx.core.app.ActivityCompat.finishAffinity
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.FragmentActivity
 
-fun authenticateUser(onSuccess: () -> Unit,activity: FragmentActivity) {
+fun authenticateUser(onSuccess: () -> Unit, onCancel: (() -> Unit)? = null, activity: FragmentActivity) {
 
     val biometricManager = BiometricManager.from(activity)
     if (biometricManager.canAuthenticate(BIOMETRIC_STRONG) == BiometricManager.BIOMETRIC_SUCCESS) {
@@ -25,7 +25,11 @@ fun authenticateUser(onSuccess: () -> Unit,activity: FragmentActivity) {
                     errorCode == BiometricPrompt.ERROR_CANCELED
                 ) {
                     // user cancelled or tapped cancel
-                    activity.finishAffinity()
+                    if (onCancel != null) {
+                        onCancel()
+                    } else {
+                        activity.finishAffinity()
+                    }
                 } else {
                     // System already shows error in bottom sheet
                     Log.d("Biometric", "Error: $errString") // Optional

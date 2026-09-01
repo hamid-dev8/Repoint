@@ -8,42 +8,104 @@ import com.repoint.dependencies.accountmanager.SpManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
 import javax.inject.Inject
+
+enum class LockMethod {
+    PASSCODE,
+    BIOMETRIC
+}
+
+enum class AutoLockOption(val minutes: Int, val label: String) {
+    DISABLED(0, "Disabled"),
+    ONE_MINUTE(1, "1 minute"),
+    FIVE_MINUTES(5, "5 minutes"),
+    FIFTEEN_MINUTES(15, "15 minutes");
+
+    companion object {
+        fun fromMinutes(minutes: Int): AutoLockOption {
+           return values().firstOrNull { it.minutes == minutes } ?: DISABLED
+        }
+    }
+}
 
 @HiltViewModel
 class SecurityViewModel @Inject constructor(private val spManager: SpManager) : ViewModel() {
 
-    val isScannerEnabled = mutableStateOf(false)
+    private val _isScannerEnabled = MutableStateFlow(false)
+    val isScannerEnabled: StateFlow<Boolean> = _isScannerEnabled
     private val _isPasscodeEnabled = MutableStateFlow(false)
     val isPasscodeEnabled: StateFlow<Boolean> = _isPasscodeEnabled
-    val isTransactionSigningEnabled = mutableStateOf(false)
-
-    init {
-        //load saved values if using dataStore or preferences
-    }
+    private val _lockMethod = MutableStateFlow(LockMethod.BIOMETRIC.name)
+    val lockMethod: StateFlow<String> = _lockMethod
+    private val _autoLockMinutes = MutableStateFlow(0)
+    val autoLockMinutes: StateFlow<Int> = _autoLockMinutes
+    private val _isTransactionSigningEnabled = MutableStateFlow(false)
+    val isTransactionSigningEnabled: StateFlow<Boolean> = _isTransactionSigningEnabled
 
     init {
         viewModelScope.launch {
-            spManager.getPasscodeEnabled()
-                .collect { enabled ->
-                    _isPasscodeEnabled.value = enabled
-                }
+           combine(
+               spManager.getPasscodeEnabled(),
+               spManager.getLockMethodFlow(),
+               spManager.getAutoLockMinutesFlow(),
+               spManager.getTransactionSigningEnabledFlow(),
+               spManager.getScannerEnabledFlow()
+           ) { passcodeEnabled, savedMethod, savedAutoLockMinutes, txSigningEnabled, scannerEnabled ->
+               val resolvedMethod = savedMethod.takeIf { it.isNotBlank() }
+                   ?: if (passcodeEnabled) LockMethod.PASSCODE.name else LockMethod.BIOMETRIC.name
+
+               val resolvedPasscodeEnabled = resolvedMethod == LockMethod.PASSCODE.name || passcodeEnabled
+
+               _lockMethod.value = resolvedMethod
+               _isPasscodeEnabled.value = resolvedPasscodeEnabled
+               _autoLockMinutes.value = savedAutoLockMinutes
+               _isTransactionSigningEnabled.value = txSigningEnabled
+               _isScannerEnabled.value = scannerEnabled
+           }.collect { }
         }
     }
 
     fun toggleScanner(enabled: Boolean) {
-        isScannerEnabled.value = enabled
+        viewModelScope.launch {
+           spManager.setScannerEnabled(enabled)
+           _isScannerEnabled.value = enabled
+        }
     }
 
     fun togglePasscode(enabled: Boolean) {
         viewModelScope.launch {
-            spManager.setPasscodeEnabled(enabled)
+           val lockMethodValue = if (enabled) LockMethod.PASSCODE else LockMethod.BIOMETRIC
+           spManager.setPasscodeEnabled(enabled)
+           spManager.setLockMethod(lockMethodValue.name)
+           _lockMethod.value = lockMethodValue.name
+           _isPasscodeEnabled.value = enabled
+        }
+    }
+
+    fun setLockMethod(method: LockMethod) {
+        viewModelScope.launch {
+           val enabled = method == LockMethod.PASSCODE
+           spManager.setLockMethod(method.name)
+           spManager.setPasscodeEnabled(enabled)
+           _lockMethod.value = method.name
+           _isPasscodeEnabled.value = enabled
+        }
+    }
+
+    fun setAutoLockMinutes(minutes: Int) {
+        viewModelScope.launch {
+           spManager.setAutoLockMinutes(minutes)
+           _autoLockMinutes.value = minutes
         }
     }
 
     fun toggleTransactionSigning(enabled: Boolean) {
-        isTransactionSigningEnabled.value = enabled
+        viewModelScope.launch {
+            spManager.setTransactionSigningEnabled(enabled)
+            _isTransactionSigningEnabled.value = enabled
+        }
     }
 
     fun checkAndTriggerPasscode() {
@@ -51,6 +113,5 @@ class SecurityViewModel @Inject constructor(private val spManager: SpManager) : 
            // val enabled = spManager.setPasscodeEnabled()
         }
     }
-
 
 }

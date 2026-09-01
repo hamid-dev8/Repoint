@@ -25,6 +25,10 @@ class SpManager(private val context: Context) {
     private val USER_ID_KEY = stringPreferencesKey("user_id")
     private val WALLET_ID_KEY = stringPreferencesKey("wallet_id")
     private val PASSCODE_ENABLED_KEY = booleanPreferencesKey("passcode_enabled")
+    private val LOCK_METHOD_KEY = stringPreferencesKey("lock_method")
+    private val AUTO_LOCK_MINUTES_KEY = intPreferencesKey("auto_lock_minutes")
+    private val TRANSACTION_SIGNING_ENABLED_KEY = booleanPreferencesKey("transaction_signing_enabled")
+    private val SCANNER_ENABLED_KEY = booleanPreferencesKey("scanner_enabled")
 
     suspend fun setPasscodeEnabled(enabled : Boolean){
         context.dataStore.edit { prefs ->
@@ -35,6 +39,54 @@ class SpManager(private val context: Context) {
     fun getPasscodeEnabled() : Flow<Boolean>{
         return context.dataStore.data.map { prefs ->
             prefs[PASSCODE_ENABLED_KEY] ?: false
+        }
+    }
+
+    suspend fun setLockMethod(method: String) {
+        context.dataStore.edit { prefs ->
+            prefs[LOCK_METHOD_KEY] = method
+        }
+    }
+
+    fun getLockMethodFlow(): Flow<String> {
+        return context.dataStore.data.map { prefs ->
+            prefs[LOCK_METHOD_KEY] ?: "BIOMETRIC"
+        }
+    }
+
+    suspend fun setAutoLockMinutes(minutes: Int) {
+        context.dataStore.edit { prefs ->
+            prefs[AUTO_LOCK_MINUTES_KEY] = minutes
+        }
+    }
+
+    fun getAutoLockMinutesFlow(): Flow<Int> {
+        return context.dataStore.data.map { prefs ->
+            prefs[AUTO_LOCK_MINUTES_KEY] ?: 0
+        }
+    }
+
+    suspend fun setTransactionSigningEnabled(enabled: Boolean) {
+        context.dataStore.edit { prefs ->
+            prefs[TRANSACTION_SIGNING_ENABLED_KEY] = enabled
+        }
+    }
+
+    fun getTransactionSigningEnabledFlow(): Flow<Boolean> {
+        return context.dataStore.data.map { prefs ->
+            prefs[TRANSACTION_SIGNING_ENABLED_KEY] ?: false
+        }
+    }
+
+    suspend fun setScannerEnabled(enabled: Boolean) {
+        context.dataStore.edit { prefs ->
+            prefs[SCANNER_ENABLED_KEY] = enabled
+        }
+    }
+
+    fun getScannerEnabledFlow(): Flow<Boolean> {
+        return context.dataStore.data.map { prefs ->
+            prefs[SCANNER_ENABLED_KEY] ?: false
         }
     }
 

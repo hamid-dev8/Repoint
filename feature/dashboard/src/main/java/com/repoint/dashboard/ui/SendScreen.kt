@@ -30,6 +30,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -45,6 +46,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -61,7 +63,7 @@ import com.repoint.basics.logic.SendRoutes
 import com.repoint.basics.logic.coinTypeFromSlug
 import com.repoint.dashboard.AlchemyViewModel
 import com.repoint.dashboard.CmcTokenViewModel
-import com.repoint.dashboard.TokenViewModel
+import com.repoint.dashboard.SecurityViewModel
 import com.repoint.dashboard.Web3ViewModel
 import com.repoint.dependencies.accountmanager.SpManager
 import com.repoint.dependencies.theme.FernGreen
@@ -83,6 +85,9 @@ import java.math.BigInteger
 import java.math.RoundingMode
 
 
+import com.repoint.dashboard.ui.LockChallengeScreen
+import androidx.compose.ui.zIndex
+
 @Composable
 fun SendTokenScreen(
     walletAddress: String,
@@ -97,9 +102,15 @@ fun SendTokenScreen(
     walletViewModel: WalletViewModel = hiltViewModel<WalletViewModel>(),
     alchemyViewModel: AlchemyViewModel = hiltViewModel<AlchemyViewModel>(),
     cmcTokenViewModel: CmcTokenViewModel = hiltViewModel(),
-    userViewModel: UserViewModel = hiltViewModel<UserViewModel>()
+    userViewModel: UserViewModel = hiltViewModel<UserViewModel>(),
+    securityViewModel: SecurityViewModel = hiltViewModel<SecurityViewModel>()
 ) {
 
+    val isTransactionSigningEnabled by securityViewModel.isTransactionSigningEnabled.collectAsState()
+    val selectedLockMethod by securityViewModel.lockMethod.collectAsState()
+    val isScannerEnabled by securityViewModel.isScannerEnabled.collectAsState()
+    var showSignChallenge by remember { mutableStateOf(false) }
+    var showSecurityWarning by remember { mutableStateOf(false) }
 
     var recipientAddress by remember { mutableStateOf("") }
     var amount by remember { mutableStateOf("") }
@@ -321,6 +332,82 @@ fun SendTokenScreen(
             ?.divide(BigDecimal(1_000_000_000), 9, RoundingMode.HALF_UP)?.toPlainString()
     }
 
+    fun getTokenSecurityData(): Pair<Int, Boolean> {
+        // Mock security data - can be replaced with actual API data later
+        // This is a placeholder implementation that checks token characteristics
+        val currentToken = alchemyList.find { token ->
+            token.contractAddress.equals(contractAddress, ignoreCase = true)
+        }
+        
+        // Default security score (higher = safer, lower = riskier)
+        // Scale: 0-100
+        var securityScore = 75
+        var possibleSpam = false
+        
+        // Check for common spam/scam patterns
+        if (currentToken != null) {
+            // Check if token name/symbol contains common scam keywords
+            val lowercaseName = currentToken.name.lowercase()
+            val lowercaseSymbol = currentToken.symbol.lowercase()
+            
+            if (lowercaseName.contains("test") || lowercaseSymbol.contains("test")) {
+                securityScore = 20
+            } else if (lowercaseName.contains("fake") || lowercaseSymbol.contains("fake")) {
+                securityScore = 10
+                possibleSpam = true
+            } else if (lowercaseName.contains("scam") || lowercaseSymbol.contains("scam")) {
+                securityScore = 5
+                possibleSpam = true
+            }
+        }
+        
+        return Pair(securityScore, possibleSpam)
+    }
+
+    fun isHighRiskToken(): Boolean {
+        val (securityScore, possibleSpam) = getTokenSecurityData()
+        return securityScore < 30 || possibleSpam
+    }
+
+    fun executeTransaction() {
+        isSending = true
+        coroutineScope.launch {
+            val result = credentials?.let {
+                web3ViewModel.sendTokenDynamic(
+                    credentials = it,
+                    recipientAddress = recipientAddress,
+                    tokenMeta = tokenMeta!!,
+                    amount = amount.toBigDecimal(),
+                    contractAddress = contractAddress,
+                    chainId = chainId.toLong(),
+                    chainSlug = chainSlug!!
+                )
+            }
+            Log.d(
+                "transaction",
+                "transaction is going to start with credentials : ${credentials?.address} && amount is : $amount && amount.toBigDecimal is : ${amount.toBigDecimal()}"
+            )
+            Log.d(
+                "transaction",
+                "transaction is going to start with to ADddress : $recipientAddress"
+            )
+            Log.d(
+                "transaction",
+                "transaction is going to start with tokenMeta of : $tokenMeta"
+            )
+            Log.d(
+                "transaction",
+                "transaction is going to start with chainSlug of : $chainSlug"
+            )
+            isSending = false
+            if (result != null) {
+                txHash = result
+            } else {
+                errorMessage = " Transaction Failed "
+            }
+        }
+    }
+
     RepointAppBar("send", navController = navController, exp = { _, _, _ ->
         Box(
             modifier = Modifier
@@ -539,41 +626,12 @@ fun SendTokenScreen(
                                     recipientAddress
                                 )
                             ) {
-                                isSending = true
-                                coroutineScope.launch {
-                                    val result = credentials?.let {
-                                        web3ViewModel.sendTokenDynamic(
-                                            credentials = it,
-                                            recipientAddress = recipientAddress,
-                                            tokenMeta = tokenMeta!!,
-                                            amount = amount.toBigDecimal(),
-                                            contractAddress = contractAddress,
-                                            chainId = chainId.toLong(),
-                                            chainSlug = chainSlug!!
-                                        )
-                                    }
-                                    Log.d(
-                                        "transaction",
-                                        "transaction is going to start with credentials : ${credentials?.address} && amount is : $amount && amount.toBigDecimal is : ${amount.toBigDecimal()}"
-                                    )
-                                    Log.d(
-                                        "transaction",
-                                        "transaction is going to start with to ADddress : $recipientAddress"
-                                    )
-                                    Log.d(
-                                        "transaction",
-                                        "transaction is going to start with tokenMeta of : $tokenMeta"
-                                    )
-                                    Log.d(
-                                        "transaction",
-                                        "transaction is going to start with chainSlug of : $chainSlug"
-                                    )
-                                    isSending = false
-                                    if (result != null) {
-                                        txHash = result
-                                    } else {
-                                        errorMessage = " Transaction Failed "
-                                    }
+                                if (isScannerEnabled && isHighRiskToken()) {
+                                    showSecurityWarning = true
+                                } else if (isTransactionSigningEnabled) {
+                                    showSignChallenge = true
+                                } else {
+                                    executeTransaction()
                                 }
                             } else Toast.makeText(
                                 context, "fields are empty or Not Correct", Toast.LENGTH_SHORT
@@ -591,6 +649,146 @@ fun SendTokenScreen(
 
         }
     })
+
+    if (showSecurityWarning) {
+        val (securityScore, possibleSpam) = getTokenSecurityData()
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Color.Black.copy(alpha = 0.6f))
+                .zIndex(9f),
+            contentAlignment = Alignment.Center
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth(0.85f)
+                    .clip(RoundedCornerShape(16.dp))
+                    .background(MaterialTheme.colorScheme.surface)
+                    .padding(24.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                Text(
+                    "⚠️ Security Warning",
+                    style = RepointTypography.headlineSmall,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+
+                Text(
+                    "This token appears to be high-risk.",
+                    style = RepointTypography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(
+                            MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.2f),
+                            shape = RoundedCornerShape(8.dp)
+                        )
+                        .padding(12.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    if (possibleSpam) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text(
+                                "🚨",
+                                style = RepointTypography.bodySmall,
+                                modifier = Modifier.padding(end = 8.dp)
+                            )
+                            Text(
+                                "Possible spam or scam token",
+                                style = RepointTypography.bodySmall,
+                                color = RoseWood
+                            )
+                        }
+                    }
+
+                    if (securityScore < 30) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text(
+                                "⚠️",
+                                style = RepointTypography.bodySmall,
+                                modifier = Modifier.padding(end = 8.dp)
+                            )
+                            Text(
+                                "Low security score: $securityScore/100",
+                                style = RepointTypography.bodySmall,
+                                color = RoseWood
+                            )
+                        }
+                    }
+                }
+
+                Text(
+                    "Proceed with caution. Do you want to continue?",
+                    style = RepointTypography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    textAlign = TextAlign.Center
+                )
+
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(48.dp),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    TextButton(
+                        onClick = {
+                            showSecurityWarning = false
+                        },
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(48.dp),
+                        shape = RoundedCornerShape(8.dp)
+                    ) {
+                        Text("Cancel", color = MaterialTheme.colorScheme.primary)
+                    }
+
+                    RepointCommonButton(
+                        text = "Continue",
+                        onClick = {
+                            showSecurityWarning = false
+                            if (isTransactionSigningEnabled) {
+                                showSignChallenge = true
+                            } else {
+                                executeTransaction()
+                            }
+                        },
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(48.dp)
+                    )
+                }
+            }
+        }
+    }
+
+    if (showSignChallenge) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .zIndex(10f)
+        ) {
+            LockChallengeScreen(
+                selectedLockMethod = selectedLockMethod,
+                onUnlock = {
+                    showSignChallenge = false
+                    executeTransaction()
+                },
+                onCancel = {
+                    showSignChallenge = false
+                }
+            )
+        }
+    }
 
 }
 

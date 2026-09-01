@@ -24,6 +24,7 @@ import com.repoint.account.signup.ui.ConfirmPhrases
 import com.repoint.account.signup.ui.SetPinCode
 import com.repoint.account.signup.ui.ShowPhrase
 import com.repoint.account.signup.ui.WalletConfirmSurface
+import com.repoint.account.signup.ui.VerifyPinScreen
 import com.repoint.basics.logic.SendRoutes
 import com.repoint.basics.logic.authenticateUser
 import com.repoint.dashboard.ui.BotScreen
@@ -73,10 +74,7 @@ fun RepointNavigation(activity: FragmentActivity) {
                 navController.navigate("home") {
                     popUpTo("splash") { inclusive = true }
                 }
-            }, onAuthRequest = { onAuthSuccess ->
-                authenticateUser(onAuthSuccess, activity)
-            }
-            )
+            })
         }
         composable("hedgehog",
             enterTransition = {
@@ -271,6 +269,17 @@ fun RepointNavigation(activity: FragmentActivity) {
             }, false, activity = activity)
         }
 
+
+        composable("verifyPin") {
+            VerifyPinScreen(
+                navController = navController,
+                onVerified = {
+                    navController.navigate("home") {
+                        popUpTo("verifyPin") { inclusive = true }
+                    }
+                }
+            )
+        }
 
         composable("home") { //navigating from home with a button to qrCode screen
             HomeScreen(navController)

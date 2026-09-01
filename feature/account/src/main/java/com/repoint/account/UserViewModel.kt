@@ -50,14 +50,27 @@ class UserViewModel @Inject constructor(
         }
     }
 
-    suspend fun fetchUser(): User? {
+    fun verifyPasscode(input: String, onSuccess: () -> Unit, onFail: () -> Unit) {
+        viewModelScope.launch {
+            val user = repository.getUser()
+            if (user != null) {
+                val hashed = hashPasscode(input, user.salt)
+                if (hashed == user.passwordHash) {
+                    onSuccess()
+                } else {
+                    onFail()
+                }
+            } else {
+                onFail()
+            }
+        }
+    }
 
+    suspend fun fetchUser(): User? {
         delay(1000)
         val user = repository.getUser()
         _userExists.value = (user != null)
         Log.d("focus", "fetch user is : $user")
-
-
         return user
     }
 

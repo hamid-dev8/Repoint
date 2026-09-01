@@ -41,7 +41,7 @@ private fun PreviewSplashScreen() {
 }
 
 @Composable
-fun SplashScreenRepoint(onStay: () -> Unit, onProceed: () -> Unit, onAuthRequest : (onSuccess : () -> Unit) -> Unit, web3ViewModel : Web3ViewModel = hiltViewModel(), walletViewModel : WalletViewModel = hiltViewModel(),cmcTokenViewModel: CmcTokenViewModel = hiltViewModel()) {
+fun SplashScreenRepoint(onStay: () -> Unit, onProceed: () -> Unit, web3ViewModel : Web3ViewModel = hiltViewModel(), walletViewModel : WalletViewModel = hiltViewModel(),cmcTokenViewModel: CmcTokenViewModel = hiltViewModel()) {
 
     val splashTimeout = 3000L
 
@@ -74,9 +74,7 @@ fun SplashScreenRepoint(onStay: () -> Unit, onProceed: () -> Unit, onAuthRequest
         if (!userId.isNullOrEmpty()) {
             val wallets = walletViewModel.getAllMasterWallets(userId)
             if (wallets.isNotEmpty()){
-                onAuthRequest{
-                    onProceed()
-                }
+                onProceed()
             }
             else{
                 spManager.clearAllSessionData()

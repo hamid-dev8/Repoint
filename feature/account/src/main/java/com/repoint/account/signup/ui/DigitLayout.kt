@@ -21,6 +21,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.LocalTextStyle
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -103,12 +104,12 @@ fun SingleDigitRow(digitState: SnapshotStateList<String>, modifier: Modifier, fo
                             .height(56.dp)
                             .border(
                                 width = 2.dp,
-                                color = if (index == focusedIndex) repointOrange else aliceBlue,
+                                color = if (index == focusedIndex) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline.copy(alpha = 0.4f),
                                 shape = RoundedCornerShape(8.dp)
                             ),
                         textStyle = LocalTextStyle.current.copy(
                             textAlign = TextAlign.Center,
-                            color = repointBlue
+                            color = MaterialTheme.colorScheme.onSurface
                         ),
                         readOnly = true,
                         enabled = true
@@ -143,6 +144,8 @@ fun RepointNumPad(
     var showBiometricDialog by remember { mutableStateOf(false) }
     val coroutineScope = rememberCoroutineScope()
 
+    val colors = MaterialTheme.colorScheme
+
     Log.d(
         "focus",
         "digits that passed is : ${digits.contentToString()} & ${digits?.joinToString("")}"
@@ -175,7 +178,8 @@ fun RepointNumPad(
                         end.linkTo(parent.end)
                     },
                 textAlign = TextAlign.Center,
-                style = RepointTypography.bodyLarge
+                style = RepointTypography.bodyLarge,
+                color = MaterialTheme.colorScheme.onBackground
             )
 
             SingleDigitRow(
@@ -203,7 +207,7 @@ fun RepointNumPad(
                     },
                 textAlign = TextAlign.Center,
                 style = RepointTypography.labelSmall,
-                color = Color.Gray
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
             )
 
 
@@ -291,7 +295,7 @@ fun RepointNumPad(
 
                                 }, colors = ButtonDefaults.buttonColors(
                                     containerColor = Color.Transparent,
-                                    contentColor = richBlack
+                                    contentColor = MaterialTheme.colorScheme.onSurface
                                 ),
                                 modifier = Modifier
                                     .size(64.dp)
@@ -327,7 +331,6 @@ fun RepointNumPad(
             })
         }
     })
-
     if (showBiometricDialog) {
         LaunchedEffect(walletId) {
             val user = viewModel.fetchUser()
