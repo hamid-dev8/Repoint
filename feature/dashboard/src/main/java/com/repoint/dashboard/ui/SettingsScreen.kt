@@ -4,7 +4,9 @@ import android.app.Activity
 import android.content.Context
 import android.content.ContextWrapper
 import android.content.Intent
+import android.net.Uri
 import android.util.Log
+import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
@@ -35,6 +37,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -63,6 +66,7 @@ import com.repoint.dashboard.activity.QrScannerActivity
 import com.repoint.dependencies.theme.RepointTypography
 import com.repoint.models.sharedmodels.remote.PendingProposal
 import com.repoint.models.sharedmodels.remote.ActiveSession
+import androidx.core.net.toUri
 
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -76,15 +80,35 @@ fun SettingsScreen(
     val walletConnectUiState by walletConnectViewModel.uiState.collectAsState()
     val context = LocalContext.current
     var showWalletConnectSheet by remember { mutableStateOf(false) }
+    var wcUrlInput by remember { mutableStateOf("") }
+    var showManualWcUrlEntry by remember { mutableStateOf(false) }
     val walletConnectSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val approvalSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
-    val activeSession = walletConnectUiState.activeSession
-    val hasConnectedWallet = activeSession != null || walletConnectUiState.status.startsWith("Connected to", ignoreCase = true)
-    val connectedDisplayName = activeSession?.dAppName ?: walletConnectUiState.status.removePrefix("Connected to ").trim()
+    val activeSession = walletConnectUiState.activeSession?.takeIf { it.connectedAddress.isNotBlank() }
+    val hasConnectedWallet = activeSession != null
+    val connectedDisplayName = activeSession?.dAppName ?: "Connected"
 
     LaunchedEffect(Unit) {
         walletConnectViewModel.refreshActiveSession()
+
+        val pendingDeepLinkUri = com.repoint.basics.WalletConnectDeepLinkBridge.consumePendingUri()
+        if (!pendingDeepLinkUri.isNullOrBlank()) {
+            showWalletConnectSheet = true
+            walletConnectViewModel.pairWallet(pendingDeepLinkUri)
+        }
+    }
+
+    LaunchedEffect(walletConnectUiState.activeSession, walletConnectUiState.status) {
+        if (walletConnectUiState.status.startsWith("Connected to", ignoreCase = true) && walletConnectUiState.activeSession == null) {
+            walletConnectViewModel.refreshActiveSession()
+        }
+    }
+
+    LaunchedEffect(walletConnectUiState.activeSession, walletConnectUiState.status) {
+        if (walletConnectUiState.activeSession == null && walletConnectUiState.status.startsWith("Connected to", ignoreCase = true)) {
+            walletConnectViewModel.refreshActiveSession()
+        }
     }
 
     val qrScannerLauncher = rememberLauncherForActivityResult(
@@ -154,10 +178,25 @@ fun SettingsScreen(
                     status = walletConnectUiState.status,
                     isPairing = walletConnectUiState.isPairing,
                     error = walletConnectUiState.error,
-                    activeSession = walletConnectUiState.activeSession,
+                    activeSession = activeSession,
+                    wcUrlInput = wcUrlInput,
+                    showManualWcUrlEntry = showManualWcUrlEntry,
                     onDismiss = { showWalletConnectSheet = false },
                     onScanQr = {
                         qrScannerLauncher.launch(Intent(context, QrScannerActivity::class.java))
+                    },
+                    onToggleManualWcUrl = {
+                        showManualWcUrlEntry = !showManualWcUrlEntry
+                        if (!showManualWcUrlEntry) wcUrlInput = ""
+                    },
+                    onWcUrlInputChange = { wcUrlInput = it },
+                    onManualConnect = {
+                        val uri = wcUrlInput.trim()
+                        if (uri.isBlank()) {
+                            walletConnectViewModel.updateStatus("Paste a WalletConnect URI first.")
+                            return@WalletConnectBottomSheetContent
+                        }
+                        walletConnectViewModel.pairWallet(uri)
                     },
                     onDisconnect = { showDisconnectDialog = true }
                 )
@@ -271,8 +310,13 @@ fun WalletConnectBottomSheetContent(
     isPairing: Boolean,
     error: String?,
     activeSession: ActiveSession?,
+    wcUrlInput: String,
+    showManualWcUrlEntry: Boolean,
     onDismiss: () -> Unit,
     onScanQr: () -> Unit,
+    onToggleManualWcUrl: () -> Unit,
+    onWcUrlInputChange: (String) -> Unit,
+    onManualConnect: () -> Unit,
     onDisconnect: () -> Unit = {},
 ) {
     if (activeSession != null) {
@@ -403,11 +447,33 @@ fun WalletConnectBottomSheetContent(
                 enabled = !isPairing
             )
 
-            TextButton(
-                onClick = onDismiss,
-                modifier = Modifier.align(Alignment.CenterHorizontally)
-            ) {
-                Text("Cancel")
+            RepointCommonButton(
+                text = "WC URL Connection",
+                onClick = onToggleManualWcUrl,
+                fullWidth = true,
+                margin = 0.dp,
+                buttonHeight = 52.dp
+            )
+
+            if (showManualWcUrlEntry) {
+                OutlinedTextField(
+                    value = wcUrlInput,
+                    onValueChange = onWcUrlInputChange,
+                    modifier = Modifier.fillMaxWidth(),
+                    placeholder = { Text("wc:...") },
+                    singleLine = false,
+                    minLines = 3,
+                    maxLines = 5
+                )
+
+                RepointCommonButton(
+                    text = "Connect via URL",
+                    onClick = onManualConnect,
+                    fullWidth = true,
+                    margin = 0.dp,
+                    buttonHeight = 52.dp,
+                    enabled = wcUrlInput.isNotBlank() && !isPairing
+                )
             }
         }
     }

@@ -12,7 +12,23 @@ import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 
 object EcGenerator {
-    private val supportedCoinType = listOf(60, 714, 966)
+    private val sharedEvmNetworks = listOf(
+        "Ethereum",
+        "Polygon",
+        "Arbitrum",
+        "Optimism",
+        "Avalanche",
+        "Fantom"
+    )
+    private val supportedChainDefinitions = listOf(
+        "Ethereum" to 60,
+        "Polygon" to 60,
+        "Arbitrum" to 60,
+        "Optimism" to 60,
+        "Avalanche" to 60,
+        "Fantom" to 60,
+        "BNB Smart Chain" to 714
+    )
 
     fun generateMasterAndChainWallets(
         walletName: String,
@@ -29,30 +45,41 @@ object EcGenerator {
             creationDate = getCurrentDate()
         )
 
-        val chainWallet = supportedCoinType.map { coinType ->
-            val path = intArrayOf(
-                44 or Bip32ECKeyPair.HARDENED_BIT,
-                coinType or Bip32ECKeyPair.HARDENED_BIT,
-                0 or Bip32ECKeyPair.HARDENED_BIT,
-                0, 0
-            )
+        val evmPath = intArrayOf(
+            44 or Bip32ECKeyPair.HARDENED_BIT,
+            60 or Bip32ECKeyPair.HARDENED_BIT,
+            0 or Bip32ECKeyPair.HARDENED_BIT,
+            0, 0
+        )
+        val sharedEvmKeyPair = Bip32ECKeyPair.deriveKeyPair(masterKeyPair, evmPath)
+        val sharedEvmCredentials = Credentials.create(sharedEvmKeyPair)
+        val sharedEvmPublicKeyHex = Numeric.toHexStringNoPrefixZeroPadded(sharedEvmKeyPair.publicKey, 128)
+        val sharedEvmPrivateKey = sharedEvmKeyPair.privateKey.toString(16).padStart(64, '0')
 
-            val childKeypair = Bip32ECKeyPair.deriveKeyPair(masterKeyPair, path)
-            val credentials = Credentials.create(childKeypair)
-
-            val ecPublicKeyHex = Numeric.toHexStringNoPrefixZeroPadded(childKeypair.publicKey, 128)
-            val privateKey = childKeypair.privateKey.toString(16).padStart(64, '0')
-
+        val chainWallet = supportedChainDefinitions.map { (networkName, coinType) ->
+            val walletKeyPair = if (coinType == 60) {
+                sharedEvmKeyPair
+            } else {
+                val path = intArrayOf(
+                    44 or Bip32ECKeyPair.HARDENED_BIT,
+                    coinType or Bip32ECKeyPair.HARDENED_BIT,
+                    0 or Bip32ECKeyPair.HARDENED_BIT,
+                    0, 0
+                )
+                Bip32ECKeyPair.deriveKeyPair(masterKeyPair, path)
+            }
+            val credentials = Credentials.create(walletKeyPair)
+            val ecPublicKeyHex = Numeric.toHexStringNoPrefixZeroPadded(walletKeyPair.publicKey, 128)
+            val privateKey = walletKeyPair.privateKey.toString(16).padStart(64, '0')
 
             ChainWallet(
                 masterWalletId = masterWallet.masterWalletId,
                 coinType = coinType,
-                networkName = getNetworkNameByCoinType(coinType),
+                networkName = networkName,
                 publicKey = ecPublicKeyHex,
                 privateKey = privateKey,
                 address = credentials.address
             )
-
         }
 
         return Pair(masterWallet, chainWallet)
@@ -74,35 +101,39 @@ object EcGenerator {
             creationDate = getCurrentDate()
         )
 
-        val chainWallets = supportedCoinType.map { coinType ->
+        val evmPath = intArrayOf(
+            44 or Bip32ECKeyPair.HARDENED_BIT,
+            60 or Bip32ECKeyPair.HARDENED_BIT,
+            0 or Bip32ECKeyPair.HARDENED_BIT,
+            0, 0
+        )
+        val sharedEvmKeyPair = Bip32ECKeyPair.deriveKeyPair(masterKeyPair, evmPath)
 
-            val path = intArrayOf(
-                44 or Bip32ECKeyPair.HARDENED_BIT,
-                coinType or Bip32ECKeyPair.HARDENED_BIT,
-                0 or Bip32ECKeyPair.HARDENED_BIT,
-                0 , 0
-            )
+        val chainWallets = supportedChainDefinitions.map { (networkName, coinType) ->
+            val walletKeyPair = if (coinType == 60) sharedEvmKeyPair else {
+                val path = intArrayOf(
+                    44 or Bip32ECKeyPair.HARDENED_BIT,
+                    coinType or Bip32ECKeyPair.HARDENED_BIT,
+                    0 or Bip32ECKeyPair.HARDENED_BIT,
+                    0 , 0
+                )
+                Bip32ECKeyPair.deriveKeyPair(masterKeyPair,path)
+            }
+            val credentials = Credentials.create(walletKeyPair)
+            val ecPublicKeyHex = Numeric.toHexStringNoPrefixZeroPadded(walletKeyPair.publicKey, 128)
+            val privateKey = walletKeyPair.privateKey.toString(16).padStart(64, '0')
 
-            val childKeyPair = Bip32ECKeyPair.deriveKeyPair(masterKeyPair,path)
-            val credentials = Credentials.create(childKeyPair)
-
-            val ecPublicKeyHex = Numeric.toHexStringNoPrefixZeroPadded(childKeyPair.publicKey, 128)
-            val privateKey = childKeyPair.privateKey.toString(16).padStart(64, '0')
-
-
-            Log.d("ecGen","the private key is : ${childKeyPair.privateKey}")
-
+            Log.d("ecGen","the private key is : ${walletKeyPair.privateKey}")
 
             ChainWallet(
                 masterWalletId = masterWallet.masterWalletId,
                 coinType = coinType,
-                networkName = getNetworkNameByCoinType(coinType),
+                networkName = networkName,
                 publicKey = ecPublicKeyHex,
                 privateKey = privateKey,
                 address = credentials.address
             )
         }
-
 
         return Pair(masterWallet,chainWallets)
     }

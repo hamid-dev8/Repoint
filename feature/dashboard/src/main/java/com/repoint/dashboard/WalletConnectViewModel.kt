@@ -17,5 +17,6 @@ class WalletConnectViewModel @Inject constructor(
     fun rejectPendingProposal() = walletConnectManagerImp.rejectPendingProposal()
     fun updateStatus(message: String) = walletConnectManagerImp.updateStatus(message)
     fun refreshActiveSession() = walletConnectManagerImp.refreshSessionStateFromSdk()
+    fun syncWalletSessionWithSelectedWallet() = walletConnectManagerImp.reconcileWalletSessionWithSelectedWallet()
     fun disconnect() = walletConnectManagerImp.disconnect()
 }

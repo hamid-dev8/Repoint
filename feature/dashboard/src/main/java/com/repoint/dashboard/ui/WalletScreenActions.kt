@@ -135,7 +135,8 @@ fun HomeScreen(
     tokenViewModel: TokenViewModel = hiltViewModel<TokenViewModel>(),
     web3ViewModel: Web3ViewModel = hiltViewModel(),
     cmcTokenViewModel: CmcTokenViewModel = hiltViewModel(),
-    alchemyViewModel: AlchemyViewModel = hiltViewModel()
+    alchemyViewModel: AlchemyViewModel = hiltViewModel(),
+    walletConnectViewModel: com.repoint.dashboard.WalletConnectViewModel = hiltViewModel()
 ) {
 
     var masterWallets by remember { mutableStateOf<List<MasterWallet>>(emptyList()) }
@@ -521,7 +522,8 @@ fun HomeScreen(
                                         onWalletSelected = { selectedWallet ->
                                             coroutineScope.launch {
                                                 spManager.setActiveWallet(selectedWallet.masterWalletId)
-
+                                                walletConnectViewModel.syncWalletSessionWithSelectedWallet()
+ 
                                                 Log.d(
                                                     "token",
                                                     "selected wallet changed : ${selectedWallet.masterWalletId}"
@@ -533,7 +535,7 @@ fun HomeScreen(
                                             }
                                             //TODO ezafe kardane safe add wallet va sakht wallet jadid
                                             //walletViewModel.createUserWallet()
-
+ 
                                             selectedWalletId =
                                                 selectedWallet.masterWalletId
                                         },
@@ -720,14 +722,22 @@ fun HomeScreen(
                                         }
 
 
+                                        val metadata = token.tokenMeta
                                         val balanceValue: BigDecimal? =
-                                            when (val result = balances) {
-                                                is UiState.Success -> getTokenBalanceFromInstance(
-                                                    token,
-                                                    result.data
+                                            if (metadata?.let(::isNativeToken) == true) {
+                                                getNativeBalanceForMetaSmart(
+                                                    metadata,
+                                                    nativeBalanceList
                                                 )
+                                            } else {
+                                                when (val result = balances) {
+                                                    is UiState.Success -> getTokenBalanceFromInstance(
+                                                        token,
+                                                        result.data
+                                                    )
 
-                                                else -> null
+                                                    else -> null
+                                                }
                                             }
                                         Log.d("ChainSlugChecks", "filtered META is  2: $tokens")
                                         Log.d(
@@ -736,16 +746,24 @@ fun HomeScreen(
                                         )
 
                                         val totalUsdBalance = dedupedInstances.sumOf { token ->
-                                            val balance = when (val result = balances) {
-                                                is UiState.Success -> getTokenBalanceFromInstance(
-                                                    token,
-                                                    result.data
+                                            val metadata = token.tokenMeta
+                                            val balance = if (metadata?.let(::isNativeToken) == true) {
+                                                getNativeBalanceForMetaSmart(
+                                                    metadata,
+                                                    nativeBalanceList
                                                 )
+                                            } else {
+                                                when (val result = balances) {
+                                                    is UiState.Success -> getTokenBalanceFromInstance(
+                                                        token,
+                                                        result.data
+                                                    )
 
-                                                else -> null
+                                                    else -> null
+                                                }
                                             } ?: BigDecimal.ZERO
 
-                                            val price = quotesMap[token.tokenMeta.id.toString()]
+                                            val price = quotesMap[token.tokenMeta?.id?.toString()]
                                                 ?.quote
                                                 ?.get("USD")
                                                 ?.price
@@ -761,25 +779,27 @@ fun HomeScreen(
                                         )
 
                                         val balanceOfNative =
-                                            getNativeBalanceForMetaSmart(
-                                                token.tokenMeta,
-                                                nativeBalanceList
-                                            )
+                                            token.tokenMeta?.let { meta ->
+                                                getNativeBalanceForMetaSmart(
+                                                    meta,
+                                                    nativeBalanceList
+                                                )
+                                            }
 
 
                                         Log.d(
                                             "ChainSlugCheck",
-                                            "Platform slug: ${token.tokenMeta.platform?.slug}"
+                                            "Platform slug: ${token.tokenMeta?.platform?.slug}"
                                         )
                                         Log.d("ChainSlugCheck", "meta name: ${token.name}")
                                         Log.d(
                                             "ChainSlugCheck",
-                                            "meta slug: ${token.tokenMeta.slug}"
+                                            "meta slug: ${token.tokenMeta?.slug}"
                                         )
                                         Log.d("ChainSlugCheck", "meta symbol: ${token.symbol}")
                                         Log.d(
                                             "ChainSlugCheck",
-                                            "meta category: ${token.tokenMeta.category}"
+                                            "meta category: ${token.tokenMeta?.category}"
                                         )
 
                                         Log.d(
@@ -805,7 +825,7 @@ fun HomeScreen(
                                         Log.d("token", "the token balances are :$tokenBalance")
 
 
-                                        val priceUsd = quotesMap[token.tokenMeta.id.toString()]
+                                        val priceUsd = quotesMap[token.tokenMeta?.id?.toString()]
                                             ?.quote
                                             ?.get("USD")
                                             ?.price
@@ -1236,8 +1256,7 @@ fun ActionsRow(
 
     val context = LocalContext.current
     val walletConnectUiState by walletConnectViewModel.uiState.collectAsState()
-    val isWcConnected = walletConnectUiState.activeSession != null ||
-        walletConnectUiState.status.startsWith("Connected to", ignoreCase = true)
+    val isWcConnected = walletConnectUiState.activeSession?.connectedAddress?.isNotBlank() == true
 
     Row(
         horizontalArrangement = Arrangement.spacedBy(12.dp),

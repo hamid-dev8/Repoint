@@ -167,13 +167,37 @@ class CmcTokenViewModel @Inject constructor(
         }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(), emptyList())
 
-
     val filteredMetas: StateFlow<List<ResolvedTokenInstance>> = combine(
         tokenMetasFlow,
         activeTokenKeyFlow
     ) { metas, keys ->
         Log.d("flowDebug", "metas and keys are $metas & $keys")
-        getFilteredMetas(metas, keys)
+        val erc20Assets = getFilteredMetas(metas, keys)
+        val nativeAssets = getNativeAssetEntries(
+            activeChains = keys.map { it.chain }.toSet()
+        )
+
+        val nativeSymbolsByChain = mapOf(
+            "ethereum" to setOf("ETH"),
+            "polygon" to setOf("MATIC", "POL"),
+            "bnb" to setOf("BNB"),
+            "arbitrum" to setOf("ETH"),
+            "optimism" to setOf("ETH"),
+            "avalanche" to setOf("AVAX"),
+            "fantom" to setOf("FTM")
+        )
+
+        // NetworkScreen can activate CMC's native-coin metadata directly. Prefer that
+        // record because it includes the canonical logo and quote; add a synthetic
+        // fallback only when no corresponding native record is active.
+        val chainsWithNativeMetadata = erc20Assets
+            .filter { asset ->
+                asset.symbol.uppercase() in nativeSymbolsByChain[asset.chain].orEmpty()
+            }
+            .map { it.chain }
+            .toSet()
+
+        erc20Assets + nativeAssets.filterNot { it.chain in chainsWithNativeMetadata }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(), emptyList())
 
     fun updateSearchQuery(query: String) {
@@ -232,13 +256,58 @@ class CmcTokenViewModel @Inject constructor(
                         contractAddress = contract.contractAddress,
                         chain = slug,
                         decimals = getDecimals(meta),
-                        tokenMeta = meta
+                        tokenMeta = meta,
+                        isNative = isNativeAsset(meta.symbol, slug)
                     )
                 } else null
             }
         }
     }
 
+    private fun isNativeAsset(symbol: String, chain: String): Boolean {
+        val nativeSymbolsByChain = mapOf(
+            "ethereum" to setOf("ETH"),
+            "polygon" to setOf("MATIC", "POL"),
+            "bnb" to setOf("BNB"),
+            "arbitrum" to setOf("ETH"),
+            "optimism" to setOf("ETH"),
+            "avalanche" to setOf("AVAX"),
+            "fantom" to setOf("FTM")
+        )
+
+        return symbol.uppercase() in nativeSymbolsByChain[normalizeSlug(chain)].orEmpty()
+    }
+
+    fun getNativeAssetEntries(activeChains : Set<String>) : List<ResolvedTokenInstance>{
+        val nativeMap = mapOf(
+            "ethereum" to ("ETH" to "Ethereum"),
+            "polygon" to ("POL" to "Polygon"),
+            "bnb" to ("BNB" to "BNB Smart Chain"),
+            "bsc" to ("BNB" to "BNB Smart Chain"),
+            "arbitrum" to ("ETH" to "Arbitrum"),
+            "optimism" to ("ETH" to "Optimism"),
+            "avalanche" to ("AVAX" to "Avalanche"),
+            "fantom" to ("FTM" to "Fantom")
+        )
+
+        return activeChains.mapNotNull { chainSlug ->
+            val normalized = normalizeSlug(chainSlug)
+            val pair = nativeMap[normalized] ?: return@mapNotNull null
+            val (symbol, displayName) = pair
+
+            ResolvedTokenInstance(
+                tokenId = -1,
+                symbol = symbol,
+                name = displayName,
+                logo = null,
+                contractAddress = "",
+                chain = normalized,
+                decimals = 18,
+                tokenMeta = null,
+                isNative = true
+            )
+        }
+    }
 
     fun loadNextDbPage() {
         viewModelScope.launch {

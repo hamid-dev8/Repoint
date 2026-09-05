@@ -37,36 +37,34 @@ fun chainIdFromSlug(slug: String): Int? {
 // In your constants or utility file
 fun coinTypeFromSlug(slug: String): Int {
     return when (normalizeSlug(slug)) {
-        "ethereum" -> 60
-        "polygon", "matic" -> 60  // Use Ethereum's coin type for Polygon
-        "bnb", "bsc" -> 60        // Keep BNB separate if you want
-        "arbitrum" -> 60          // Arbitrum uses same address as Ethereum
-        "optimism" -> 60          // Optimism uses same address as Ethereum
-        "avalanche" -> 60         // If you want separate addresses for other chains
-        "fantom" -> 60
-        else -> 60 // Default fallback
+        "ethereum", "polygon", "matic", "arbitrum", "optimism", "avalanche", "avax", "fantom", "ftm" -> 60
+        "bnb", "bsc" -> 714
+        else -> 60
     }
 }
 
-// Or more explicitly, define which chains share Ethereum addresses
-val ETHEREUM_COMPATIBLE_CHAINS = setOf("ethereum", "polygon", "arbitrum", "optimism")
+// Shared-address EVM wallet strategy: EVM chains reuse the same base Ethereum address.
+val ETHEREUM_COMPATIBLE_CHAINS = setOf(
+    "ethereum", "eth", "polygon", "matic", "arbitrum", "optimism",
+    "avalanche", "avax", "fantom", "ftm"
+)
 val BNB_COMPATIBLE_CHAINS = setOf("bnb", "bsc")
 
 fun getWalletCoinType(chainSlug: String): Int {
     val normalized = normalizeSlug(chainSlug)
     return when {
-        ETHEREUM_COMPATIBLE_CHAINS.contains(normalized) -> 60  // Ethereum
-        BNB_COMPATIBLE_CHAINS.contains(normalized) -> 60      // Or separate if needed
+        ETHEREUM_COMPATIBLE_CHAINS.contains(normalized) -> 60
+        BNB_COMPATIBLE_CHAINS.contains(normalized) -> 714
         else -> 60
     }
 }
 
 fun getAddressForChain(chainSlug: String, chainWallets: List<ChainWallet>): String? {
-    val ethAddress = chainWallets.firstOrNull { it.coinType == 60 }?.address
+    val evmAddress = chainWallets.firstOrNull { it.coinType == 60 }?.address
 
     return when (normalizeSlug(chainSlug)) {
-        "polygon", "ethereum", "arbitrum", "optimism" -> ethAddress
-        "bnb", "bsc" -> chainWallets.firstOrNull { it.coinType == 56 }?.address ?: ethAddress
-        else -> ethAddress // Default to Ethereum address
+        "polygon", "ethereum", "arbitrum", "optimism", "avalanche", "avax", "fantom", "ftm" -> evmAddress
+        "bnb", "bsc" -> chainWallets.firstOrNull { it.coinType == 714 }?.address ?: evmAddress
+        else -> evmAddress
     }
 }

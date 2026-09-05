@@ -10,6 +10,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.fragment.app.FragmentActivity
 import androidx.navigation.NavType
@@ -57,6 +58,15 @@ fun PreViewNav() {
 @Composable
 fun RepointNavigation(activity: FragmentActivity) {
     val navController = rememberNavController()
+
+    LaunchedEffect(Unit) {
+        val pendingUri = com.repoint.basics.WalletConnectDeepLinkBridge.peekPendingUri()
+        if (!pendingUri.isNullOrBlank()) {
+            navController.navigate("settings") {
+                popUpTo(navController.graph.startDestinationId) { inclusive = false }
+            }
+        }
+    }
 
     //auth and signup
     NavHost(
@@ -416,7 +426,9 @@ fun RepointNavigation(activity: FragmentActivity) {
             val walletAddress = backStackEntry.arguments?.getString("walletAddress") ?: ""
             val balance = backStackEntry.arguments?.getString("balance") ?: ""
             val coinType = backStackEntry.arguments?.getInt("coinType") ?: -1
-            val contractAddress = backStackEntry.arguments?.getString("contractAddress") ?: ""
+            val contractAddress = backStackEntry.arguments?.getString("contractAddress")
+                ?.takeUnless { it == "native" }
+                ?: ""
             val chainId = backStackEntry.arguments?.getInt("chainId") ?: -1
             val tokenName = backStackEntry.arguments?.getString("tokenName") ?: "0"
             val tokenId = backStackEntry.arguments?.getInt("tokenId") ?: -1

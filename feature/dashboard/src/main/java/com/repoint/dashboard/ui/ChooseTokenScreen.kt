@@ -45,6 +45,7 @@ import com.repoint.basics.atoms.RepointAppBar
 import com.repoint.basics.atoms.RepointSearchBar
 import com.repoint.basics.logic.chainIdFromSlug
 import com.repoint.basics.logic.coinTypeFromSlug
+import com.repoint.basics.logic.getAddressForChain
 import com.repoint.dashboard.AlchemyViewModel
 import com.repoint.dashboard.CmcTokenViewModel
 import com.repoint.dashboard.Web3ViewModel
@@ -100,6 +101,20 @@ fun ChooseTokenScreen(
     val alchemyBalances = (balancesState as? UiState.Success)?.data ?: emptyList()
 
     val tokens by cmcTokenViewModel.filteredMetas.collectAsState()
+    val filteredTokens = remember(tokens, searchQuery) {
+        tokens
+            .filter { it.symbol.contains(searchQuery, true) || it.name.contains(searchQuery, true) }
+            .distinctBy { token ->
+                if (token.isNative) "native:${token.chain.lowercase()}"
+                else "${token.tokenId}:${token.chain.lowercase()}"
+            }
+            .sortedWith(
+                compareBy<ResolvedTokenInstance>(
+                    { it.chain.lowercase() },
+                    { it.symbol.lowercase() }
+                )
+            )
+    }
     // Get first token (or best match later)
     val selectedToken = remember(tokens, searchQuery) {
         tokens.firstOrNull {
@@ -222,12 +237,7 @@ fun ChooseTokenScreen(
                                     .fillMaxWidth()
                                     .background(pureWhite)
                             ) {
-                                val filtered = tokens
-                                    .filter { it.symbol.contains(searchQuery, true) || it.name.contains(searchQuery, true) }
-                                    .distinctBy { it.tokenMeta.id to it.chain.lowercase() }
-
-
-                                if (filtered.isEmpty()) {
+                                if (filteredTokens.isEmpty()) {
                                     item {
                                         Box(
                                             modifier = Modifier
@@ -248,39 +258,25 @@ fun ChooseTokenScreen(
                                         }
                                     }
                                 } else {
-                                    items(filtered) { token ->
-                                        val normalizedChain = normalizeSlug(token.chain)
-                                        //todo this is SPECIFIC _CHAIN ADDRESS
-                                        //val walletAddress = getAddressForChain(token.chain, chainWallets)
-                                       val walletAddress =  chainWallets.firstOrNull { it.coinType == 60 }?.address
+                                    items(filteredTokens) { token ->
+                                       val walletAddress = getAddressForChain(token.chain, chainWallets)
 
+                                       if (walletAddress != null && masterWalletId != null) {
+                                           val perTokenCoinType = coinTypeFromSlug(token.chain)
+                                           Log.d("ChooseToken", "▶ coinType for ${token.chain} = $perTokenCoinType")
 
-
-
-                                        if (walletAddress != null && masterWalletId != null) {
-
-                                            val perTokenCoinType = coinTypeFromSlug(token.chain)
-                                            Log.d("ChooseToken", "▶ coinType for ${token.chain} = $perTokenCoinType")
-
-                                            val walletAddressState = produceState<String?>(initialValue = null, masterWalletId, token.chain) {
-                                                value = if (masterWalletId != null && perTokenCoinType != null) {
-                                                    walletViewModel.getChainWallet(masterWalletId!!, perTokenCoinType)?.address
-                                                } else null
-                                            }
-
-                                            // ✅ Pass the correct wallet address
-                                                ResolvedTokenRow(
-                                                    token = token,
-                                                    masterWalletId = masterWalletId!!,
-                                                    isSend = isSend,
-                                                    balances = alchemyBalances,
-                                                    walletAddress = walletAddress,
-                                                    navController = navController,
-                                                    coinType = perTokenCoinType
-                                                )
-                                        } else {
-                                            Log.w("ChooseToken", "⚠️ Missing wallet for chain=${token.chain}")
-                                        }
+                                           ResolvedTokenRow(
+                                               token = token,
+                                               masterWalletId = masterWalletId!!,
+                                               isSend = isSend,
+                                               balances = alchemyBalances,
+                                               walletAddress = walletAddress,
+                                               navController = navController,
+                                               coinType = perTokenCoinType
+                                           )
+                                       } else {
+                                           Log.w("ChooseToken", "⚠️ Missing wallet for chain=${token.chain}")
+                                       }
                                     }
                                 }
                                 }
@@ -295,50 +291,10 @@ fun ChooseTokenScreen(
 
 
                     LazyColumn(modifier = Modifier.padding(16.dp)) {
-
-                        val filtered = tokens
-                            .filter { it.symbol.contains(searchQuery, true) || it.name.contains(searchQuery, true) }
-                            .distinctBy { it.tokenMeta.id to it.chain.lowercase() }
-
-
-                        val resolvedTokens = filtered.mapNotNull { token ->
-                            val slug = token.chain.lowercase()
-
-                            // گرفتن آدرس قرارداد مرتبط با شبکه انتخاب شده
-                            val selectedContract = token.tokenMeta.contractAddress.orEmpty().firstOrNull {
-                                it.platform?.coin?.slug.equals(slug, ignoreCase = true)
-                            }
-
-                            if (selectedContract == null) {
-                                Log.w("ChooseToken", "❌ No contract found for ${token.tokenMeta.symbol} on chain $slug")
-                                return@mapNotNull null
-                            }
-
-                            // گرفتن موجودی از لیست Alchemy
-                            val matchedBalance = alchemyBalances.firstOrNull {
-                                it.contractAddress.equals(selectedContract.contractAddress, ignoreCase = true) &&
-                                        it.chainSlug.equals(slug, ignoreCase = true)
-                            }?.tokenBalance?.toBigDecimalOrNull()
-
-                            Log.d("ChooseToken", "✅ Matched ${token.tokenMeta.symbol} on $slug → contract=${selectedContract.contractAddress}, balance=$matchedBalance")
-
-                            ResolvedTokenInstance(
-                                tokenId = token.tokenMeta.id,
-                                symbol = token.tokenMeta.symbol,
-                                name = token.tokenMeta.name,
-                                logo = token.tokenMeta.logo,
-                                contractAddress = selectedContract.contractAddress,
-                                chain = slug,
-                                decimals = token.decimals,
-                                tokenMeta = token.tokenMeta
-                            ) to matchedBalance
-                        }
-
-
                         Log.d("ResolvedTokenRow","the tokens are : $tokens")
-                        Log.d("ResolvedTokenRow","the filtered tokens are : $filtered")
+                        Log.d("ResolvedTokenRow","the filtered tokens are : $filteredTokens")
 
-                        if (filtered.isEmpty()) {
+                        if (filteredTokens.isEmpty()) {
                             item {
                                 Box(
                                     modifier = Modifier
@@ -359,29 +315,24 @@ fun ChooseTokenScreen(
                                 }
                             }
                         }else {
-                            items(resolvedTokens) { token ->
-                                val perTokenCoinType = coinTypeFromSlug(token.first.chain)
-                                //todo THIS IS SPECIFIC CHAIN+
-                                val walletAddressie = chainWallets.firstOrNull { it.coinType == 60 }?.address
+                            items(filteredTokens) { token ->
+                                val perTokenCoinType = coinTypeFromSlug(token.chain)
+                                val walletAddressie = getAddressForChain(token.chain, chainWallets)
 
-
-                                // ✅ Pass the correct wallet address
                                 Log.d("TokenDebug", "MasterWalletId: $masterWalletId")
-                                Log.d("TokenDebug", "CoinType for ${token.first.chain}: $perTokenCoinType")
+                                Log.d("TokenDebug", "CoinType for ${token.chain}: $perTokenCoinType")
                                 Log.d("TokenDebug", "Resolved wallet address: $walletAddressie")
                                 masterWalletId?.let { walletId ->
                                     if (walletAddressie != null) {
-                                        if (perTokenCoinType != null) {
-                                            ResolvedTokenRow(
-                                                token = token.first,
-                                                masterWalletId = walletId,
-                                                isSend = isSend,
-                                                balances = alchemyBalances,
-                                                walletAddress = walletAddressie,
-                                                navController = navController,
-                                                coinType = perTokenCoinType
-                                            )
-                                        }
+                                        ResolvedTokenRow(
+                                            token = token,
+                                            masterWalletId = walletId,
+                                            isSend = isSend,
+                                            balances = alchemyBalances,
+                                            walletAddress = walletAddressie,
+                                            navController = navController,
+                                            coinType = perTokenCoinType
+                                        )
                                     }
                                 }
                             }
@@ -423,10 +374,16 @@ fun ResolvedTokenRow(
                     Log.d("ResolvedTokenRow", "tokenName = ${token.name}")
 
 
-                    val balance = matchBalance(token.tokenMeta, balances, token.chain)?.toPlainString() ?: "0"
+                    val balance = if (token.isNative) {
+                        "0"
+                    } else {
+                        token.tokenMeta?.let { meta ->
+                            matchBalance(meta, balances, token.chain)?.toPlainString()
+                        } ?: "0"
+                    }
 
                     Log.d("BalanceMatch", "Trying to match token: ${token.name} on chain=${token.chain}")
-                    Log.d("BalanceMatch", "→ Meta contracts: ${token.tokenMeta.contractAddress.orEmpty().map { it.contractAddress }}")
+                    Log.d("BalanceMatch", "→ Meta contracts: ${token.tokenMeta?.contractAddress.orEmpty().map { it.contractAddress }}")
                     Log.d("BalanceMatch", "→ Alchemy balances: ${balances.map { it.contractAddress to it.chainSlug }}")
 
                     Log.d("ResolvedTokenRow","token meta is : ${token.tokenMeta}")
@@ -442,21 +399,25 @@ fun ResolvedTokenRow(
                     Log.d("ResolvedTokenRow", "CoinType: $coinType, ChainId: $chainId")
                     Log.d("ResolvedTokenRow", "coinType = $coinType for slug=${token.chain}")
 
-                    if (coinType == null || chainId == null) {
-                        Log.e("ResolvedTokenRow", "❌ coinType or chainId is null for slug=${token.chain}")
+                   if (chainId == null) {
+                       Log.e("ResolvedTokenRow", "❌ chainId is null for slug=${token.chain}")
                         return@launch
                     }
 
                     Log.d("ResolvedTokenRow", "Wallet Address: $walletAddress")
 
                     if (isSend) {
-                        val route = "sendToken/$walletAddress/$balance/$coinType/${token.contractAddress}/$chainId/${Uri.encode(token.name)}/${token.tokenId}/$masterWalletId"
+                        val routeTokenId = if (token.isNative) -1 else token.tokenId
+                        // Navigation routes cannot reliably preserve an empty path segment.
+                        val routeContractAddress = if (token.isNative) "native" else token.contractAddress
+                        val route = "sendToken/$walletAddress/$balance/$coinType/$routeContractAddress/$chainId/${Uri.encode(token.name)}/$routeTokenId/$masterWalletId"
                         Log.d("ResolvedTokenRow", "Navigating to: $route")
                         navController.navigate(
                             route
                         )
                     } else {
-                        val route = "qrCode/$walletAddress/$masterWalletId/${token.tokenId}/${token.chain}"
+                        val routeTokenId = if (token.isNative) -1 else token.tokenId
+                        val route = "qrCode/$walletAddress/$masterWalletId/$routeTokenId/${token.chain}"
                         Log.d("ResolvedTokenRow", "Navigating to: $route")
                         navController.navigate("qrCode/$walletAddress/$masterWalletId/${token.tokenId}/${token.chain}")
                     }

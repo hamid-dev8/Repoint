@@ -44,6 +44,15 @@ class SecurityViewModel @Inject constructor(private val spManager: SpManager) : 
     private val _isTransactionSigningEnabled = MutableStateFlow(false)
     val isTransactionSigningEnabled: StateFlow<Boolean> = _isTransactionSigningEnabled
 
+    // Becomes true only after the first real values have been read from
+    // DataStore. Consumers (e.g. the launch-lock screen) must wait for this
+    // before acting on lockMethod/isPasscodeEnabled, otherwise they'd act on
+    // the transient default values above and briefly trigger the wrong
+    // authenticator (e.g. flashing a biometric prompt before the saved
+    // "Passcode" method loads).
+    private val _isLoaded = MutableStateFlow(false)
+    val isLoaded: StateFlow<Boolean> = _isLoaded
+
     init {
         viewModelScope.launch {
            combine(
@@ -63,6 +72,7 @@ class SecurityViewModel @Inject constructor(private val spManager: SpManager) : 
                _autoLockMinutes.value = savedAutoLockMinutes
                _isTransactionSigningEnabled.value = txSigningEnabled
                _isScannerEnabled.value = scannerEnabled
+               _isLoaded.value = true
            }.collect { }
         }
     }

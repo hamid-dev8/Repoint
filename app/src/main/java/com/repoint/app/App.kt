@@ -8,7 +8,6 @@ import com.repoint.sources.datarepo.datasource.WalletConnectManagerDataSource
 import dagger.hilt.android.HiltAndroidApp
 import javax.inject.Inject
 
-
 @HiltAndroidApp
 class App : Application() {
     lateinit var sharedPreferences: SharedPreferences

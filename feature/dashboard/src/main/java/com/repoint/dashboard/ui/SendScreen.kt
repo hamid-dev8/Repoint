@@ -135,8 +135,11 @@ fun SendTokenScreen(
     var selectedTier by remember { mutableStateOf("Average") } // Default tier
 
     val nativeUsdState by alchemyViewModel.nativeUsdPrice.collectAsState()
+    val isNativeToken = tokenId == -1 || contractAddress.isBlank()
 
-    val tokenMeta = cmcTokenViewModel.getTokenMetaFlow(tokenId).collectAsState(initial = null).value
+    val tokenMetaFromFlow =
+        cmcTokenViewModel.getTokenMetaFlow(tokenId).collectAsState(initial = null).value
+    val tokenMeta = tokenMetaFromFlow.takeUnless { isNativeToken }
     tokenMeta?.contractAddress?.forEach {
         Log.d(
             "tokenMetaCheck",
@@ -153,10 +156,15 @@ fun SendTokenScreen(
     val nativeTokenSymbol = remember(chainId) {
         when (chainId) {
             1 -> "ETH"
-            137 -> "MATIC"
+            137 -> "POL"
             56 -> "BNB"
             else -> "NATIVE"
         }
+    }
+    val availableBalance = if (isNativeToken) {
+        (nativeBalanceForChain as? UiState.Success)?.data?.stripTrailingZeros()?.toPlainString() ?: "0"
+    } else {
+        balance
     }
     val isLoading = gasTierState is UiState.Loading || nativeUsdState is UiState.Loading
     val shimmerOnce = remember { mutableStateOf(true) }
@@ -190,8 +198,8 @@ fun SendTokenScreen(
         Log.d("SendScreen", "the match balance is : $matched")
     }
 
-    LaunchedEffect(tokenId) {
-        if (cmcTokenViewModel.tokenMetasFlow.value.none { it.id == tokenId }) {
+    LaunchedEffect(tokenId, isNativeToken) {
+        if (!isNativeToken && cmcTokenViewModel.tokenMetasFlow.value.none { it.id == tokenId }) {
             cmcTokenViewModel.loadTokenMetaById(tokenId)
         }
     }
@@ -216,8 +224,19 @@ fun SendTokenScreen(
 
     val balanceState by alchemyViewModel.tokenBalances.collectAsState()
 
-    val currentSlug = remember(tokenMeta, contractAddress) {
-        tokenMeta?.getSlugFor(contractAddress) ?: ""
+    val currentSlug = remember(tokenMeta, contractAddress, chainId, isNativeToken) {
+        if (isNativeToken) {
+            when (chainId) {
+                1 -> "ethereum"
+                137 -> "polygon"
+                56 -> "bnb"
+                42161 -> "arbitrum"
+                10 -> "optimism"
+                else -> ""
+            }
+        } else {
+            tokenMeta?.getSlugFor(contractAddress) ?: ""
+        }
     }
 
     val resolvedBalance = remember(tokenMeta, balancesState, currentSlug) {
@@ -373,15 +392,26 @@ fun SendTokenScreen(
         isSending = true
         coroutineScope.launch {
             val result = credentials?.let {
-                web3ViewModel.sendTokenDynamic(
-                    credentials = it,
-                    recipientAddress = recipientAddress,
-                    tokenMeta = tokenMeta!!,
-                    amount = amount.toBigDecimal(),
-                    contractAddress = contractAddress,
-                    chainId = chainId.toLong(),
-                    chainSlug = chainSlug!!
-                )
+                if (isNativeToken) {
+                    web3ViewModel.sendNativeToken(
+                        credentials = it,
+                        recipientAddress = recipientAddress,
+                        amount = amount.toBigDecimal(),
+                        chainId = chainId.toLong()
+                    )?.transactionHash
+                } else {
+                    val metadata = tokenMeta ?: return@let null
+                    val tokenChain = currentSlug.ifBlank { return@let null }
+                    web3ViewModel.sendTokenDynamic(
+                        credentials = it,
+                        recipientAddress = recipientAddress,
+                        tokenMeta = metadata,
+                        amount = amount.toBigDecimal(),
+                        contractAddress = contractAddress,
+                        chainId = chainId.toLong(),
+                        chainSlug = tokenChain
+                    )
+                }
             }
             Log.d(
                 "transaction",
@@ -514,7 +544,7 @@ fun SendTokenScreen(
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                             trailingIcon = {
                                 TextButton(onClick = {
-                                    amount = balance
+                                   amount = availableBalance
                                 }) {
                                     Text("Max")
                                 }
@@ -523,7 +553,7 @@ fun SendTokenScreen(
                         )
 
                         Text(
-                            text = "Available $tokenName : $balance",
+                            text = "Available $tokenName : $availableBalance",
                             style = RepointTypography.bodySmall,
                             color = PurpleGrey80
                         )

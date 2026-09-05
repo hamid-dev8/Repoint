@@ -7,8 +7,9 @@ data class ResolvedTokenInstance(
     val symbol: String,
     val name: String,
     val logo: String?,
-    val contractAddress: String,
+    val contractAddress: String = "",
     val chain: String,
     val decimals: Int,
-    val tokenMeta: TokenMetaData
+    val tokenMeta: TokenMetaData? = null,
+    val isNative : Boolean = false
 )
